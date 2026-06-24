@@ -1420,6 +1420,8 @@ set(DUSK_FILES
         src/d/actor/d_a_alink_dusk.cpp
         src/dusk/android_frame_rate.hpp
         src/dusk/android_frame_rate.cpp
+        src/dusk/android_hud.hpp
+        src/dusk/android_hud.cpp
         src/dusk/asserts.cpp
         src/dusk/batch.cpp
         src/dusk/batch.hpp

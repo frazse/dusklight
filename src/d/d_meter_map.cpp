@@ -6,6 +6,7 @@
 #include "d/dolzel.h" // IWYU pragma: keep
 
 #include "d/d_meter_map.h"
+#include "dusk/android_hud.hpp"
 #include "JSystem/J2DGraph/J2DGrafContext.h"
 #include "JSystem/JHostIO/JORServer.h"
 #include "d/actor/d_a_player.h"
@@ -601,6 +602,7 @@ void dMeterMap_c::_move(u32 param_0) {
 }
 
 void dMeterMap_c::_draw() {
+    if (dusk::android::hud_is_second_screen_active()) return;
     #if DEBUG
     if (!g_meter_mapHIO.mMapRenderingProhibited) {
         mMap->_draw();
@@ -613,6 +615,7 @@ void dMeterMap_c::_draw() {
 }
 
 void dMeterMap_c::draw() {
+    if (dusk::android::hud_is_second_screen_active()) return;
     if (
         #if DEBUG
         !g_meter_mapHIO.mMapDisplayProhibited &&

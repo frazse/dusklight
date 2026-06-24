@@ -29,6 +29,8 @@
 #include "dusk/settings.h"
 #endif
 
+#include "dusk/android_hud.hpp"
+
 int dMeter2_c::_create() {
     stage_stag_info_class* stag_info = dComIfGp_getStageStagInfo();
     if (dStage_stagInfo_GetUpButton(stag_info) == 1) {
@@ -253,6 +255,31 @@ int dMeter2_c::_create() {
 int dMeter2_c::_execute() {
     JKRHeap* heap = mDoExt_setCurrentHeap(mpHeap);
 
+#if defined(TARGET_ANDROID) || defined(__ANDROID__) || defined(ANDROID)
+    if (dusk::android::hud_is_second_screen_active()) {
+        g_drawHIO.mLifeGaugePosX      = 1E5f;
+        g_drawHIO.mMagicMeterPosX     = 1E5f;
+        g_drawHIO.mRupeePosX          = 1E5f;
+        g_drawHIO.mKeyPosX            = 1E5f;
+        g_drawHIO.mLanternMeterPosX   = 1E5f;
+        g_drawHIO.mOxygenMeterPosX    = 1E5f;
+        g_drawHIO.mMainHUDButtonsPosX = 1E5f;
+        g_drawHIO.mRingHUDButtonsPosX = 1E5f;
+        g_drawHIO.mButtonAPosX        = 1E5f;
+        g_drawHIO.mButtonBPosX        = 1E5f;
+        g_drawHIO.mButtonXPosX        = 1E5f;
+        g_drawHIO.mButtonYPosX        = 1E5f;
+        g_drawHIO.mButtonZPosX        = 1E5f;
+        g_drawHIO.mMidnaIconPosX      = 1E5f;
+        g_drawHIO.mSpurBarPosX        = 1E5f;
+        g_drawHIO.mButtonCrossOFFPosX = 1E5f;
+        g_drawHIO.mButtonCrossONPosX  = 1E5f;
+        for (auto& alpha : g_drawHIO.mLightDrop.mVesselAlpha) {
+            alpha = 0.f;
+        }
+    }
+#endif
+
     if (!dComIfGs_isCollectMirror(0)
            /* dSv_event_flag_c::F_0685 - Cutscene - (Cutscene 32) Sage appears, get first Mirror of Twilight shard */
         && dComIfGs_isEventBit(dSv_event_flag_c::F_0685)) {
@@ -311,6 +338,8 @@ int dMeter2_c::_execute() {
     dComIfGp_setNunCStatus(0, 0);
     dComIfGp_setBottleStatus(0, 0);
     dComIfGp_setCStickStatus(0, 0, 0);
+
+    dusk::android::hud_update();
 
     mDoExt_setCurrentHeap(heap);
     return 1;

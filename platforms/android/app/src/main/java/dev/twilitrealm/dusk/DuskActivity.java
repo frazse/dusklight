@@ -22,7 +22,7 @@ import android.view.View;
 import android.view.Window;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
-
+import android.hardware.display.DisplayManager;
 import org.libsdl.app.SDLActivity;
 import org.libsdl.app.SDLSurface;
 
@@ -37,6 +37,85 @@ public class DuskActivity extends SDLActivity {
     private static final int MANAGE_STORAGE_REQUEST_CODE = 0x4456;
     private static final String EXTERNAL_STORAGE_AUTHORITY =
         "com.android.externalstorage.documents";
+
+    // ── Second screen ────────────────────────────────────────────────
+    private DisplayManager mDisplayManager;
+    private SecondScreenPresentation mSecondScreen;
+
+    private void initSecondScreen() {
+        if (mDisplayManager == null) return;
+        Display[] displays = mDisplayManager.getDisplays(
+            DisplayManager.DISPLAY_CATEGORY_PRESENTATION);
+        if (displays.length == 0) {
+            // Ayn Thor fallback: some dual-screen devices don't use the
+            // PRESENTATION category — try all non-default displays instead
+            Display[] all = mDisplayManager.getDisplays();
+            for (Display d : all) {
+                if (d.getDisplayId() != Display.DEFAULT_DISPLAY) {
+                    displays = new Display[]{d};
+                    break;
+                }
+            }
+        }
+        if (displays.length == 0) {
+            Log.d(TAG, "No second display found");
+            return;
+        }
+        Log.d(TAG, "Second display found: " + displays[0].getName());
+        mSecondScreen = new SecondScreenPresentation(this, displays[0]);
+        mSecondScreen.show();
+    }
+
+    private final DisplayManager.DisplayListener mDisplayListener =
+        new DisplayManager.DisplayListener() {
+            @Override public void onDisplayAdded(int id) {
+                runOnUiThread(() -> {
+                    if (mSecondScreen == null) initSecondScreen();
+                });
+            }
+            @Override public void onDisplayRemoved(int id) {
+                runOnUiThread(() -> {
+                    if (mSecondScreen != null) {
+                        mSecondScreen.dismiss();
+                        mSecondScreen = null;
+                    }
+                });
+            }
+            @Override public void onDisplayChanged(int id) {}
+        };
+
+    /**
+     * Called from native via JNI on the GL thread.
+     * Posts to the UI thread so HudView.invalidate() is safe.
+     */
+    public void onGameStateUpdate(
+        int health, int maxHealth,
+        int magic,  int maxMagic,
+        int oil,    int maxOil,
+        int oxygen, int maxOxygen,
+        int rupees, int keys, int arrows, int bombs,
+        float mapX, float mapY,
+        int transform, String stageName, int roomNo, float[] mapLines,
+        float[] mapIcons, float mapAngle,
+        float mapMinX, float mapMinZ, float mapMaxX, float mapMaxZ,
+        String buttonAText, String buttonBText, String buttonZText,
+        String buttonXText, String buttonYText,
+        int itemXResId, int itemYResId, int itemXCount, int itemYCount)
+    {
+        if (mSecondScreen == null) return;
+        final GameState state = new GameState(
+            health, maxHealth, magic, maxMagic,
+            oil, maxOil, oxygen, maxOxygen,
+            rupees, keys, arrows, bombs,
+            mapX, mapY, transform, stageName, roomNo, mapLines,
+            mapIcons, mapAngle,
+            mapMinX, mapMinZ, mapMaxX, mapMaxZ,
+            buttonAText, buttonBText, buttonZText,
+            buttonXText, buttonYText,
+            itemXResId, itemYResId, itemXCount, itemYCount);
+        runOnUiThread(() -> mSecondScreen.updateHud(state));
+    }
+    // ── End second screen ────────────────────────────────────────────
 
     private long folderDialogUserdata = 0;
     private boolean awaitingManageStoragePermission = false;
@@ -91,6 +170,9 @@ public class DuskActivity extends SDLActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        mDisplayManager = (DisplayManager) getSystemService(Context.DISPLAY_SERVICE);
+        mDisplayManager.registerDisplayListener(mDisplayListener, null);
+        initSecondScreen();
         hideSystemBars();
     }
 
@@ -105,6 +187,18 @@ public class DuskActivity extends SDLActivity {
         hideSystemBars();
         if (awaitingManageStoragePermission) {
             resumeFolderDialogAfterPermissionGrant();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (mDisplayManager != null) {
+            mDisplayManager.unregisterDisplayListener(mDisplayListener);
+        }
+        if (mSecondScreen != null) {
+            mSecondScreen.dismiss();
+            mSecondScreen = null;
         }
     }
 
