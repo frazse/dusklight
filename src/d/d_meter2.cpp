@@ -255,6 +255,8 @@ int dMeter2_c::_create() {
 int dMeter2_c::_execute() {
     JKRHeap* heap = mDoExt_setCurrentHeap(mpHeap);
 
+    dusk::android::hud_update();
+
 #if defined(TARGET_ANDROID) || defined(__ANDROID__) || defined(ANDROID)
     if (dusk::android::hud_is_second_screen_active()) {
         g_drawHIO.mLifeGaugePosX      = 1E5f;
@@ -274,9 +276,6 @@ int dMeter2_c::_execute() {
         g_drawHIO.mSpurBarPosX        = 1E5f;
         g_drawHIO.mButtonCrossOFFPosX = 1E5f;
         g_drawHIO.mButtonCrossONPosX  = 1E5f;
-        for (auto& alpha : g_drawHIO.mLightDrop.mVesselAlpha) {
-            alpha = 0.f;
-        }
     }
 #endif
 
@@ -338,8 +337,6 @@ int dMeter2_c::_execute() {
     dComIfGp_setNunCStatus(0, 0);
     dComIfGp_setBottleStatus(0, 0);
     dComIfGp_setCStickStatus(0, 0, 0);
-
-    dusk::android::hud_update();
 
     mDoExt_setCurrentHeap(heap);
     return 1;

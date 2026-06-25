@@ -94,25 +94,29 @@ public class DuskActivity extends SDLActivity {
         int oil,    int maxOil,
         int oxygen, int maxOxygen,
         int rupees, int keys, int arrows, int bombs,
+        int lightDrops, int maxLightDrops, int showLightDrops,
         float mapX, float mapY,
         int transform, String stageName, int roomNo, float[] mapLines,
         float[] mapIcons, float mapAngle,
         float mapMinX, float mapMinZ, float mapMaxX, float mapMaxZ,
         String buttonAText, String buttonBText, String buttonZText,
         String buttonXText, String buttonYText,
-        int itemXResId, int itemYResId, int itemXCount, int itemYCount)
+        int itemXResId, int itemYResId, int itemXCount, int itemYCount,
+        String dPadText, int dPadDirection, int itemDDownId, int itemDDownCount)
     {
         if (mSecondScreen == null) return;
         final GameState state = new GameState(
             health, maxHealth, magic, maxMagic,
             oil, maxOil, oxygen, maxOxygen,
             rupees, keys, arrows, bombs,
+            lightDrops, maxLightDrops, showLightDrops != 0,
             mapX, mapY, transform, stageName, roomNo, mapLines,
             mapIcons, mapAngle,
             mapMinX, mapMinZ, mapMaxX, mapMaxZ,
             buttonAText, buttonBText, buttonZText,
             buttonXText, buttonYText,
-            itemXResId, itemYResId, itemXCount, itemYCount);
+            itemXResId, itemYResId, itemXCount, itemYCount,
+            dPadText, dPadDirection, itemDDownId, itemDDownCount);
         runOnUiThread(() -> mSecondScreen.updateHud(state));
     }
     // ── End second screen ────────────────────────────────────────────

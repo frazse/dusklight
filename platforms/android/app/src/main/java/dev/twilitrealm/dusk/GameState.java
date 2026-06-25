@@ -38,16 +38,27 @@ public class GameState {
     public final int itemXCount;
     public final int itemYCount;
 
+    public final int lightDrops;
+    public final int maxLightDrops;
+    public final boolean showLightDrops;
+
+    public final String dPadText;
+    public final int dPadDirection;
+    public final int itemDDownId;
+    public final int itemDDownCount;
+
     public GameState(int health, int maxHealth, int magic, int maxMagic,
                      int oil, int maxOil, int oxygen, int maxOxygen,
                      int rupees, int keys, int arrows, int bombs,
+                     int lightDrops, int maxLightDrops, boolean showLightDrops,
                      float mapX, float mapY, int transform, 
                      String stageName, int roomNo, float[] mapLines,
                      float[] mapIcons, float mapAngle,
                      float mapMinX, float mapMinZ, float mapMaxX, float mapMaxZ,
                      String buttonAText, String buttonBText, String buttonZText,
                      String buttonXText, String buttonYText,
-                     int itemXResId, int itemYResId, int itemXCount, int itemYCount) {
+                     int itemXResId, int itemYResId, int itemXCount, int itemYCount,
+                     String dPadText, int dPadDirection, int itemDDownId, int itemDDownCount) {
         this.health = health;
         this.maxHealth = maxHealth;
         this.magic = magic;
@@ -60,6 +71,9 @@ public class GameState {
         this.keys = keys;
         this.arrows = arrows;
         this.bombs = bombs;
+        this.lightDrops = lightDrops;
+        this.maxLightDrops = maxLightDrops;
+        this.showLightDrops = showLightDrops;
         this.mapX = mapX;
         this.mapY = mapY;
         this.mapAngle = mapAngle;
@@ -81,5 +95,9 @@ public class GameState {
         this.itemYResId = itemYResId;
         this.itemXCount = itemXCount;
         this.itemYCount = itemYCount;
+        this.dPadText = dPadText;
+        this.dPadDirection = dPadDirection;
+        this.itemDDownId = itemDDownId;
+        this.itemDDownCount = itemDDownCount;
     }
 }

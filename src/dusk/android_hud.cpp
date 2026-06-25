@@ -5,7 +5,9 @@
 #include "d/d_map_path_dmap.h"
 #include "d/d_meter2_info.h"
 #include "d/d_meter2.h"
+#include "d/d_tresure.h"
 #include "d/actor/d_a_alink.h"
+#include "dusk/map_loader_definitions.h"
 #include "SSystem/SComponent/c_xyz.h"
 
 #include <SDL3/SDL_system.h>
@@ -62,6 +64,75 @@ std::string get_action_text(u8 action_id) {
     return std::string(text_buf);
 }
 
+bool should_draw_icon(int type, const dTres_c::data_s* data, int stayNo) {
+    if (data == nullptr) return false;
+
+    // stay_type: 1 for dungeons (Stage_stagInfo_GetUpButton == 1), 0 for field
+    int stay_type = (dStage_stagInfo_GetUpButton(dComIfGp_getStage()->getStagInfo()) == 1) ? 1 : 0;
+    bool has_compass = dMapInfo_n::chkGetCompass();
+    bool has_map = dMapInfo_n::chkGetMap();
+
+    switch (type) {
+    case 0: // Regular Chests
+        if (stay_type == 1) {
+            if (has_compass && data->mNo != 255 && !dComIfGs_isTbox(data->mNo)) {
+                return true;
+            }
+        }
+        break;
+    case 1:
+    case 8: // Keys / Map / Compass
+        if (stay_type == 1) {
+            if (has_map) return true;
+        } else {
+            if (data->mSwBit == 255 || dComIfGs_isSwitch(data->mSwBit, data->mRoomNo)) {
+                return true;
+            }
+        }
+        break;
+    case 2: // Heart Pieces
+        if (stay_type == 1) {
+            if (has_compass && !dComIfGs_isTbox(data->mNo)) {
+                return true;
+            }
+        }
+        break;
+    case 4: // Light Drops
+        if (stay_type == 0 && dComIfGp_isLightDropMapVisible()) {
+            if (data->mNo != 255 && !dComIfGs_isTbox(data->mNo)) {
+                return true;
+            }
+        }
+        break;
+    case 10: // Field Chests
+        if (stay_type == 0 && data->mNo != 255 && !dComIfGs_isTbox(data->mNo)) {
+            return true;
+        }
+        break;
+    case 3: // Boss
+        if (stay_type == 1 && has_compass && !dComIfGs_isStageBossEnemy()) {
+            return true;
+        }
+        break;
+    case 13:
+    case 14: // NPCs
+        if (stay_type == 0) {
+            if (data->mSwBit == 255 || dComIfGs_isSwitch(data->mSwBit, data->mRoomNo)) {
+                return true;
+            }
+        }
+        break;
+    case 15: // Owl Statues
+        if (stay_type == 1 && has_compass) {
+            return true;
+        }
+        break;
+    default:
+        return true;
+    }
+    return false;
+}
+
 } // namespace
 
 bool hud_is_second_screen_active() {
@@ -92,7 +163,7 @@ void hud_update() {
         }
         // Updated signature for X/Y buttons and items
         s_onGameStateUpdate = env->GetMethodID(
-            cls, "onGameStateUpdate", "(IIIIIIIIIIIIFFILjava/lang/String;I[F[FFFFFFLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIII)V");
+            cls, "onGameStateUpdate", "(IIIIIIIIIIIIIIIFFILjava/lang/String;I[F[FFFFFFLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIIILjava/lang/String;III)V");
         env->DeleteLocalRef(cls);
         if (s_onGameStateUpdate == nullptr || clear_pending_exception(env)) {
             env->DeleteLocalRef(activity);
@@ -118,9 +189,38 @@ void hud_update() {
     const int keys      = static_cast<int>(dComIfGs_getKeyNum());
     const int transform = static_cast<int>(dComIfGs_getTransformStatus());
 
+    const int lightDrops = static_cast<int>(dComIfGs_getLightDropNum(dComIfGp_getStartStageDarkArea()));
+    const int needLightDrops = static_cast<int>(dComIfGp_getNeedLightDropNum());
+
+    int showLightDrops = 0;
+    dMeter2_c* meter = dMeter2Info_getMeterClass();
+    if (meter != nullptr && meter->isShowLightDrop()) {
+        showLightDrops = 1;
+    }
+
     // Map Info
     const char* stageNameStr = dComIfGp_getStartStageName();
     int stayNo = dComIfGp_roomControl_getStayNo();
+
+    std::string friendlyName = (stageNameStr && stayNo != -1) ? stageNameStr : "Loading...";
+    if (stageNameStr && stayNo != -1) {
+        for (const auto& region : gameRegions) {
+            for (const auto& map : region.maps) {
+                if (strcmp(map.mapFile, stageNameStr) == 0) {
+                    if (map.mapRooms.empty()) {
+                        friendlyName = map.mapName;
+                    } else {
+                        for (const auto& room : map.mapRooms) {
+                            if (room.roomNo == stayNo) {
+                                friendlyName = map.mapName;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     std::vector<float> mapLines;
     std::vector<float> mapIcons; // [type, x, y, status]
@@ -186,6 +286,9 @@ void hud_update() {
             if (data->mRoomNo != -1 && !dComIfGs_isVisitedRoom(data->mRoomNo) && data->mRoomNo != stayNo) {
                 continue;
             }
+            if (!should_draw_icon(type, data->getConstDataPointer(), stayNo)) {
+                continue;
+            }
             BE(Vec) iconPos = data->mPos;
             if (data->mRoomNo != -1) {
                 dMapInfo_n::correctionOriginPos(data->mRoomNo, &iconPos);
@@ -223,7 +326,11 @@ void hud_update() {
         buttonBText = get_action_text(dComIfGp_getAStatus());
     }
     if (dMeter2Info_isUseButton(METER2_USEBUTTON_Z)) {
-        buttonZText = get_action_text(dComIfGp_getZStatus());
+        u8 zStatus = dComIfGp_getZStatus();
+        buttonZText = get_action_text(zStatus);
+        if (buttonZText.empty() && (zStatus == 0x2D || zStatus == 0x2E)) {
+            buttonZText = "Midna";
+        }
     }
     if (dMeter2Info_isUseButton(METER2_USEBUTTON_X)) {
         buttonXText = get_action_text(dComIfGp_getXStatus());
@@ -232,13 +339,23 @@ void hud_update() {
         buttonYText = get_action_text(dComIfGp_getYStatus());
     }
 
+    // D-Pad (Cross)
+    int dPadStatus = static_cast<int>(dComIfGp_get3DStatus());
+    std::string dPadText = get_action_text(dPadStatus);
+    if (dPadText.empty() && dPadStatus == 0x6A) {
+        dPadText = "Map";
+    }
+    int dPadDirection = static_cast<int>(dComIfGp_get3DDirection());
+
     // Equipped Items
     int itemXId = static_cast<int>(dComIfGp_getSelectItem(0));
     int itemYId = static_cast<int>(dComIfGp_getSelectItem(1));
+    int itemDDownId = static_cast<int>(dComIfGp_getSelectItem(2));
     int itemXCount = static_cast<int>(dComIfGp_getSelectItemNum(0));
     int itemYCount = static_cast<int>(dComIfGp_getSelectItemNum(1));
+    int itemDDownCount = static_cast<int>(dComIfGp_getSelectItemNum(2));
 
-    jstring jStageName = env->NewStringUTF(stageNameStr ? stayNo != -1 ? stageNameStr : "Title" : "Loading...");
+    jstring jStageName = env->NewStringUTF(friendlyName.c_str());
     jfloatArray jLines = env->NewFloatArray(mapLines.size());
     if (jLines != nullptr && !mapLines.empty()) {
         env->SetFloatArrayRegion(jLines, 0, mapLines.size(), mapLines.data());
@@ -252,6 +369,7 @@ void hud_update() {
     jstring jButtonZ = env->NewStringUTF(buttonZText.c_str());
     jstring jButtonX = env->NewStringUTF(buttonXText.c_str());
     jstring jButtonY = env->NewStringUTF(buttonYText.c_str());
+    jstring jDPadText = env->NewStringUTF(dPadText.c_str());
 
     env->CallVoidMethod(activity, s_onGameStateUpdate,
         health, maxHealth,
@@ -259,12 +377,14 @@ void hud_update() {
         oil, maxOil,
         oxygen, maxOxygen,
         rupees, keys, arrows, bombs,
+        lightDrops, needLightDrops, showLightDrops,
         mapX, mapY,
         transform,
         jStageName, stayNo, jLines, jIcons, mapAngle,
         minX, minZ, maxX, maxZ,
         jButtonA, jButtonB, jButtonZ, jButtonX, jButtonY,
-        itemXId, itemYId, itemXCount, itemYCount);
+        itemXId, itemYId, itemXCount, itemYCount,
+        jDPadText, dPadDirection, itemDDownId, itemDDownCount);
 
     if (jStageName) env->DeleteLocalRef(jStageName);
     if (jLines) env->DeleteLocalRef(jLines);
@@ -278,6 +398,7 @@ void hud_update() {
     clear_pending_exception(env);
     env->DeleteLocalRef(activity);
 }
+
 
 } // namespace dusk::android
 

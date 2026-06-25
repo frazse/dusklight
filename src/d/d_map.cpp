@@ -322,7 +322,7 @@ void dMap_HIO_list_c::copyBufToHio(const char* param_1) {
 
 f32 renderingAmap_c::getIconSize(u8 i_typeGroup) const {
     static f32 const l_iconSize[] = {
-        0.12f, 0.12f, 0.08f, 0.12f, 0.08f, 0.16f, 0.12f, 0.0f,  0.12f,
+        0.12f, 0.12f, 0.08f, 0.12f, 0.05f, 0.16f, 0.12f, 0.0f,  0.12f,
         0.08f, 0.08f, 0.08f, 0.08f, 0.08f, 0.08f, 0.08f, 0.08f,
     };
 

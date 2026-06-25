@@ -58,22 +58,30 @@ public class HudView extends View {
         canvas.translate((getWidth() - 1280 * scale) / 2, (getHeight() - 1080 * scale) / 2);
         canvas.scale(scale, scale);
 
-        drawHearts(canvas, 80, 80);
-        drawMagicBar(canvas, 80, 230);
-        drawOilBar(canvas, 80, 275);
-        drawOxygenBar(canvas, 480, 230);
+        // 1280x1080 Workspace Border (Diagnostic)
+        mPaint.setStyle(Paint.Style.STROKE);
+        mPaint.setStrokeWidth(4);
+        mPaint.setColor(Color.MAGENTA);
+        canvas.drawRect(0, 0, 1280, 1080, mPaint);
+        mPaint.setStrokeWidth(2); // Reset stroke width for other elements
+
+        drawHearts(canvas, 20, 20);
+        drawMagicBar(canvas, 20, 150);
+        drawOilBar(canvas, 340, 150);
+        drawOxygenBar(canvas, 660, 150);
         
-        drawRupeeCounter(canvas, 100, 750);
+        drawRupeeCounter(canvas, 20, 1040);
+        drawLightDrops(canvas, 280, 1040);
         
-        drawItems(canvas, 950, 80);
+        drawItems(canvas, 980, 40);
         
         // Minimap
-        drawMiniMap(canvas, 340, 320);
+        drawMiniMap(canvas, 20, 210);
         
-        // Context Labels (A / B / Z / X / Y Buttons)
-        drawContextButtons(canvas, 640, 960);
+        // Context Labels (A / B / Z / X / Y Buttons) in a vertical row to the right of the minimap
+        drawContextButtons(canvas, 820, 280);
         
-        drawStatusInfo(canvas, 640, 1040);
+        drawStatusInfo(canvas, 1100, 1040);
 
         canvas.restore();
     }
@@ -191,6 +199,15 @@ public class HudView extends View {
         canvas.drawText("◆ " + mState.rupees, x, y, mPaint);
     }
 
+    private void drawLightDrops(Canvas canvas, float x, float y) {
+        if (!mState.showLightDrops || mState.maxLightDrops <= 0) return;
+        mPaint.setStyle(Paint.Style.FILL);
+        mPaint.setColor(Color.rgb(200, 200, 255));
+        mPaint.setTextSize(55);
+        mPaint.setTextAlign(Paint.Align.LEFT);
+        canvas.drawText("◌ " + mState.lightDrops + " / " + mState.maxLightDrops, x, y, mPaint);
+    }
+
     private void drawItems(Canvas canvas, float x, float y) {
         mPaint.setTextSize(38);
         mPaint.setTextAlign(Paint.Align.LEFT);
@@ -200,84 +217,127 @@ public class HudView extends View {
         canvas.drawText("Keys:   " + mState.keys, x, y + 90, mPaint);
     }
 
-    private void drawContextButtons(Canvas canvas, float centerX, float centerY) {
+    private void drawContextButtons(Canvas canvas, float x, float startY) {
         mPaint.setTextSize(42);
+        float spacing = 110;
         
-        // Midna (Z) Button - Top Left
-        if (mState.buttonZText != null && !mState.buttonZText.isEmpty()) {
-            float zX = centerX - 250;
-            float zY = centerY - 120;
-            drawActionButton(canvas, zX, zY, "Z", Color.argb(255, 100, 200, 255), mState.buttonZText);
-        }
+        // D-Pad Up (Map/Context)
+        boolean dUpActive = mState.dPadText != null && !mState.dPadText.isEmpty();
+        drawActionButton(canvas, x, startY, "D↑", Color.rgb(150, 150, 255), mState.dPadText, dUpActive);
 
-        // A Button - Bottom Left
-        if (mState.buttonAText != null && !mState.buttonAText.isEmpty()) {
-            drawActionButton(canvas, centerX - 250, centerY, "A", Color.rgb(0, 200, 50), mState.buttonAText);
-        }
+        // Z (Midna)
+        boolean zActive = mState.buttonZText != null && !mState.buttonZText.isEmpty();
+        drawActionButton(canvas, x, startY + spacing, "Z", Color.argb(255, 100, 200, 255), mState.buttonZText, zActive);
+
+        // A
+        boolean aActive = mState.buttonAText != null && !mState.buttonAText.isEmpty();
+        drawActionButton(canvas, x, startY + spacing * 2, "A", Color.rgb(0, 200, 50), mState.buttonAText, aActive);
         
-        // B Button - Bottom Right
-        if (mState.buttonBText != null && !mState.buttonBText.isEmpty()) {
-            drawActionButton(canvas, centerX + 150, centerY, "B", Color.RED, mState.buttonBText);
-        }
+        // B
+        boolean bActive = mState.buttonBText != null && !mState.buttonBText.isEmpty();
+        drawActionButton(canvas, x, startY + spacing * 3, "B", Color.RED, mState.buttonBText, bActive);
 
-        // Y Button - Inner Top Right
-        float xY = centerY - 120;
+        // Y
         String yText = mState.buttonYText;
         if (yText == null || yText.isEmpty()) {
             yText = getItemName(mState.itemYResId);
             if (mState.itemYCount > 0) yText += " (" + mState.itemYCount + ")";
         }
-        drawActionButton(canvas, centerX + 150, xY, "Y", Color.rgb(255, 255, 0), yText);
+        boolean yActive = mState.itemYResId != 0xFF || (mState.buttonYText != null && !mState.buttonYText.isEmpty());
+        drawActionButton(canvas, x, startY + spacing * 4, "Y", Color.rgb(255, 255, 0), yText, yActive);
 
-        // X Button - Outer Top Right
+        // X
         String xText = mState.buttonXText;
         if (xText == null || xText.isEmpty()) {
             xText = getItemName(mState.itemXResId);
             if (mState.itemXCount > 0) xText += " (" + mState.itemXCount + ")";
         }
-        drawActionButton(canvas, centerX + 450, xY, "X", Color.rgb(255, 165, 0), xText);
+        boolean xActive = mState.itemXResId != 0xFF || (mState.buttonXText != null && !mState.buttonXText.isEmpty());
+        drawActionButton(canvas, x, startY + spacing * 5, "X", Color.rgb(255, 165, 0), xText, xActive);
+
+        // D-Pad Down item
+        String dDownText = getItemName(mState.itemDDownId);
+        if (mState.itemDDownCount > 0) dDownText += " (" + mState.itemDDownCount + ")";
+        boolean dDownActive = mState.itemDDownId != 0xFF;
+        drawActionButton(canvas, x, startY + spacing * 6, "D↓", Color.rgb(200, 200, 200), dDownText, dDownActive);
     }
 
-    private void drawActionButton(Canvas canvas, float x, float y, String label, int color, String text) {
+    private void drawActionButton(Canvas canvas, float x, float y, String label, int color, String text, boolean active) {
         mPaint.setTextAlign(Paint.Align.CENTER);
         mPaint.setStyle(Paint.Style.FILL);
-        mPaint.setColor(color);
+        
+        if (active) {
+            mPaint.setColor(color);
+        } else {
+            mPaint.setColor(Color.argb(60, 100, 100, 100));
+        }
+        
         canvas.drawCircle(x, y, 38, mPaint);
-        mPaint.setColor(Color.BLACK);
-        if (color == Color.RED || color == Color.BLACK) mPaint.setColor(Color.WHITE);
+        
+        if (active) {
+            mPaint.setColor(Color.BLACK);
+            if (color == Color.RED || color == Color.BLACK) mPaint.setColor(Color.WHITE);
+        } else {
+            mPaint.setColor(Color.argb(100, 200, 200, 200));
+        }
+        
         canvas.drawText(label, x, y + 15, mPaint);
         
-        mPaint.setColor(Color.WHITE);
         mPaint.setTextAlign(Paint.Align.LEFT);
-        if (text != null) {
+        if (active && text != null && !text.isEmpty() && !text.equals("None")) {
+            mPaint.setColor(Color.WHITE);
             canvas.drawText(text, x + 50, y + 15, mPaint);
+        } else if (!active) {
+             mPaint.setColor(Color.argb(60, 150, 150, 150));
+             // Optional: draw "Disabled" or something? User didn't ask for it.
         }
     }
 
     private String getItemName(int id) {
         switch(id) {
-            case 0x46: return "Bow";
-            case 0x47: return "Hookshot";
-            case 0x41: return "Boomerang";
-            case 0x49: return "Iron Ball";
-            case 0x4B: return "Copy Rod";
-            case 0x48: return "Heavy Boots";
-            case 0x42: return "Spinner";
-            case 0x4C: return "Lantern";
-            case 0x5E: return "Bomb";
-            case 0x5F: return "Water Bomb";
-            case 0x60: return "Bombling";
-            case 0x32: return "Slingshot";
-            case 0x64: return "Bottle";
-            case 0x86: return "Fishing Rod";
-            case 0x93: return "Horse Flute";
+            case 0x43: return "Bow";
+            case 0x44: return "Hookshot";
+            case 0x47: return "Double Hookshot";
+            case 0x40: return "Boomerang";
+            case 0x42: return "Ball and Chain";
+            case 0x46: return "Copy Rod";
+            case 0x45: return "Iron Boots";
+            case 0x41: return "Spinner";
+            case 0x48: return "Lantern";
+            case 0x4A: return "Fishing Rod";
+            case 0x4B: return "Slingshot";
+            case 0x3E: return "Hawk Eye";
+            case 0x70: return "Bombs";
+            case 0x71: return "Water Bombs";
+            case 0x72: return "Bomblings";
+            case 0x84: return "Horse Flute";
+            case 0x60: return "Empty Bottle";
+            case 0x61: return "Red Potion";
+            case 0x62: return "Green Potion";
+            case 0x63: return "Blue Potion";
+            case 0x64: return "Milk";
+            case 0x65: return "Half Milk";
+            case 0x66: return "Oil";
+            case 0x67: return "Water";
+            case 0x6A: return "Ugly Soup";
+            case 0x6B: return "Hot Spring Water";
+            case 0x6C: return "Fairy";
+            case 0x73: return "Fairy Drop";
+            case 0x77: return "Rare Chu Jelly";
+            case 0x78: return "Red Chu Jelly";
+            case 0x79: return "Blue Chu Jelly";
+            case 0x7A: return "Green Chu Jelly";
+            case 0x7B: return "Yellow Chu Jelly";
+            case 0x7C: return "Purple Chu Jelly";
+            case 0x9C: return "Yellow Chu Jelly";
+            case 0x9F: return "Black Chu Jelly";
             case 0xFF: return "None";
             default: return "Item " + String.format("0x%02X", id);
         }
     }
 
     private void drawMiniMap(Canvas canvas, float x, float y) {
-        float mapSize = 600; 
+        float mapSize = 720;
         mPaint.setStyle(Paint.Style.FILL);
         mPaint.setColor(Color.argb(120, 15, 15, 50));
         canvas.drawRect(x, y, x + mapSize, y + mapSize, mPaint);
@@ -345,19 +405,28 @@ public class HudView extends View {
         mPaint.setTextSize(32);
         mPaint.setColor(Color.WHITE);
         mPaint.setTextAlign(Paint.Align.CENTER);
-        canvas.drawText(mState.stageName + " - Room " + mState.roomNo, x + mapSize/2, y - 18, mPaint);
+        canvas.drawText(mState.stageName, x + mapSize/2, y + mapSize + 40, mPaint);
     }
 
     private void drawMapIcon(Canvas canvas, float x, float y, int type, int status) {
         mPaint.setStyle(Paint.Style.FILL);
         switch (type) {
-            case 12: // Chest
+            case 0: // Chest
+            case 10: // Field Chest
                 mPaint.setColor(status == 0 ? Color.YELLOW : Color.GRAY);
-                canvas.drawRect(x - 7, y - 7, x + 7, y + 7, mPaint);
+                canvas.drawRect(x - 8, y - 8, x + 8, y + 8, mPaint);
                 break;
-            case 4: // Boss
+            case 4: // Light Drop
+                mPaint.setColor(Color.rgb(100, 150, 255));
+                canvas.drawCircle(x, y, 6, mPaint);
+                break;
+            case 3: // Boss
                 mPaint.setColor(Color.RED);
-                canvas.drawCircle(x, y, 12, mPaint);
+                canvas.drawCircle(x, y, 14, mPaint);
+                break;
+            case 2: // Heart Piece
+                mPaint.setColor(Color.rgb(255, 100, 100));
+                canvas.drawCircle(x, y, 8, mPaint);
                 break;
             default:
                 mPaint.setColor(Color.WHITE);

@@ -1594,7 +1594,7 @@ void dMeter2Draw_c::drawLife(s16 i_maxLife, s16 i_life, f32 i_posX, f32 i_posY) 
     f32 lifePosY = i_posY;
     // The heart row sits inset from its box's left edge, so use a partial horizontal pull
     // to keep it from jamming against the screen edge.
-    dAnchorHudScale(mpLifeParent, HudCorner::TopLeft, &lifePosX, &lifePosY, 0.6f);
+    dAnchorHudScale(mpLifeParent, HudCorner::TopLeft, &lifePosX, &lifePosY, 1.0f);
     mpLifeParent->paneTrans(lifePosX, lifePosY);
 #else
     mpLifeParent->paneTrans(i_posX, i_posY);
@@ -1720,7 +1720,7 @@ void dMeter2Draw_c::drawKanteraScreen(u8 i_meterType) {
     f32 magicPosY = field_0x5f0[i_meterType];
     // The oil/magic bar sits inset within its pane box, so use a reduced horizontal pull
     // (like the heart row) to keep it from overshooting off the left edge when shrunk.
-    dAnchorHudScale(mpMagicParent, HudCorner::TopLeft, &magicPosX, &magicPosY, 0.3f);
+    dAnchorHudScale(mpMagicParent, HudCorner::TopLeft, &magicPosX, &magicPosY, 1.0f);
     mpMagicParent->paneTrans(magicPosX, magicPosY);
 #else
     mpMagicParent->scale(field_0x5cc[i_meterType], field_0x5d8[i_meterType]);

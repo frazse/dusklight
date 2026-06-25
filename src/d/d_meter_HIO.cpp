@@ -1645,8 +1645,8 @@ dMeter_drawHIO_c::dMeter_drawHIO_c() {
     #if DEBUG
     field_0x8_debug = 0;
     #endif
-    mLifeTopPosX = 40.0f;
-    mLifeTopPosY = -5.6f;
+    mLifeTopPosX = 20.0f;
+    mLifeTopPosY = 10.0f;
 
     mNoMagicPosY = -15.0f;
 
