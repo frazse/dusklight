@@ -17,13 +17,7 @@ public class GameState {
     public final int itemXResId, itemYResId, itemXCount, itemYCount;
     public final int itemDDownId, itemDDownCount, itemDLeftId, itemDLeftCount, itemDRightId, itemDRightCount;
 
-    /**
-     * Constructor for the "Data Packet" approach.
-     * i: Packed Integers (Stats, Item IDs, Action IDs, Visibility)
-     * f: Packed Floats (Player Map Coordinates)
-     */
     public GameState(int[] i, float[] f, String stageName, float[] lines, float[] icons, float[] doors) {
-        // 1. Unpack Stats
         this.health = i[0];     this.maxHealth = i[1];
         this.magic  = i[2];     this.maxMagic  = i[3];
         this.oil    = i[4];     this.maxOil    = i[5];
@@ -35,34 +29,35 @@ public class GameState {
         this.showLightDrops = i[16] != 0;
         this.midnaCalling = i[27] != 0;
         
-        // 2. Unpack Item Info
         this.itemXResId = i[17];    this.itemYResId = i[18];
         this.itemXCount = i[19];    this.itemYCount = i[20];
         this.itemDDownId = i[21];   this.itemDDownCount = i[22];
         this.itemDLeftId = i[23];   this.itemDLeftCount = i[24];
         this.itemDRightId = i[25];  this.itemDRightCount = i[26];
 
-        // 3. Unpack Action Labels using ID Lookup
-        int vis = i[39]; // Visibility Bitmask (A=1, B=2, Z=4, R=8, X=16, Y=32)
+        int stateFlags = i[31];
+        boolean targeting = (stateFlags & 1) != 0;
+        boolean swimming = (stateFlags & 2) != 0;
+        boolean riding = (stateFlags & 4) != 0;
 
-        this.buttonAText = ((vis & 1) != 0) ? getActionLabel(i[28]) : "";
-        this.buttonBText = ((vis & 2) != 0) ? getActionLabel(i[29]) : "";
+        int vis = i[39];
+        this.buttonAText = ((vis & 1) != 0) ? getActionLabel(i[28], swimming, riding, transform) : "";
+        this.buttonBText = ((vis & 2) != 0) ? getActionLabel(i[29], swimming, riding, transform) : "";
         
-        String zText = getActionLabel(i[30]);
+        String zText = getActionLabel(i[30], swimming, riding, transform);
         if (zText.isEmpty()) zText = "Midna";
         this.buttonZText = ((vis & 4) != 0) ? zText : "";
 
-        this.buttonLText = (i[31] != 0) ? "Target" : "";
-        this.buttonRText = ((vis & 8) != 0) ? getActionLabel(i[32]) : "";
-        this.buttonXText = ((vis & 16) != 0) ? getActionLabel(i[33]) : "";
-        this.buttonYText = ((vis & 32) != 0) ? getActionLabel(i[34]) : "";
+        this.buttonLText = targeting ? "Target" : "";
+        this.buttonRText = ((vis & 8) != 0) ? getActionLabel(i[32], swimming, riding, transform) : "";
+        this.buttonXText = ((vis & 16) != 0) ? getActionLabel(i[33], swimming, riding, transform) : "";
+        this.buttonYText = ((vis & 32) != 0) ? getActionLabel(i[34], swimming, riding, transform) : "";
 
-        this.dPadUpText    = getActionLabel(i[35]);
-        this.dPadDownText  = getActionLabel(i[36]);
-        this.dPadLeftText  = getActionLabel(i[37]);
-        this.dPadRightText = getActionLabel(i[38]);
+        this.dPadUpText    = getActionLabel(i[35], swimming, riding, transform);
+        this.dPadDownText  = getActionLabel(i[36], swimming, riding, transform);
+        this.dPadLeftText  = getActionLabel(i[37], swimming, riding, transform);
+        this.dPadRightText = getActionLabel(i[38], swimming, riding, transform);
 
-        // 4. Unpack Map Floats
         this.mapX = f[0]; this.mapY = f[1]; this.mapAngle = f[2];
         this.mapMinX = f[3]; this.mapMinZ = f[4]; this.mapMaxX = f[5]; this.mapMaxZ = f[6];
 
@@ -72,10 +67,10 @@ public class GameState {
         this.mapDoors = doors;
     }
 
-    private String getActionLabel(int id) {
+    private String getActionLabel(int id, boolean isSwimming, boolean isRiding, int wolfForm) {
         if (id == 0) return "";
         switch (id) {
-            case 0x01: return "Action"; // Generic Action (Talk/Open/Let Go)
+            case 0x01: return "Action";
             case 0x02: return "Peek";
             case 0x03: return "Attack";
             case 0x04: return "Put Away";
@@ -83,7 +78,11 @@ public class GameState {
             case 0x06: return "Open";
             case 0x07: return "Enter";
             case 0x08: return "Check";
-            case 0x09: return "Roll";
+            case 0x09: // Generic Dash/Roll
+                if (isSwimming) return "Dash";
+                if (isRiding) return "Hurry";
+                if (wolfForm == 1) return "Dash";
+                return "Roll";
             case 0x0A: return "Crouch";
             case 0x0B: return "Defend";
             case 0x0C: return "Pick Up";
@@ -122,7 +121,7 @@ public class GameState {
             case 0x30: return "Finish";
             case 0x31: return "Set Free";
             case 0x32: return "Dismount";
-            case 0x33: return "Let Go"; // Was "Drop Down", but "Let Go" is more common for this ID
+            case 0x33: return "Let Go";
             case 0x35: return "Take";
             case 0x36: return "Hurry";
             case 0x37: return "Pull Down";

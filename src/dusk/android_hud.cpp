@@ -119,7 +119,12 @@ void hud_update() {
     iData[30] = dComIfGp_getZStatus();
 
     dAttention_c* attn = dComIfGp_getAttention();
-    iData[31] = (attn && attn->GetLockonCount() > 0) ? 1 : 0; // Target
+    daPy_py_c* player = dComIfGp_getLinkPlayer();
+    int stateFlags = 0;
+    if (attn && attn->GetLockonCount() > 0) stateFlags |= 1; // Targeting
+    if (player && (player->checkWaterInMove() || player->checkSwimUp())) stateFlags |= 2; // Swimming
+    if (player && player->checkHorseRide()) stateFlags |= 4; // Riding
+    iData[31] = stateFlags;
 
     iData[32] = dComIfGp_getRStatus();
     iData[33] = dComIfGp_getXStatus();
