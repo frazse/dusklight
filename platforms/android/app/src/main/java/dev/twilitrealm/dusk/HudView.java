@@ -7,6 +7,7 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 
 public class HudView extends View {
@@ -17,6 +18,12 @@ public class HudView extends View {
     private final Path mDrawPath = new Path();
     private boolean mSizeLogged = false;
 
+    // Map Zoom State
+    private int mMapZoomLevel = 0; // 0: Fit, 1: 2x, 2: 4x, 3: 8x
+    private final float MAP_X = 20;
+    private final float MAP_Y = 210;
+    private final float MAP_SIZE = 720;
+
     public HudView(Context context) {
         super(context);
     }
@@ -24,6 +31,33 @@ public class HudView extends View {
     public void update(GameState state) {
         mState = state;
         invalidate();
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        if (event.getAction() == MotionEvent.ACTION_DOWN) {
+            float tx = event.getX();
+            float ty = event.getY();
+
+            // Reverse the workspace scaling/translation logic from onDraw
+            float scaleX = (float) getWidth() / 1280.0f;
+            float scaleY = (float) getHeight() / 1080.0f;
+            float scale = Math.min(scaleX, scaleY);
+            float translateX = (getWidth() - 1280 * scale) / 2;
+            float translateY = (getHeight() - 1080 * scale) / 2;
+
+            float logicalX = (tx - translateX) / scale;
+            float logicalY = (ty - translateY) / scale;
+
+            // Check if tap is inside minimap bounds
+            if (logicalX >= MAP_X && logicalX <= MAP_X + MAP_SIZE &&
+                logicalY >= MAP_Y && logicalY <= MAP_Y + MAP_SIZE) {
+                mMapZoomLevel = (mMapZoomLevel + 1) % 4;
+                invalidate();
+                return true;
+            }
+        }
+        return super.onTouchEvent(event);
     }
 
     @Override
@@ -76,7 +110,7 @@ public class HudView extends View {
         drawItems(canvas, 1260, 40);
         
         // Minimap
-        drawMiniMap(canvas, 20, 210);
+        drawMiniMap(canvas, MAP_X, MAP_Y);
         
         // Context Labels (A / B / Z / L / X / Y) in a vertical row to the right of the minimap
         drawContextButtons(canvas, 820, 280);
@@ -368,27 +402,43 @@ public class HudView extends View {
     }
 
     private void drawMiniMap(Canvas canvas, float x, float y) {
-        float mapSize = 720;
         mPaint.setStyle(Paint.Style.FILL);
         mPaint.setColor(Color.argb(120, 15, 15, 50));
-        canvas.drawRect(x, y, x + mapSize, y + mapSize, mPaint);
+        canvas.drawRect(x, y, x + MAP_SIZE, y + MAP_SIZE, mPaint);
         mPaint.setStyle(Paint.Style.STROKE);
         mPaint.setStrokeWidth(3);
         mPaint.setColor(Color.WHITE);
-        canvas.drawRect(x, y, x + mapSize, y + mapSize, mPaint);
+        canvas.drawRect(x, y, x + MAP_SIZE, y + MAP_SIZE, mPaint);
 
         if (mState.mapMaxX <= mState.mapMinX || mState.mapMaxZ <= mState.mapMinZ) return;
+        
         float stageW = mState.mapMaxX - mState.mapMinX;
         float stageH = mState.mapMaxZ - mState.mapMinZ;
-        float paddedSize = mapSize * 0.92f;
-        float mapScale = paddedSize / Math.max(stageW, stageH);
-        float centerX = x + mapSize / 2;
-        float centerY = y + mapSize / 2;
-        float stageCenterX = (mState.mapMaxX + mState.mapMinX) / 2f;
-        float stageCenterZ = (mState.mapMaxZ + mState.mapMinZ) / 2f;
+        float paddedSize = MAP_SIZE * 0.92f;
+        float baseScale = paddedSize / Math.max(stageW, stageH);
+        
+        float mapScale;
+        float stageCenterX;
+        float stageCenterZ;
+
+        if (mMapZoomLevel > 0) {
+            // Zoomed levels (2x, 4x, 8x) - center on Link
+            mapScale = baseScale * (float) Math.pow(2, mMapZoomLevel);
+            stageCenterX = mState.mapX;
+            stageCenterZ = mState.mapY; // mapY is actually Z in 3D
+        } else {
+            // Default level (0) - center on room
+            mapScale = baseScale;
+            stageCenterX = (mState.mapMaxX + mState.mapMinX) / 2f;
+            stageCenterZ = (mState.mapMaxZ + mState.mapMinZ) / 2f;
+        }
+
+        float centerX = x + MAP_SIZE / 2;
+        float centerY = y + MAP_SIZE / 2;
 
         canvas.save();
-        canvas.clipRect(x, y, x + mapSize, y + mapSize);
+        canvas.clipRect(x, y, x + MAP_SIZE, y + MAP_SIZE);
+        
         if (mState.mapLines != null && mState.mapLines.length > 1) {
             mPaint.setStyle(Paint.Style.STROKE);
             mPaint.setColor(Color.CYAN);
@@ -406,6 +456,7 @@ public class HudView extends View {
             }
             canvas.drawPath(mDrawPath, mPaint);
         }
+        
         if (mState.mapDoors != null) {
             for (int i = 0; i < mState.mapDoors.length; i += 4) {
                 float dx = mState.mapDoors[i];
@@ -417,6 +468,7 @@ public class HudView extends View {
                 drawDoorIcon(canvas, doorScreenX, doorScreenY, angle, type);
             }
         }
+        
         if (mState.mapIcons != null) {
             for (int i = 0; i < mState.mapIcons.length; i += 4) {
                 int type = (int)mState.mapIcons[i];
@@ -428,10 +480,13 @@ public class HudView extends View {
                 drawMapIcon(canvas, iconScreenX, iconScreenY, type, status);
             }
         }
-        float playerX = centerX + (mState.mapX - stageCenterX) * mapScale;
-        float playerY = centerY + (mState.mapY - stageCenterZ) * mapScale;
+
+        // Player Arrow (Oriented north as per request)
+        float playerScreenX = centerX + (mState.mapX - stageCenterX) * mapScale;
+        float playerScreenY = centerY + (mState.mapY - stageCenterZ) * mapScale;
+        
         canvas.save();
-        canvas.translate(playerX, playerY);
+        canvas.translate(playerScreenX, playerScreenY);
         canvas.rotate(180 - mState.mapAngle); 
         mPaint.setStyle(Paint.Style.FILL);
         mPaint.setColor(Color.YELLOW);
@@ -442,12 +497,15 @@ public class HudView extends View {
         mDrawPath.close();
         canvas.drawPath(mDrawPath, mPaint);
         canvas.restore();
+        
         canvas.restore();
         
+        // Stage Info and Zoom Indicator
         mPaint.setTextSize(32);
         mPaint.setColor(Color.WHITE);
         mPaint.setTextAlign(Paint.Align.CENTER);
-        canvas.drawText(mState.stageName, x + mapSize/2, y + mapSize + 40, mPaint);
+        String zoomText = (mMapZoomLevel == 0) ? "" : " (" + (1 << mMapZoomLevel) + "x)";
+        canvas.drawText(mState.stageName + zoomText, x + MAP_SIZE/2, y + MAP_SIZE + 40, mPaint);
     }
 
     private void drawDoorIcon(Canvas canvas, float x, float y, float angle, int type) {
