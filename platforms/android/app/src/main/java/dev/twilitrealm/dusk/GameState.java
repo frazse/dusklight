@@ -75,7 +75,7 @@ public class GameState {
     private String getActionLabel(int id) {
         if (id == 0) return "";
         switch (id) {
-            case 0x01: return "Talk";
+            case 0x01: return "Action"; // Generic Action (Talk/Open/Let Go)
             case 0x02: return "Peek";
             case 0x03: return "Attack";
             case 0x04: return "Put Away";
@@ -106,6 +106,7 @@ public class GameState {
             case 0x1D: return "Lift";
             case 0x1E: return "Swing";
             case 0x1F: return "Dig";
+            case 0x20: return "Jump";
             case 0x22: return "Confirm";
             case 0x23: return "Next";
             case 0x24: return "Info";
@@ -121,7 +122,7 @@ public class GameState {
             case 0x30: return "Finish";
             case 0x31: return "Set Free";
             case 0x32: return "Dismount";
-            case 0x33: return "Drop Down";
+            case 0x33: return "Let Go"; // Was "Drop Down", but "Let Go" is more common for this ID
             case 0x35: return "Take";
             case 0x36: return "Hurry";
             case 0x37: return "Pull Down";
