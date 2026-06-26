@@ -161,9 +161,9 @@ void hud_update() {
             env->DeleteLocalRef(activity);
             return;
         }
-        // Updated signature for X/Y buttons and items
+        // Updated signature for X/Y buttons, items, and L button
         s_onGameStateUpdate = env->GetMethodID(
-            cls, "onGameStateUpdate", "(IIIIIIIIIIIIIIIFFILjava/lang/String;I[F[FFFFFFLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIIILjava/lang/String;III)V");
+            cls, "onGameStateUpdate", "(IIIIIIIIIIIIIIIFFILjava/lang/String;I[F[FFFFFFLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIIILjava/lang/String;III)V");
         env->DeleteLocalRef(cls);
         if (s_onGameStateUpdate == nullptr || clear_pending_exception(env)) {
             env->DeleteLocalRef(activity);
@@ -316,6 +316,7 @@ void hud_update() {
     std::string buttonAText = "";
     std::string buttonBText = "";
     std::string buttonZText = "";
+    std::string buttonLText = "";
     std::string buttonXText = "";
     std::string buttonYText = "";
 
@@ -327,10 +328,24 @@ void hud_update() {
     }
     if (dMeter2Info_isUseButton(METER2_USEBUTTON_Z)) {
         u8 zStatus = dComIfGp_getZStatus();
-        buttonZText = get_action_text(zStatus);
-        if (buttonZText.empty() && (zStatus == 0x2D || zStatus == 0x2E)) {
+
+        // Contextual Z button: usually Midna
+        // Status 0x2F (Hint) and 0x08 (Check) specifically show her icon.
+        // Status 0 (None) also shows her icon if the button is enabled.
+        if (zStatus == 0x2F || zStatus == 0x08 || zStatus == 0) {
             buttonZText = "Midna";
+        } else {
+            buttonZText = get_action_text(zStatus);
+            if (buttonZText.empty()) {
+                buttonZText = "Midna";
+            }
         }
+    }
+
+    // Contextual L button for targeting
+    dAttention_c* attn = dComIfGp_getAttention();
+    if (attn != nullptr && attn->GetLockonCount() > 0) {
+        buttonLText = "Target";
     }
     if (dMeter2Info_isUseButton(METER2_USEBUTTON_X)) {
         buttonXText = get_action_text(dComIfGp_getXStatus());
@@ -367,6 +382,7 @@ void hud_update() {
     jstring jButtonA = env->NewStringUTF(buttonAText.c_str());
     jstring jButtonB = env->NewStringUTF(buttonBText.c_str());
     jstring jButtonZ = env->NewStringUTF(buttonZText.c_str());
+    jstring jButtonL = env->NewStringUTF(buttonLText.c_str());
     jstring jButtonX = env->NewStringUTF(buttonXText.c_str());
     jstring jButtonY = env->NewStringUTF(buttonYText.c_str());
     jstring jDPadText = env->NewStringUTF(dPadText.c_str());
@@ -382,7 +398,7 @@ void hud_update() {
         transform,
         jStageName, stayNo, jLines, jIcons, mapAngle,
         minX, minZ, maxX, maxZ,
-        jButtonA, jButtonB, jButtonZ, jButtonX, jButtonY,
+        jButtonA, jButtonB, jButtonZ, jButtonL, jButtonX, jButtonY,
         itemXId, itemYId, itemXCount, itemYCount,
         jDPadText, dPadDirection, itemDDownId, itemDDownCount);
 
@@ -392,6 +408,7 @@ void hud_update() {
     if (jButtonA) env->DeleteLocalRef(jButtonA);
     if (jButtonB) env->DeleteLocalRef(jButtonB);
     if (jButtonZ) env->DeleteLocalRef(jButtonZ);
+    if (jButtonL) env->DeleteLocalRef(jButtonL);
     if (jButtonX) env->DeleteLocalRef(jButtonX);
     if (jButtonY) env->DeleteLocalRef(jButtonY);
 

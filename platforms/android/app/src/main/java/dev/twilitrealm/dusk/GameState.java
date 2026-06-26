@@ -30,6 +30,8 @@ public class GameState {
     public final String buttonAText;
     public final String buttonBText;
     public final String buttonZText;
+    public final boolean midnaCalling;
+    public final String buttonLText;
     public final String buttonXText;
     public final String buttonYText;
     
@@ -55,8 +57,8 @@ public class GameState {
                      String stageName, int roomNo, float[] mapLines,
                      float[] mapIcons, float mapAngle,
                      float mapMinX, float mapMinZ, float mapMaxX, float mapMaxZ,
-                     String buttonAText, String buttonBText, String buttonZText,
-                     String buttonXText, String buttonYText,
+                     String buttonAText, String buttonBText, String buttonZText, boolean midnaCalling,
+                     String buttonLText, String buttonXText, String buttonYText,
                      int itemXResId, int itemYResId, int itemXCount, int itemYCount,
                      String dPadText, int dPadDirection, int itemDDownId, int itemDDownCount) {
         this.health = health;
@@ -89,6 +91,8 @@ public class GameState {
         this.buttonAText = buttonAText;
         this.buttonBText = buttonBText;
         this.buttonZText = buttonZText;
+        this.midnaCalling = midnaCalling;
+        this.buttonLText = buttonLText;
         this.buttonXText = buttonXText;
         this.buttonYText = buttonYText;
         this.itemXResId = itemXResId;

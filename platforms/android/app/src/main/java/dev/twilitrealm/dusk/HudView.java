@@ -84,6 +84,10 @@ public class HudView extends View {
         drawStatusInfo(canvas, 1100, 1040);
 
         canvas.restore();
+
+        if (mState.buttonZText != null && mState.buttonZText.equals("Midna")) {
+            postInvalidateOnAnimation();
+        }
     }
 
     private void drawHearts(Canvas canvas, float startX, float startY) {
@@ -219,23 +223,27 @@ public class HudView extends View {
 
     private void drawContextButtons(Canvas canvas, float x, float startY) {
         mPaint.setTextSize(42);
-        float spacing = 110;
+        float spacing = 95;
         
         // D-Pad Up (Map/Context)
         boolean dUpActive = mState.dPadText != null && !mState.dPadText.isEmpty();
         drawActionButton(canvas, x, startY, "D↑", Color.rgb(150, 150, 255), mState.dPadText, dUpActive);
 
+        // L (Target)
+        boolean lActive = mState.buttonLText != null && !mState.buttonLText.isEmpty();
+        drawActionButton(canvas, x, startY + spacing, "L", Color.rgb(200, 200, 200), mState.buttonLText, lActive);
+
         // Z (Midna)
         boolean zActive = mState.buttonZText != null && !mState.buttonZText.isEmpty();
-        drawActionButton(canvas, x, startY + spacing, "Z", Color.argb(255, 100, 200, 255), mState.buttonZText, zActive);
+        drawActionButton(canvas, x, startY + spacing * 2, "Z", Color.argb(255, 100, 200, 255), mState.buttonZText, zActive);
 
         // A
         boolean aActive = mState.buttonAText != null && !mState.buttonAText.isEmpty();
-        drawActionButton(canvas, x, startY + spacing * 2, "A", Color.rgb(0, 200, 50), mState.buttonAText, aActive);
+        drawActionButton(canvas, x, startY + spacing * 3, "A", Color.rgb(0, 200, 50), mState.buttonAText, aActive);
         
         // B
         boolean bActive = mState.buttonBText != null && !mState.buttonBText.isEmpty();
-        drawActionButton(canvas, x, startY + spacing * 3, "B", Color.RED, mState.buttonBText, bActive);
+        drawActionButton(canvas, x, startY + spacing * 4, "B", Color.RED, mState.buttonBText, bActive);
 
         // Y
         String yText = mState.buttonYText;
@@ -244,7 +252,7 @@ public class HudView extends View {
             if (mState.itemYCount > 0) yText += " (" + mState.itemYCount + ")";
         }
         boolean yActive = mState.itemYResId != 0xFF || (mState.buttonYText != null && !mState.buttonYText.isEmpty());
-        drawActionButton(canvas, x, startY + spacing * 4, "Y", Color.rgb(255, 255, 0), yText, yActive);
+        drawActionButton(canvas, x, startY + spacing * 5, "Y", Color.rgb(255, 255, 0), yText, yActive);
 
         // X
         String xText = mState.buttonXText;
@@ -253,30 +261,47 @@ public class HudView extends View {
             if (mState.itemXCount > 0) xText += " (" + mState.itemXCount + ")";
         }
         boolean xActive = mState.itemXResId != 0xFF || (mState.buttonXText != null && !mState.buttonXText.isEmpty());
-        drawActionButton(canvas, x, startY + spacing * 5, "X", Color.rgb(255, 165, 0), xText, xActive);
+        drawActionButton(canvas, x, startY + spacing * 6, "X", Color.rgb(255, 165, 0), xText, xActive);
 
         // D-Pad Down item
         String dDownText = getItemName(mState.itemDDownId);
         if (mState.itemDDownCount > 0) dDownText += " (" + mState.itemDDownCount + ")";
         boolean dDownActive = mState.itemDDownId != 0xFF;
-        drawActionButton(canvas, x, startY + spacing * 6, "D↓", Color.rgb(200, 200, 200), dDownText, dDownActive);
+        drawActionButton(canvas, x, startY + spacing * 7, "D↓", Color.rgb(200, 200, 200), dDownText, dDownActive);
     }
 
     private void drawActionButton(Canvas canvas, float x, float y, String label, int color, String text, boolean active) {
         mPaint.setTextAlign(Paint.Align.CENTER);
         mPaint.setStyle(Paint.Style.FILL);
         
+        int drawColor = color;
+        boolean isMidna = active && "Midna".equals(text);
+        
+        if (isMidna) {
+            float pulse = (float)(Math.sin(System.currentTimeMillis() / 150.0) * 0.5 + 0.5);
+            // Pulse between Midna's orange and a brighter yellow
+            int r = 255;
+            int g = (int)(140 + 80 * pulse);
+            int b = (int)(30 * (1.0f - pulse));
+            drawColor = Color.rgb(r, g, b);
+        }
+
         if (active) {
-            mPaint.setColor(color);
+            mPaint.setColor(drawColor);
         } else {
             mPaint.setColor(Color.argb(60, 100, 100, 100));
         }
         
-        canvas.drawCircle(x, y, 38, mPaint);
+        float radius = 38;
+        if (isMidna) {
+            radius += 4 * (float)(Math.sin(System.currentTimeMillis() / 150.0) * 0.5 + 0.5);
+        }
+        canvas.drawCircle(x, y, radius, mPaint);
         
         if (active) {
             mPaint.setColor(Color.BLACK);
             if (color == Color.RED || color == Color.BLACK) mPaint.setColor(Color.WHITE);
+            if (isMidna) mPaint.setColor(Color.BLACK);
         } else {
             mPaint.setColor(Color.argb(100, 200, 200, 200));
         }
@@ -285,11 +310,17 @@ public class HudView extends View {
         
         mPaint.setTextAlign(Paint.Align.LEFT);
         if (active && text != null && !text.isEmpty() && !text.equals("None")) {
-            mPaint.setColor(Color.WHITE);
+            if (isMidna) {
+                mPaint.setColor(drawColor);
+                mPaint.setFakeBoldText(true);
+            } else {
+                mPaint.setColor(Color.WHITE);
+                mPaint.setFakeBoldText(false);
+            }
             canvas.drawText(text, x + 50, y + 15, mPaint);
+            mPaint.setFakeBoldText(false);
         } else if (!active) {
              mPaint.setColor(Color.argb(60, 150, 150, 150));
-             // Optional: draw "Disabled" or something? User didn't ask for it.
         }
     }
 
