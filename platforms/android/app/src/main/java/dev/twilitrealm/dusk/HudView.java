@@ -110,6 +110,8 @@ public class HudView extends View {
         
         mHeartPath.reset();
         float mid = size / 2;
+        float splitY = y + size * 0.62f; // Adjusted horizontal split down to reduce "top heavy" feel
+        
         mHeartPath.moveTo(x + mid, y + size * 0.35f);
         mHeartPath.cubicTo(x + size * 0.9f, y - size * 0.1f, x + size * 1.1f, y + size * 0.6f, x + mid, y + size);
         mHeartPath.cubicTo(x - size * 0.1f, y + size * 0.6f, x + size * 0.1f, y - size * 0.1f, x + mid, y + size * 0.35f);
@@ -127,19 +129,24 @@ public class HudView extends View {
             mPaint.setColor(Color.RED);
             canvas.save();
             canvas.clipPath(mHeartPath);
-            if (fill >= 1) canvas.drawRect(x, y, x + mid, y + mid, mPaint);
-            if (fill >= 2) canvas.drawRect(x, y + mid, x + mid, y + size, mPaint);
-            if (fill >= 3) canvas.drawRect(x + mid, y, x + size, y + mid, mPaint);
-            if (fill >= 4) canvas.drawRect(x + mid, y + mid, x + size, y + size, mPaint);
+            // Draw 4 quarters, using adjusted splitY
+            if (fill >= 1) canvas.drawRect(x - size * 0.2f, y - size * 0.2f, x + mid, splitY, mPaint);    // Top-Left
+            if (fill >= 2) canvas.drawRect(x - size * 0.2f, splitY, x + mid, y + size * 1.2f, mPaint);   // Bottom-Left
+            if (fill >= 3) canvas.drawRect(x + mid, y - size * 0.2f, x + size * 1.2f, splitY, mPaint);   // Top-Right
+            if (fill >= 4) canvas.drawRect(x + mid, splitY, x + size * 1.2f, y + size * 1.2f, mPaint);  // Bottom-Right
             canvas.restore();
+            
             mPaint.setStyle(Paint.Style.STROKE);
             mPaint.setColor(Color.WHITE);
             canvas.drawPath(mHeartPath, mPaint);
+            
             if (fill > 0 && fill < 4) {
                 mPaint.setColor(Color.argb(100, 255, 255, 255));
                 mPaint.setStrokeWidth(1);
-                canvas.drawLine(x + mid, y + size * 0.2f, x + mid, y + size * 0.9f, mPaint);
-                canvas.drawLine(x + size * 0.1f, y + mid, x + size * 0.9f, y + mid, mPaint);
+                // Vertical divider
+                canvas.drawLine(x + mid, y + size * 0.1f, x + mid, y + size * 0.95f, mPaint);
+                // Horizontal divider (using adjusted splitY)
+                canvas.drawLine(x + size * 0.1f, splitY, x + size * 0.9f, splitY, mPaint);
             }
         }
     }
