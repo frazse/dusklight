@@ -102,7 +102,10 @@ public class DuskActivity extends SDLActivity {
         String buttonAText, String buttonBText, String buttonZText, boolean midnaCalling,
         String buttonLText, String buttonXText, String buttonYText,
         int itemXResId, int itemYResId, int itemXCount, int itemYCount,
-        String dPadText, int dPadDirection, int itemDDownId, int itemDDownCount)
+        String dPadUpText, String dPadDownText, String dPadLeftText, String dPadRightText,
+        int itemDDownId, int itemDDownCount,
+        int itemDLeftId, int itemDLeftCount,
+        int itemDRightId, int itemDRightCount)
     {
         if (mSecondScreen == null) return;
         final GameState state = new GameState(
@@ -116,7 +119,10 @@ public class DuskActivity extends SDLActivity {
             buttonAText, buttonBText, buttonZText, midnaCalling,
             buttonLText, buttonXText, buttonYText,
             itemXResId, itemYResId, itemXCount, itemYCount,
-            dPadText, dPadDirection, itemDDownId, itemDDownCount);
+            dPadUpText, dPadDownText, dPadLeftText, dPadRightText,
+            itemDDownId, itemDDownCount,
+            itemDLeftId, itemDLeftCount,
+            itemDRightId, itemDRightCount);
         runOnUiThread(() -> mSecondScreen.updateHud(state));
     }
     // ── End second screen ────────────────────────────────────────────

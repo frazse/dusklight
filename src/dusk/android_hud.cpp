@@ -161,9 +161,9 @@ void hud_update() {
             env->DeleteLocalRef(activity);
             return;
         }
-        // Updated signature for X/Y buttons, items, L button, and Midna pulse
+        // Updated signature for X/Y buttons, items, L button, Midna pulse, and D-Pad directions
         s_onGameStateUpdate = env->GetMethodID(
-            cls, "onGameStateUpdate", "(IIIIIIIIIIIIIIIFFILjava/lang/String;I[F[FFFFFFLjava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;IIIILjava/lang/String;III)V");
+            cls, "onGameStateUpdate", "(IIIIIIIIIIIIIIIFFILjava/lang/String;I[F[FFFFFFLjava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;IIIILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIIIII)V");
         env->DeleteLocalRef(cls);
         if (s_onGameStateUpdate == nullptr || clear_pending_exception(env)) {
             env->DeleteLocalRef(activity);
@@ -362,19 +362,29 @@ void hud_update() {
 
     // D-Pad (Cross)
     int dPadStatus = static_cast<int>(dComIfGp_get3DStatus());
-    std::string dPadText = get_action_text(dPadStatus);
-    if (dPadText.empty() && dPadStatus == 0x6A) {
-        dPadText = "Map";
+    std::string dPadPromptText = get_action_text(dPadStatus);
+    if (dPadPromptText.empty() && dPadStatus == 0x6A) {
+        dPadPromptText = "Map";
     }
     int dPadDirection = static_cast<int>(dComIfGp_get3DDirection());
 
-    // Equipped Items
+    std::string dPadUpText = (dPadDirection & 8) ? dPadPromptText : "";
+    std::string dPadDownText = (dPadDirection & 2) ? dPadPromptText : "";
+    std::string dPadLeftText = (dPadDirection & 1) ? dPadPromptText : "";
+    std::string dPadRightText = (dPadDirection & 4) ? dPadPromptText : "";
+
+    // Equipped Items (Slots: 0=Left, 1=Right, 2=Down)
     int itemXId = static_cast<int>(dComIfGp_getSelectItem(0));
     int itemYId = static_cast<int>(dComIfGp_getSelectItem(1));
     int itemDDownId = static_cast<int>(dComIfGp_getSelectItem(2));
+    int itemDLeftId = itemXId;
+    int itemDRightId = itemYId;
+
     int itemXCount = static_cast<int>(dComIfGp_getSelectItemNum(0));
     int itemYCount = static_cast<int>(dComIfGp_getSelectItemNum(1));
     int itemDDownCount = static_cast<int>(dComIfGp_getSelectItemNum(2));
+    int itemDLeftCount = itemXCount;
+    int itemDRightCount = itemYCount;
 
     jstring jStageName = env->NewStringUTF(friendlyName.c_str());
     jfloatArray jLines = env->NewFloatArray(mapLines.size());
@@ -391,7 +401,10 @@ void hud_update() {
     jstring jButtonL = env->NewStringUTF(buttonLText.c_str());
     jstring jButtonX = env->NewStringUTF(buttonXText.c_str());
     jstring jButtonY = env->NewStringUTF(buttonYText.c_str());
-    jstring jDPadText = env->NewStringUTF(dPadText.c_str());
+    jstring jDPadUpText = env->NewStringUTF(dPadUpText.c_str());
+    jstring jDPadDownText = env->NewStringUTF(dPadDownText.c_str());
+    jstring jDPadLeftText = env->NewStringUTF(dPadLeftText.c_str());
+    jstring jDPadRightText = env->NewStringUTF(dPadRightText.c_str());
 
     env->CallVoidMethod(activity, s_onGameStateUpdate,
         health, maxHealth,
@@ -406,7 +419,8 @@ void hud_update() {
         minX, minZ, maxX, maxZ,
         jButtonA, jButtonB, jButtonZ, midnaCalling, jButtonL, jButtonX, jButtonY,
         itemXId, itemYId, itemXCount, itemYCount,
-        jDPadText, dPadDirection, itemDDownId, itemDDownCount);
+        jDPadUpText, jDPadDownText, jDPadLeftText, jDPadRightText,
+        itemDDownId, itemDDownCount, itemDLeftId, itemDLeftCount, itemDRightId, itemDRightCount);
 
     if (jStageName) env->DeleteLocalRef(jStageName);
     if (jLines) env->DeleteLocalRef(jLines);
@@ -417,6 +431,10 @@ void hud_update() {
     if (jButtonL) env->DeleteLocalRef(jButtonL);
     if (jButtonX) env->DeleteLocalRef(jButtonX);
     if (jButtonY) env->DeleteLocalRef(jButtonY);
+    if (jDPadUpText) env->DeleteLocalRef(jDPadUpText);
+    if (jDPadDownText) env->DeleteLocalRef(jDPadDownText);
+    if (jDPadLeftText) env->DeleteLocalRef(jDPadLeftText);
+    if (jDPadRightText) env->DeleteLocalRef(jDPadRightText);
 
     clear_pending_exception(env);
     env->DeleteLocalRef(activity);

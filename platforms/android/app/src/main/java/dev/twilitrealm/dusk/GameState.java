@@ -44,10 +44,16 @@ public class GameState {
     public final int maxLightDrops;
     public final boolean showLightDrops;
 
-    public final String dPadText;
-    public final int dPadDirection;
+    public final String dPadUpText;
+    public final String dPadDownText;
+    public final String dPadLeftText;
+    public final String dPadRightText;
     public final int itemDDownId;
     public final int itemDDownCount;
+    public final int itemDLeftId;
+    public final int itemDLeftCount;
+    public final int itemDRightId;
+    public final int itemDRightCount;
 
     public GameState(int health, int maxHealth, int magic, int maxMagic,
                      int oil, int maxOil, int oxygen, int maxOxygen,
@@ -60,7 +66,10 @@ public class GameState {
                      String buttonAText, String buttonBText, String buttonZText, boolean midnaCalling,
                      String buttonLText, String buttonXText, String buttonYText,
                      int itemXResId, int itemYResId, int itemXCount, int itemYCount,
-                     String dPadText, int dPadDirection, int itemDDownId, int itemDDownCount) {
+                     String dPadUpText, String dPadDownText, String dPadLeftText, String dPadRightText,
+                     int itemDDownId, int itemDDownCount,
+                     int itemDLeftId, int itemDLeftCount,
+                     int itemDRightId, int itemDRightCount) {
         this.health = health;
         this.maxHealth = maxHealth;
         this.magic = magic;
@@ -99,9 +108,15 @@ public class GameState {
         this.itemYResId = itemYResId;
         this.itemXCount = itemXCount;
         this.itemYCount = itemYCount;
-        this.dPadText = dPadText;
-        this.dPadDirection = dPadDirection;
+        this.dPadUpText = dPadUpText;
+        this.dPadDownText = dPadDownText;
+        this.dPadLeftText = dPadLeftText;
+        this.dPadRightText = dPadRightText;
         this.itemDDownId = itemDDownId;
         this.itemDDownCount = itemDDownCount;
+        this.itemDLeftId = itemDLeftId;
+        this.itemDLeftCount = itemDLeftCount;
+        this.itemDRightId = itemDRightId;
+        this.itemDRightCount = itemDRightCount;
     }
 }

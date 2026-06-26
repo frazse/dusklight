@@ -78,7 +78,7 @@ public class HudView extends View {
         // Minimap
         drawMiniMap(canvas, 20, 210);
         
-        // Context Labels (A / B / Z / X / Y Buttons) in a vertical row to the right of the minimap
+        // Context Labels (A / B / Z / L / X / Y) in a vertical row to the right of the minimap
         drawContextButtons(canvas, 820, 280);
         
         drawStatusInfo(canvas, 1100, 1040);
@@ -225,49 +225,34 @@ public class HudView extends View {
         mPaint.setTextSize(42);
         float spacing = 95;
         
-        // D-Pad Up (Map/Context)
-        boolean dUpActive = mState.dPadText != null && !mState.dPadText.isEmpty();
-        drawActionButton(canvas, x, startY, "D↑", Color.rgb(150, 150, 255), mState.dPadText, dUpActive);
-
-        // L (Target)
+        // Action Buttons (L, Z, A, B, Y, X)
         boolean lActive = mState.buttonLText != null && !mState.buttonLText.isEmpty();
-        drawActionButton(canvas, x, startY + spacing, "L", Color.rgb(200, 200, 200), mState.buttonLText, lActive);
+        drawActionButton(canvas, x, startY, "L", Color.rgb(200, 200, 200), mState.buttonLText, lActive);
 
-        // Z (Midna)
         boolean zActive = mState.buttonZText != null && !mState.buttonZText.isEmpty();
-        drawActionButton(canvas, x, startY + spacing * 2, "Z", Color.argb(255, 100, 200, 255), mState.buttonZText, zActive);
+        drawActionButton(canvas, x, startY + spacing, "Z", Color.argb(255, 100, 200, 255), mState.buttonZText, zActive);
 
-        // A
         boolean aActive = mState.buttonAText != null && !mState.buttonAText.isEmpty();
-        drawActionButton(canvas, x, startY + spacing * 3, "A", Color.rgb(0, 200, 50), mState.buttonAText, aActive);
+        drawActionButton(canvas, x, startY + spacing * 2, "A", Color.rgb(0, 200, 50), mState.buttonAText, aActive);
         
-        // B
         boolean bActive = mState.buttonBText != null && !mState.buttonBText.isEmpty();
-        drawActionButton(canvas, x, startY + spacing * 4, "B", Color.RED, mState.buttonBText, bActive);
+        drawActionButton(canvas, x, startY + spacing * 3, "B", Color.RED, mState.buttonBText, bActive);
 
-        // Y
         String yText = mState.buttonYText;
         if (yText == null || yText.isEmpty()) {
             yText = getItemName(mState.itemYResId);
             if (mState.itemYCount > 0) yText += " (" + mState.itemYCount + ")";
         }
         boolean yActive = mState.itemYResId != 0xFF || (mState.buttonYText != null && !mState.buttonYText.isEmpty());
-        drawActionButton(canvas, x, startY + spacing * 5, "Y", Color.rgb(255, 255, 0), yText, yActive);
+        drawActionButton(canvas, x, startY + spacing * 4, "Y", Color.rgb(255, 255, 0), yText, yActive);
 
-        // X
         String xText = mState.buttonXText;
         if (xText == null || xText.isEmpty()) {
             xText = getItemName(mState.itemXResId);
             if (mState.itemXCount > 0) xText += " (" + mState.itemXCount + ")";
         }
         boolean xActive = mState.itemXResId != 0xFF || (mState.buttonXText != null && !mState.buttonXText.isEmpty());
-        drawActionButton(canvas, x, startY + spacing * 6, "X", Color.rgb(255, 165, 0), xText, xActive);
-
-        // D-Pad Down item
-        String dDownText = getItemName(mState.itemDDownId);
-        if (mState.itemDDownCount > 0) dDownText += " (" + mState.itemDDownCount + ")";
-        boolean dDownActive = mState.itemDDownId != 0xFF;
-        drawActionButton(canvas, x, startY + spacing * 7, "D↓", Color.rgb(200, 200, 200), dDownText, dDownActive);
+        drawActionButton(canvas, x, startY + spacing * 5, "X", Color.rgb(255, 165, 0), xText, xActive);
     }
 
     private void drawActionButton(Canvas canvas, float x, float y, String label, int color, String text, boolean active) {
