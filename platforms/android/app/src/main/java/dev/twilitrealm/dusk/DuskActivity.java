@@ -38,7 +38,7 @@ public class DuskActivity extends SDLActivity {
     private static final String EXTERNAL_STORAGE_AUTHORITY =
         "com.android.externalstorage.documents";
 
-    // ── Second screen ────────────────────────────────────────────────
+    // -- Second screen ────────────────────────────────────────────────
     private DisplayManager mDisplayManager;
     private SecondScreenPresentation mSecondScreen;
 
@@ -47,8 +47,6 @@ public class DuskActivity extends SDLActivity {
         Display[] displays = mDisplayManager.getDisplays(
             DisplayManager.DISPLAY_CATEGORY_PRESENTATION);
         if (displays.length == 0) {
-            // Ayn Thor fallback: some dual-screen devices don't use the
-            // PRESENTATION category — try all non-default displays instead
             Display[] all = mDisplayManager.getDisplays();
             for (Display d : all) {
                 if (d.getDisplayId() != Display.DEFAULT_DISPLAY) {
@@ -85,46 +83,13 @@ public class DuskActivity extends SDLActivity {
         };
 
     /**
-     * Called from native via JNI on the GL thread.
-     * Posts to the UI thread so HudView.invalidate() is safe.
+     * Updated Data Packet version using primitive arrays.
      */
-    public void onGameStateUpdate(
-        int health, int maxHealth,
-        int magic,  int maxMagic,
-        int oil,    int maxOil,
-        int oxygen, int maxOxygen,
-        int rupees, int keys, int arrows, int bombs,
-        int lightDrops, int maxLightDrops, int showLightDrops,
-        float mapX, float mapY,
-        int transform, String stageName, int roomNo, float[] mapLines,
-        float[] mapIcons, float mapAngle,
-        float mapMinX, float mapMinZ, float mapMaxX, float mapMaxZ,
-        String buttonAText, String buttonBText, String buttonZText, boolean midnaCalling,
-        String buttonLText, String buttonXText, String buttonYText,
-        int itemXResId, int itemYResId, int itemXCount, int itemYCount,
-        String dPadUpText, String dPadDownText, String dPadLeftText, String dPadRightText,
-        int itemDDownId, int itemDDownCount,
-        int itemDLeftId, int itemDLeftCount,
-        int itemDRightId, int itemDRightCount,
-        float[] mapDoors)
+    public void onGameStateUpdate(int[] i, float[] f, String stageName, 
+                                  float[] lines, float[] icons, float[] doors)
     {
         if (mSecondScreen == null) return;
-        final GameState state = new GameState(
-            health, maxHealth, magic, maxMagic,
-            oil, maxOil, oxygen, maxOxygen,
-            rupees, keys, arrows, bombs,
-            lightDrops, maxLightDrops, showLightDrops != 0,
-            mapX, mapY, transform, stageName, roomNo, mapLines,
-            mapIcons, mapAngle,
-            mapMinX, mapMinZ, mapMaxX, mapMaxZ,
-            buttonAText, buttonBText, buttonZText, midnaCalling,
-            buttonLText, buttonXText, buttonYText,
-            itemXResId, itemYResId, itemXCount, itemYCount,
-            dPadUpText, dPadDownText, dPadLeftText, dPadRightText,
-            itemDDownId, itemDDownCount,
-            itemDLeftId, itemDLeftCount,
-            itemDRightId, itemDRightCount,
-            mapDoors);
+        final GameState state = new GameState(i, f, stageName, lines, icons, doors);
         runOnUiThread(() -> mSecondScreen.updateHud(state));
     }
     // ── End second screen ────────────────────────────────────────────

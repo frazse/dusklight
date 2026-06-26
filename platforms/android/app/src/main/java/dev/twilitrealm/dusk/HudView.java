@@ -232,18 +232,21 @@ public class HudView extends View {
         mPaint.setTextSize(42);
         float spacing = 95;
         
-        // Action Buttons (L, Z, A, B, Y, X)
+        // Action Buttons (L, R, Z, A, B, Y, X)
         boolean lActive = mState.buttonLText != null && !mState.buttonLText.isEmpty();
         drawActionButton(canvas, x, startY, "L", Color.rgb(200, 200, 200), mState.buttonLText, lActive);
 
+        boolean rActive = mState.buttonRText != null && !mState.buttonRText.isEmpty();
+        drawActionButton(canvas, x, startY + spacing, "R", Color.rgb(200, 200, 200), mState.buttonRText, rActive);
+
         boolean zActive = mState.buttonZText != null && !mState.buttonZText.isEmpty();
-        drawActionButton(canvas, x, startY + spacing, "Z", Color.argb(255, 100, 200, 255), mState.buttonZText, zActive);
+        drawActionButton(canvas, x, startY + spacing * 2, "Z", Color.argb(255, 100, 200, 255), mState.buttonZText, zActive);
 
         boolean aActive = mState.buttonAText != null && !mState.buttonAText.isEmpty();
-        drawActionButton(canvas, x, startY + spacing * 2, "A", Color.rgb(0, 200, 50), mState.buttonAText, aActive);
+        drawActionButton(canvas, x, startY + spacing * 3, "A", Color.rgb(0, 200, 50), mState.buttonAText, aActive);
         
         boolean bActive = mState.buttonBText != null && !mState.buttonBText.isEmpty();
-        drawActionButton(canvas, x, startY + spacing * 3, "B", Color.RED, mState.buttonBText, bActive);
+        drawActionButton(canvas, x, startY + spacing * 4, "B", Color.RED, mState.buttonBText, bActive);
 
         String yText = mState.buttonYText;
         if (yText == null || yText.isEmpty()) {
@@ -251,7 +254,7 @@ public class HudView extends View {
             if (mState.itemYCount > 0) yText += " (" + mState.itemYCount + ")";
         }
         boolean yActive = mState.itemYResId != 0xFF || (mState.buttonYText != null && !mState.buttonYText.isEmpty());
-        drawActionButton(canvas, x, startY + spacing * 4, "Y", Color.rgb(255, 255, 0), yText, yActive);
+        drawActionButton(canvas, x, startY + spacing * 5, "Y", Color.rgb(255, 255, 0), yText, yActive);
 
         String xText = mState.buttonXText;
         if (xText == null || xText.isEmpty()) {
@@ -259,7 +262,7 @@ public class HudView extends View {
             if (mState.itemXCount > 0) xText += " (" + mState.itemXCount + ")";
         }
         boolean xActive = mState.itemXResId != 0xFF || (mState.buttonXText != null && !mState.buttonXText.isEmpty());
-        drawActionButton(canvas, x, startY + spacing * 5, "X", Color.rgb(255, 165, 0), xText, xActive);
+        drawActionButton(canvas, x, startY + spacing * 6, "X", Color.rgb(255, 165, 0), xText, xActive);
     }
 
     private void drawActionButton(Canvas canvas, float x, float y, String label, int color, String text, boolean active) {
