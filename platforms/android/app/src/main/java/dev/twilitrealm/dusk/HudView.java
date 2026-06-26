@@ -403,6 +403,17 @@ public class HudView extends View {
             }
             canvas.drawPath(mDrawPath, mPaint);
         }
+        if (mState.mapDoors != null) {
+            for (int i = 0; i < mState.mapDoors.length; i += 4) {
+                float dx = mState.mapDoors[i];
+                float dz = mState.mapDoors[i+1];
+                float angle = mState.mapDoors[i+2];
+                int type = (int)mState.mapDoors[i+3];
+                float doorScreenX = centerX + (dx - stageCenterX) * mapScale;
+                float doorScreenY = centerY + (dz - stageCenterZ) * mapScale;
+                drawDoorIcon(canvas, doorScreenX, doorScreenY, angle, type);
+            }
+        }
         if (mState.mapIcons != null) {
             for (int i = 0; i < mState.mapIcons.length; i += 4) {
                 int type = (int)mState.mapIcons[i];
@@ -434,6 +445,21 @@ public class HudView extends View {
         mPaint.setColor(Color.WHITE);
         mPaint.setTextAlign(Paint.Align.CENTER);
         canvas.drawText(mState.stageName, x + mapSize/2, y + mapSize + 40, mPaint);
+    }
+
+    private void drawDoorIcon(Canvas canvas, float x, float y, float angle, int type) {
+        mPaint.setStyle(Paint.Style.FILL);
+        mPaint.setColor(Color.rgb(200, 200, 200));
+        canvas.save();
+        canvas.translate(x, y);
+        canvas.rotate(180 - angle);
+        // Draw a simple door rectangle
+        canvas.drawRect(-12, -4, 12, 4, mPaint);
+        mPaint.setStyle(Paint.Style.STROKE);
+        mPaint.setStrokeWidth(1);
+        mPaint.setColor(Color.BLACK);
+        canvas.drawRect(-12, -4, 12, 4, mPaint);
+        canvas.restore();
     }
 
     private void drawMapIcon(Canvas canvas, float x, float y, int type, int status) {

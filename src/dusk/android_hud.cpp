@@ -161,9 +161,9 @@ void hud_update() {
             env->DeleteLocalRef(activity);
             return;
         }
-        // Updated signature for X/Y buttons, items, L button, Midna pulse, and D-Pad directions
+        // Updated signature for X/Y buttons, items, L button, Midna pulse, D-Pad directions, and doors
         s_onGameStateUpdate = env->GetMethodID(
-            cls, "onGameStateUpdate", "(IIIIIIIIIIIIIIIFFILjava/lang/String;I[F[FFFFFFLjava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;IIIILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIIIII)V");
+            cls, "onGameStateUpdate", "(IIIIIIIIIIIIIIIFFILjava/lang/String;I[F[FFFFFFLjava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;IIIILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIIIII[F)V");
         env->DeleteLocalRef(cls);
         if (s_onGameStateUpdate == nullptr || clear_pending_exception(env)) {
             env->DeleteLocalRef(activity);
@@ -224,6 +224,7 @@ void hud_update() {
 
     std::vector<float> mapLines;
     std::vector<float> mapIcons; // [type, x, y, status]
+    std::vector<float> mapDoors; // [x, y, angle, type]
 
     float minX = std::numeric_limits<float>::max();
     float minZ = std::numeric_limits<float>::max();
@@ -278,6 +279,40 @@ void hud_update() {
             }
         }
     }
+
+    auto collect_doors = [&](dStage_KeepDoorInfo* door_info, bool correct) {
+        if (door_info == nullptr) return;
+        for (int i = 0; i < door_info->mNum; i++) {
+            const stage_tgsc_data_class* door = &door_info->mDrTgData[i];
+            int prm0 = (door->base.parameters >> 0xD) & 0x3F;
+            int prm1 = (door->base.parameters >> 0x13) & 0x3F;
+
+            // Simplified visibility check: if either connected room is visited
+            if (!dComIfGs_isVisitedRoom(prm0) && !dComIfGs_isVisitedRoom(prm1) &&
+                prm0 != stayNo && prm1 != stayNo) {
+                continue;
+            }
+
+            BE(Vec) pos;
+            pos.x = (f32)door->base.position.x;
+            pos.y = (f32)door->base.position.y;
+            pos.z = (f32)door->base.position.z;
+
+            if (correct) {
+                // For 'Keep' doors, we correct using prm0 (one of the connected rooms)
+                dMapInfo_n::correctionOriginPos(prm0, &pos);
+            }
+
+            mapDoors.push_back(pos.x);
+            mapDoors.push_back(pos.z);
+            mapDoors.push_back((float)door->base.angle.y * (180.0f / 32768.0f));
+            mapDoors.push_back(0.0f); // Type (0 = normal)
+            update_bounds(pos.x, pos.z);
+        }
+    };
+
+    collect_doors(dStage_GetKeepDoorInfo(), true);
+    collect_doors(dStage_GetRoomKeepDoorInfo(), false);
 
     for (int type = 0; type < dTres_c::TYPE_GROUP_ENUM_NUMBER; type++) {
         for (dTres_c::typeGroupData_c* data = dTres_c::getFirstData(type);
@@ -395,6 +430,10 @@ void hud_update() {
     if (jIcons != nullptr && !mapIcons.empty()) {
         env->SetFloatArrayRegion(jIcons, 0, mapIcons.size(), mapIcons.data());
     }
+    jfloatArray jDoors = env->NewFloatArray(mapDoors.size());
+    if (jDoors != nullptr && !mapDoors.empty()) {
+        env->SetFloatArrayRegion(jDoors, 0, mapDoors.size(), mapDoors.data());
+    }
     jstring jButtonA = env->NewStringUTF(buttonAText.c_str());
     jstring jButtonB = env->NewStringUTF(buttonBText.c_str());
     jstring jButtonZ = env->NewStringUTF(buttonZText.c_str());
@@ -420,11 +459,13 @@ void hud_update() {
         jButtonA, jButtonB, jButtonZ, midnaCalling, jButtonL, jButtonX, jButtonY,
         itemXId, itemYId, itemXCount, itemYCount,
         jDPadUpText, jDPadDownText, jDPadLeftText, jDPadRightText,
-        itemDDownId, itemDDownCount, itemDLeftId, itemDLeftCount, itemDRightId, itemDRightCount);
+        itemDDownId, itemDDownCount, itemDLeftId, itemDLeftCount, itemDRightId, itemDRightCount,
+        jDoors);
 
     if (jStageName) env->DeleteLocalRef(jStageName);
     if (jLines) env->DeleteLocalRef(jLines);
     if (jIcons) env->DeleteLocalRef(jIcons);
+    if (jDoors) env->DeleteLocalRef(jDoors);
     if (jButtonA) env->DeleteLocalRef(jButtonA);
     if (jButtonB) env->DeleteLocalRef(jButtonB);
     if (jButtonZ) env->DeleteLocalRef(jButtonZ);

@@ -105,7 +105,8 @@ public class DuskActivity extends SDLActivity {
         String dPadUpText, String dPadDownText, String dPadLeftText, String dPadRightText,
         int itemDDownId, int itemDDownCount,
         int itemDLeftId, int itemDLeftCount,
-        int itemDRightId, int itemDRightCount)
+        int itemDRightId, int itemDRightCount,
+        float[] mapDoors)
     {
         if (mSecondScreen == null) return;
         final GameState state = new GameState(
@@ -122,7 +123,8 @@ public class DuskActivity extends SDLActivity {
             dPadUpText, dPadDownText, dPadLeftText, dPadRightText,
             itemDDownId, itemDDownCount,
             itemDLeftId, itemDLeftCount,
-            itemDRightId, itemDRightCount);
+            itemDRightId, itemDRightCount,
+            mapDoors);
         runOnUiThread(() -> mSecondScreen.updateHud(state));
     }
     // ── End second screen ────────────────────────────────────────────

@@ -21,6 +21,7 @@ public class GameState {
     public final int roomNo;
     public final float[] mapLines;
     public final float[] mapIcons;
+    public final float[] mapDoors;
     
     public final float mapMinX;
     public final float mapMinZ;
@@ -69,7 +70,8 @@ public class GameState {
                      String dPadUpText, String dPadDownText, String dPadLeftText, String dPadRightText,
                      int itemDDownId, int itemDDownCount,
                      int itemDLeftId, int itemDLeftCount,
-                     int itemDRightId, int itemDRightCount) {
+                     int itemDRightId, int itemDRightCount,
+                     float[] mapDoors) {
         this.health = health;
         this.maxHealth = maxHealth;
         this.magic = magic;
@@ -118,5 +120,6 @@ public class GameState {
         this.itemDLeftCount = itemDLeftCount;
         this.itemDRightId = itemDRightId;
         this.itemDRightCount = itemDRightCount;
+        this.mapDoors = mapDoors;
     }
 }
