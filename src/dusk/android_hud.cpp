@@ -52,7 +52,7 @@ bool should_draw_icon(int type, const dTres_c::data_s* data, int stayNo) {
     // If it's associated with a switch (Monkeys, Poes, etc.) and switch is ON, hide it.
     if (data->mSwBit != 0xFF && dComIfGs_isSwitch(data->mSwBit, data->mRoomNo)) return false;
 
-    // 2. Type-Specific Dungeon Logic
+    // 2. Type-Specific Logic
     if (is_dungeon) {
         // Dungeon Rule: Most markers (Chests, Keys, Boss, Objectives) require the Compass.
         if (!has_compass) return false;
@@ -63,10 +63,16 @@ bool should_draw_icon(int type, const dTres_c::data_s* data, int stayNo) {
 
         // Return true if we reached here (Compass is found and not "completed")
         return true;
-    }
+    } else {
+        // Overworld Rule:
+        // NEVER show: Chests (0, 10), Heart Pieces (2), or generic quest markers (4, 5, 16).
+        if (type == 0 || type == 10 || type == 2 || type == 3 || type == 4 || type == 5 || type == 16) {
+            return false;
+        }
 
-    // 3. Overworld Rule: Usually only if the room/area has been visited.
-    return visited;
+        // DO show: Landmarks, Warp Portals, etc., but only if the area has been visited.
+        return visited;
+    }
 }
 
 } // namespace

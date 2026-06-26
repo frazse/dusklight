@@ -528,10 +528,10 @@ public class HudView extends View {
         switch (type) {
             case 0: // Chest
             case 10: // Field Chest
-                mPaint.setColor(status == 0 ? Color.YELLOW : Color.GRAY);
+                mPaint.setColor(Color.YELLOW);
                 canvas.drawRect(x - 8, y - 8, x + 8, y + 8, mPaint);
                 break;
-            case 4: // Light Drop
+            case 4: // Light Drop / Objective
                 mPaint.setColor(Color.rgb(100, 150, 255));
                 canvas.drawCircle(x, y, 6, mPaint);
                 break;
@@ -539,7 +539,7 @@ public class HudView extends View {
                 mPaint.setColor(Color.RED);
                 canvas.drawCircle(x, y, 14, mPaint);
                 break;
-            case 2: // Heart Piece
+            case 2: // Heart Piece / Small Key
                 mPaint.setColor(Color.rgb(255, 100, 100));
                 canvas.drawCircle(x, y, 8, mPaint);
                 break;
