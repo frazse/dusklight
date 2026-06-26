@@ -91,7 +91,7 @@ public class HudView extends View {
     }
 
     private void drawHearts(Canvas canvas, float startX, float startY) {
-        int maxHearts = mState.maxHealth / 4;
+        int maxHearts = mState.maxHealth / 5;
         int currentQuarters = mState.health;
         float heartSize = 58;
         float gap = 12;
