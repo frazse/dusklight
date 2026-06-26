@@ -32,6 +32,9 @@ std::atomic<bool> s_secondScreenActive{false};
 constexpr int kHudUpdateInterval = 6;
 int s_frameCounter = 0;
 
+/**
+ * Refined visibility logic based on Dungeon Map and Compass progression.
+ */
 bool should_draw_icon(int type, const dTres_c::data_s* data, int stayNo) {
     if (data == nullptr) return false;
     auto* stage = dComIfGp_getStage();
@@ -40,18 +43,30 @@ bool should_draw_icon(int type, const dTres_c::data_s* data, int stayNo) {
     StageType stage_type = (StageType)dStage_stagInfo_GetSTType(stage->getStagInfo());
     bool is_dungeon = (stage_type == ST_DUNGEON);
     bool has_compass = dMapInfo_n::chkGetCompass();
-    bool has_map = dMapInfo_n::chkGetMap();
     bool visited = dComIfGs_isVisitedRoom(data->mRoomNo) || data->mRoomNo == stayNo;
-    bool compass_reveal = (is_dungeon && has_compass);
 
-    switch (type) {
-        case 0: case 2: return is_dungeon ? (compass_reveal && (data->mNo == 255 || !dComIfGs_isTbox(data->mNo))) : visited;
-        case 1: case 8: return visited || (is_dungeon && has_map);
-        case 3: return is_dungeon && compass_reveal && !dComIfGs_isStageBossEnemy();
-        case 4: return is_dungeon ? (compass_reveal && (data->mNo == 255 || !dComIfGs_isTbox(data->mNo))) : false;
-        case 5: return is_dungeon ? (compass_reveal && (data->mNo == 255 || !dComIfGs_isTbox(data->mNo))) : (data->mSwBit == 255 || dComIfGs_isSwitch(data->mSwBit, data->mRoomNo));
-        default: return is_dungeon ? compass_reveal : visited;
+    // 1. Global "Completion" Checks
+    // If it's a treasure box and it's already open, hide it.
+    if (data->mNo != 0xFF && dComIfGs_isTbox(data->mNo)) return false;
+
+    // If it's associated with a switch (Monkeys, Poes, etc.) and switch is ON, hide it.
+    if (data->mSwBit != 0xFF && dComIfGs_isSwitch(data->mSwBit, data->mRoomNo)) return false;
+
+    // 2. Type-Specific Dungeon Logic
+    if (is_dungeon) {
+        // Dungeon Rule: Most markers (Chests, Keys, Boss, Objectives) require the Compass.
+        if (!has_compass) return false;
+
+        if (type == 3) { // Boss Icon
+            if (dComIfGs_isStageBossEnemy()) return false;
+        }
+
+        // Return true if we reached here (Compass is found and not "completed")
+        return true;
     }
+
+    // 3. Overworld Rule: Usually only if the room/area has been visited.
+    return visited;
 }
 
 } // namespace
@@ -77,7 +92,6 @@ void hud_update() {
 
     if (s_onGameStateUpdate == nullptr) {
         jclass cls = env->GetObjectClass(activity);
-        // Updated Signature: ([I[FLjava/lang/String;[F[F[F)V
         s_onGameStateUpdate = env->GetMethodID(cls, "onGameStateUpdate", "([I[FLjava/lang/String;[F[F[F)V");
         env->DeleteLocalRef(cls);
         if (s_onGameStateUpdate == nullptr || clear_pending_exception(env)) return;
@@ -85,7 +99,6 @@ void hud_update() {
 
     s_secondScreenActive.store(true, std::memory_order_relaxed);
 
-    // --- PACK DATA ---
     int iData[40] = {0};
     iData[0] = dComIfGs_getLife();      iData[1] = dComIfGs_getMaxLife();
     iData[2] = dComIfGs_getMagic();     iData[3] = dComIfGs_getMaxMagic();
@@ -107,17 +120,7 @@ void hud_update() {
     iData[25] = iData[18]; iData[26] = iData[20];
     iData[27] = (dComIfGp_isZSetFlag(2) || dComIfGp_isZSetFlag(4)) ? 1 : 0;
 
-    // Actions
-    u8 doStatus = dComIfGp_getDoStatusForce();
-    if (doStatus == 0) doStatus = dComIfGp_getDoStatus();
-    iData[28] = doStatus;
-
-    u8 aStatus = dComIfGp_getAStatusForce();
-    if (aStatus == 0) aStatus = dComIfGp_getAStatus();
-    iData[29] = aStatus;
-
-    iData[30] = dComIfGp_getZStatus();
-
+    // Player movement state
     dAttention_c* attn = dComIfGp_getAttention();
     daPy_py_c* player = dComIfGp_getLinkPlayer();
     int stateFlags = 0;
@@ -126,6 +129,14 @@ void hud_update() {
     if (player && player->checkHorseRide()) stateFlags |= 4; // Riding
     iData[31] = stateFlags;
 
+    // Actions
+    u8 doStatus = dComIfGp_getDoStatusForce();
+    if (doStatus == 0) doStatus = dComIfGp_getDoStatus();
+    iData[28] = doStatus;
+    u8 aStatus = dComIfGp_getAStatusForce();
+    if (aStatus == 0) aStatus = dComIfGp_getAStatus();
+    iData[29] = aStatus;
+    iData[30] = dComIfGp_getZStatus();
     iData[32] = dComIfGp_getRStatus();
     iData[33] = dComIfGp_getXStatus();
     iData[34] = dComIfGp_getYStatus();
@@ -136,20 +147,18 @@ void hud_update() {
     iData[37] = (dPadD & 1) ? dPadS : 0; iData[38] = (dPadD & 4) ? dPadS : 0;
 
     // Visibility Mask
-    int vis = 0;
-    if (dMeter2Info_isUseButton(METER2_USEBUTTON_A)) vis |= 1;
-    if (dMeter2Info_isUseButton(METER2_USEBUTTON_B)) vis |= 2;
-    if (dMeter2Info_isUseButton(METER2_USEBUTTON_Z)) vis |= 4;
-    if (dMeter2Info_isUseButton(METER2_USEBUTTON_R)) vis |= 8;
-    if (dMeter2Info_isUseButton(METER2_USEBUTTON_X)) vis |= 16;
-    if (dMeter2Info_isUseButton(METER2_USEBUTTON_Y)) vis |= 32;
-    iData[39] = vis;
+    int visMask = 0;
+    if (dMeter2Info_isUseButton(METER2_USEBUTTON_A)) visMask |= 1;
+    if (dMeter2Info_isUseButton(METER2_USEBUTTON_B)) visMask |= 2;
+    if (dMeter2Info_isUseButton(METER2_USEBUTTON_Z)) visMask |= 4;
+    if (dMeter2Info_isUseButton(METER2_USEBUTTON_R)) visMask |= 8;
+    if (dMeter2Info_isUseButton(METER2_USEBUTTON_X)) visMask |= 16;
+    if (dMeter2Info_isUseButton(METER2_USEBUTTON_Y)) visMask |= 32;
+    iData[39] = visMask;
 
-    // Floats
+    // Map Floats
     Vec playerPos = dMapInfo_n::getMapPlayerPos();
     float fData[7] = { playerPos.x, playerPos.z, (float)dMapInfo_n::getMapPlayerAngleY() * (180.0f / 32768.0f) };
-
-    // Stage Name / Map processing
     float minX = 1e10f, minZ = 1e10f, maxX = -1e10f, maxZ = -1e10f;
     std::vector<float> lines, icons, doors;
 
@@ -167,8 +176,13 @@ void hud_update() {
     bool is_d = (stype == ST_DUNGEON);
     s8 sFloor = dMapInfo_c::getNowStayFloorNoDecisionFlg() ? dMapInfo_c::getNowStayFloorNo() : dMapInfo_c::calcFloorNo(playerPos.y, true, stayNo);
 
+    // --- Process Room Layouts ---
     if (dMpath_c::mLayerList) for (int l = 0; l < 2; l++) for (int r = 0; r < 64; r++) {
-        if ((is_d && !has_map && !dComIfGs_isVisitedRoom(r) && r != stayNo) || (!is_d && !dComIfGs_isVisitedRoom(r) && r != stayNo)) continue;
+        // Dungeon Rule: If you don't have the Map, only show visited rooms.
+        if (is_d && !has_map && !dComIfGs_isVisitedRoom(r) && r != stayNo) continue;
+        // Overworld Rule: Only show visited rooms.
+        if (!is_d && !dComIfGs_isVisitedRoom(r) && r != stayNo) continue;
+
         dDrawPath_c::room_class* room = dMpath_c::getRoomPointer(l, r);
         if (room && room->mpFloatData) for (int f = 0; f < room->mFloorNum; f++) {
             if (room->mpFloor[f].mFloorNo != sFloor) continue;
@@ -190,6 +204,7 @@ void hud_update() {
     }
     fData[3] = minX; fData[4] = minZ; fData[5] = maxX; fData[6] = maxZ;
 
+    // --- Process Doors ---
     auto collect_doors = [&](dStage_KeepDoorInfo* di, bool correct) {
         if (!di) return;
         for (int i = 0; i < di->mNum; i++) {
@@ -203,9 +218,12 @@ void hud_update() {
     };
     collect_doors(dStage_GetKeepDoorInfo(), true); collect_doors(dStage_GetRoomKeepDoorInfo(), false);
 
+    // --- Process Icons ---
     for (int t = 0; t < dTres_c::TYPE_GROUP_ENUM_NUMBER; t++) {
         for (dTres_c::typeGroupData_c* data = dTres_c::getFirstData(t); data; data = dTres_c::getNextData(data)) {
-            if (data->mRoomNo != -1 && !dComIfGs_isVisitedRoom(data->mRoomNo) && data->mRoomNo != stayNo) continue;
+            // General filter: hidden if room hasn't been visited (unless Compass reveals it)
+            if (data->mRoomNo != -1 && !dComIfGs_isVisitedRoom(data->mRoomNo) && data->mRoomNo != stayNo && !is_d) continue;
+
             if (should_draw_icon(t, data->getConstDataPointer(), stayNo)) {
                 BE(Vec) p = data->mPos; if (data->mRoomNo != -1) dMapInfo_n::correctionOriginPos(data->mRoomNo, &p);
                 icons.push_back((float)t); icons.push_back(p.x); icons.push_back(p.z); icons.push_back((float)data->mStatus);
