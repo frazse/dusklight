@@ -73,7 +73,7 @@ public class HudView extends View {
         drawRupeeCounter(canvas, 20, 1040);
         drawLightDrops(canvas, 280, 1040);
         
-        drawItems(canvas, 980, 40);
+        drawItems(canvas, 1260, 40);
         
         // Minimap
         drawMiniMap(canvas, 20, 210);
@@ -210,7 +210,7 @@ public class HudView extends View {
 
     private void drawItems(Canvas canvas, float x, float y) {
         mPaint.setTextSize(38);
-        mPaint.setTextAlign(Paint.Align.LEFT);
+        mPaint.setTextAlign(Paint.Align.RIGHT);
         mPaint.setColor(Color.WHITE);
         canvas.drawText("Arrows: " + mState.arrows, x, y, mPaint);
         canvas.drawText("Bombs:  " + mState.bombs, x, y + 45, mPaint);
