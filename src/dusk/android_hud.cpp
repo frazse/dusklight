@@ -161,9 +161,9 @@ void hud_update() {
             env->DeleteLocalRef(activity);
             return;
         }
-        // Updated signature for X/Y buttons, items, and L button
+        // Updated signature for X/Y buttons, items, L button, and Midna pulse
         s_onGameStateUpdate = env->GetMethodID(
-            cls, "onGameStateUpdate", "(IIIIIIIIIIIIIIIFFILjava/lang/String;I[F[FFFFFFLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIIILjava/lang/String;III)V");
+            cls, "onGameStateUpdate", "(IIIIIIIIIIIIIIIFFILjava/lang/String;I[F[FFFFFFLjava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;IIIILjava/lang/String;III)V");
         env->DeleteLocalRef(cls);
         if (s_onGameStateUpdate == nullptr || clear_pending_exception(env)) {
             env->DeleteLocalRef(activity);
@@ -326,8 +326,14 @@ void hud_update() {
     if (dMeter2Info_isUseButton(METER2_USEBUTTON_B)) {
         buttonBText = get_action_text(dComIfGp_getAStatus());
     }
+    bool midnaCalling = false;
     if (dMeter2Info_isUseButton(METER2_USEBUTTON_Z)) {
         u8 zStatus = dComIfGp_getZStatus();
+
+        // Check for emphasis flag (Midna calling)
+        if (dComIfGp_isZSetFlag(2) || dComIfGp_isZSetFlag(4)) {
+            midnaCalling = true;
+        }
 
         // Contextual Z button: usually Midna
         // Status 0x2F (Hint) and 0x08 (Check) specifically show her icon.
@@ -398,7 +404,7 @@ void hud_update() {
         transform,
         jStageName, stayNo, jLines, jIcons, mapAngle,
         minX, minZ, maxX, maxZ,
-        jButtonA, jButtonB, jButtonZ, jButtonL, jButtonX, jButtonY,
+        jButtonA, jButtonB, jButtonZ, midnaCalling, jButtonL, jButtonX, jButtonY,
         itemXId, itemYId, itemXCount, itemYCount,
         jDPadText, dPadDirection, itemDDownId, itemDDownCount);
 

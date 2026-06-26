@@ -85,7 +85,7 @@ public class HudView extends View {
 
         canvas.restore();
 
-        if (mState.buttonZText != null && mState.buttonZText.equals("Midna")) {
+        if (mState.midnaCalling) {
             postInvalidateOnAnimation();
         }
     }
@@ -274,49 +274,54 @@ public class HudView extends View {
         mPaint.setTextAlign(Paint.Align.CENTER);
         mPaint.setStyle(Paint.Style.FILL);
         
-        int drawColor = color;
+        int circleColor = color;
         boolean isMidna = active && "Midna".equals(text);
+        boolean isPulse = isMidna && mState.midnaCalling;
         
         if (isMidna) {
-            float pulse = (float)(Math.sin(System.currentTimeMillis() / 150.0) * 0.5 + 0.5);
-            // Pulse between Midna's orange and a brighter yellow
-            int r = 255;
-            int g = (int)(140 + 80 * pulse);
-            int b = (int)(30 * (1.0f - pulse));
-            drawColor = Color.rgb(r, g, b);
+            if (isPulse) {
+                float pulse = (float)(Math.sin(System.currentTimeMillis() / 150.0) * 0.5 + 0.5);
+                // Pulse between Midna's orange and a brighter yellow
+                int r = 255;
+                int g = (int)(140 + 80 * pulse);
+                int b = (int)(30 * (1.0f - pulse));
+                circleColor = Color.rgb(r, g, b);
+            } else {
+                // Midna's default purple
+                circleColor = Color.rgb(180, 50, 255);
+            }
         }
 
         if (active) {
-            mPaint.setColor(drawColor);
+            mPaint.setColor(circleColor);
         } else {
             mPaint.setColor(Color.argb(60, 100, 100, 100));
         }
         
         float radius = 38;
-        if (isMidna) {
+        if (isPulse) {
             radius += 4 * (float)(Math.sin(System.currentTimeMillis() / 150.0) * 0.5 + 0.5);
         }
         canvas.drawCircle(x, y, radius, mPaint);
         
+        // Draw Button Label (A, B, X, Y, Z, L)
         if (active) {
             mPaint.setColor(Color.BLACK);
-            if (color == Color.RED || color == Color.BLACK) mPaint.setColor(Color.WHITE);
-            if (isMidna) mPaint.setColor(Color.BLACK);
+            // Use white text for labels on dark backgrounds
+            if (circleColor == Color.RED || circleColor == Color.BLACK) {
+                mPaint.setColor(Color.WHITE);
+            }
         } else {
             mPaint.setColor(Color.argb(100, 200, 200, 200));
         }
         
         canvas.drawText(label, x, y + 15, mPaint);
         
+        // Draw Descriptive Text
         mPaint.setTextAlign(Paint.Align.LEFT);
         if (active && text != null && !text.isEmpty() && !text.equals("None")) {
-            if (isMidna) {
-                mPaint.setColor(drawColor);
-                mPaint.setFakeBoldText(true);
-            } else {
-                mPaint.setColor(Color.WHITE);
-                mPaint.setFakeBoldText(false);
-            }
+            mPaint.setColor(Color.WHITE);
+            mPaint.setFakeBoldText(isPulse);
             canvas.drawText(text, x + 50, y + 15, mPaint);
             mPaint.setFakeBoldText(false);
         } else if (!active) {

@@ -99,8 +99,8 @@ public class DuskActivity extends SDLActivity {
         int transform, String stageName, int roomNo, float[] mapLines,
         float[] mapIcons, float mapAngle,
         float mapMinX, float mapMinZ, float mapMaxX, float mapMaxZ,
-        String buttonAText, String buttonBText, String buttonZText, String buttonLText,
-        String buttonXText, String buttonYText,
+        String buttonAText, String buttonBText, String buttonZText, boolean midnaCalling,
+        String buttonLText, String buttonXText, String buttonYText,
         int itemXResId, int itemYResId, int itemXCount, int itemYCount,
         String dPadText, int dPadDirection, int itemDDownId, int itemDDownCount)
     {
@@ -113,8 +113,8 @@ public class DuskActivity extends SDLActivity {
             mapX, mapY, transform, stageName, roomNo, mapLines,
             mapIcons, mapAngle,
             mapMinX, mapMinZ, mapMaxX, mapMaxZ,
-            buttonAText, buttonBText, buttonZText, buttonLText,
-            buttonXText, buttonYText,
+            buttonAText, buttonBText, buttonZText, midnaCalling,
+            buttonLText, buttonXText, buttonYText,
             itemXResId, itemYResId, itemXCount, itemYCount,
             dPadText, dPadDirection, itemDDownId, itemDDownCount);
         runOnUiThread(() -> mSecondScreen.updateHud(state));
