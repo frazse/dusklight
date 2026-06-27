@@ -1015,6 +1015,11 @@ void dMeter2_c::moveLightDrop() {
         alpha = g_drawHIO.mLightDrop.mVesselAlpha[0];
     }
 
+    // --- DUSKLIGHT HUD HOOK: HIDE ON MAIN SCREEN ---
+    // We force alpha to 0 because the counter is active on the second screen.
+    alpha = 0.0f;
+    // -----------------------------------------------
+
     if (mVesselPosX != pos_x) {
         cLib_addCalc2(&mVesselPosX, pos_x, 1.0f, 10.0f);
         draw_lightdrop = true;
