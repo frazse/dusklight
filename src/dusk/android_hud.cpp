@@ -133,28 +133,45 @@ void hud_update() {
     const char* sName = dComIfGp_getStartStageName();
     std::string friendlyName = sName ? sName : "Unknown Area";
     if (sName) {
-        for (const auto& reg : gameRegions) for (const auto& m : reg.maps) if (strcmp(m.mapFile, sName) == 0) {
-             friendlyName = m.mapName;
-             break;
+        for (const auto& reg : gameRegions) {
+            for (const auto& m : reg.maps) {
+                if (strcmp(m.mapFile, sName) == 0) {
+                    if (m.mapRooms.empty()) { friendlyName = m.mapName; goto found_name; }
+                    for (const auto& r : m.mapRooms) {
+                        if (r.roomNo == stayNo) { friendlyName = m.mapName; goto found_name; }
+                    }
+                }
+            }
         }
     }
+    found_name:;
 
     bool has_map = dMapInfo_n::chkGetMap();
     auto* stage = dComIfGp_getStage();
-    bool is_d = (StageType)dStage_stagInfo_GetSTType(stage->getStagInfo()) == ST_DUNGEON;
+    StageType stype = (StageType)dStage_stagInfo_GetSTType(stage->getStagInfo());
+    bool is_d = (stype == ST_DUNGEON);
     s8 sFloor = dMapInfo_c::getNowStayFloorNoDecisionFlg() ? dMapInfo_c::getNowStayFloorNo() : dMapInfo_c::calcFloorNo(playerPos.y, true, stayNo);
 
-    // --- UNIVERSAL PER-ROOM BOUNDARY DETECTION ---
     float minX = 1e10f, minZ = 1e10f, maxX = -1e10f, maxZ = -1e10f;
     std::vector<float> finalLines, icons, doors;
 
     if (dMpath_c::mLayerList) for (int r = 0; r < 64; r++) {
-        // Collect ALL layers for this room first to find the true boundary
+        // --- ROOM VISIBILITY LOGIC ---
+        // 1. Interior/Boss stages: strictly show ONLY the current room to prevent overlap.
+        if (stype == ST_ROOM || stype == ST_BOSS_ROOM) {
+            if (r != stayNo) continue;
+        }
+        // 2. Dungeon stages: show all rooms if map is held, otherwise only visited.
+        else if (stype == ST_DUNGEON) {
+            if (!has_map && !dComIfGs_isVisitedRoom(r) && r != stayNo) continue;
+        }
+        // 3. Field/Castle Town: show all visited rooms (geographically separate).
+        else {
+            if (!dComIfGs_isVisitedRoom(r) && r != stayNo) continue;
+        }
+
         std::vector<TempLine> roomLines;
         float maxRoomArea = 0; int boundaryIdx = -1;
-
-        if (is_d && !has_map && !dComIfGs_isVisitedRoom(r) && r != stayNo) continue;
-        if (!is_d && !dComIfGs_isVisitedRoom(r) && r != stayNo) continue;
 
         for (int l = 0; l < 2; l++) {
             dDrawPath_c::room_class* room = dMpath_c::getRoomPointer(l, r);
@@ -172,12 +189,10 @@ void hud_update() {
                         }
                         if (tl.coords.size() >= 6) {
                             float dist = std::hypot(tl.coords[0] - tl.coords[tl.coords.size()-2], tl.coords[1] - tl.coords[tl.coords.size()-1]);
-                            tl.isClosed = (dist < 5.0f); // Allow some fuzziness for "closed"
+                            tl.isClosed = (dist < 5.0f);
                             if (tl.isClosed) {
                                 tl.area = calculate_polygon_area(tl.coords);
-                                if (tl.area > maxRoomArea) {
-                                    maxRoomArea = tl.area; boundaryIdx = (int)roomLines.size();
-                                }
+                                if (tl.area > maxRoomArea) { maxRoomArea = tl.area; boundaryIdx = (int)roomLines.size(); }
                             }
                         }
                         roomLines.push_back(tl);
@@ -186,10 +201,9 @@ void hud_update() {
             }
         }
 
-        // Now filter the room and append to global lines
         for (int i = 0; i < (int)roomLines.size(); i++) {
-            // Only skip the absolute largest closed polygon if it's "huge" (likely the sector boundary)
-            if (!is_d && i == boundaryIdx && maxRoomArea > 200000.0f) continue;
+            // DUNGEON/INTERIOR BYPASS: Never filter boundaries in temples or houses.
+            if (stype == ST_FIELD && i == boundaryIdx && maxRoomArea > 200000.0f) continue;
 
             for (size_t j = 0; j < roomLines[i].coords.size(); j += 2) {
                 finalLines.push_back(roomLines[i].coords[j]); finalLines.push_back(roomLines[i].coords[j+1]);
@@ -201,8 +215,8 @@ void hud_update() {
     }
     fData[3] = minX; fData[4] = minZ; fData[5] = maxX; fData[6] = maxZ;
 
-    // --- Doors & Icons ---
-    auto collect_doors = [&](dStage_KeepDoorInfo* di, bool correct) {
+    // Original Dungeon Transitions
+    auto collect_orig_doors = [&](dStage_KeepDoorInfo* di, bool correct) {
         if (!di) return;
         for (int i = 0; i < di->mNum; i++) {
             const stage_tgsc_data_class* d = &di->mDrTgData[i];
@@ -213,7 +227,7 @@ void hud_update() {
             doors.push_back(p.x); doors.push_back(p.z); doors.push_back((float)d->base.angle.y * (180.0f / 32768.0f)); doors.push_back(0.0f);
         }
     };
-    collect_doors(dStage_GetKeepDoorInfo(), true); collect_doors(dStage_GetRoomKeepDoorInfo(), false);
+    collect_orig_doors(dStage_GetKeepDoorInfo(), true); collect_orig_doors(dStage_GetRoomKeepDoorInfo(), false);
 
     for (int t = 0; t < dTres_c::TYPE_GROUP_ENUM_NUMBER; t++) {
         for (dTres_c::typeGroupData_c* data = dTres_c::getFirstData(t); data; data = dTres_c::getNextData(data)) {
