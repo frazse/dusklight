@@ -3,8 +3,8 @@ package dev.twilitrealm.dusk;
 public class GameState {
     public final int health, maxHealth, magic, maxMagic, oil, maxOil, oxygen, maxOxygen;
     public final int rupees, keys, arrows, bombs, transform, roomNo;
-    public final int lightDrops, maxLightDrops;
-    public final boolean showLightDrops, midnaCalling;
+    public final int lightDrops, maxLightDrops, horseSpurs;
+    public final boolean showLightDrops, midnaCalling, isRiding, isSwimming, showOxygen;
     
     public final float mapX, mapY, mapAngle;
     public final float mapMinX, mapMinZ, mapMaxX, mapMaxZ;
@@ -27,36 +27,39 @@ public class GameState {
         this.transform = i[12]; this.roomNo    = i[13];
         this.lightDrops = i[14]; this.maxLightDrops = i[15];
         this.showLightDrops = i[16] != 0;
-        this.midnaCalling = i[27] != 0;
         
         this.itemXResId = i[17];    this.itemYResId = i[18];
         this.itemXCount = i[19];    this.itemYCount = i[20];
         this.itemDDownId = i[21];   this.itemDDownCount = i[22];
-        this.itemDLeftId = i[23];   this.itemDLeftCount = i[24];
-        this.itemDRightId = i[25];  this.itemDRightCount = i[26];
+        this.itemDLeftId = i[25];   this.itemDLeftCount = i[26];
+        this.itemDRightId = i[40];  this.itemDRightCount = i[41];
+        
+        this.horseSpurs = i[42];
+        this.showOxygen = i[43] != 0;
+        this.midnaCalling = i[27] != 0;
 
         int stateFlags = i[31];
         boolean targeting = (stateFlags & 1) != 0;
-        boolean swimming = (stateFlags & 2) != 0;
-        boolean riding = (stateFlags & 4) != 0;
+        this.isSwimming = (stateFlags & 2) != 0;
+        this.isRiding = (stateFlags & 4) != 0;
 
         int vis = i[39];
-        this.buttonAText = ((vis & 1) != 0) ? getActionLabel(i[28], swimming, riding, transform) : "";
-        this.buttonBText = ((vis & 2) != 0) ? getActionLabel(i[29], swimming, riding, transform) : "";
+        this.buttonAText = ((vis & 1) != 0) ? getActionLabel(i[28], isSwimming, isRiding, transform) : "";
+        this.buttonBText = ((vis & 2) != 0) ? getActionLabel(i[29], isSwimming, isRiding, transform) : "";
         
-        String zText = getActionLabel(i[30], swimming, riding, transform);
+        String zText = getActionLabel(i[30], isSwimming, isRiding, transform);
         if (zText.isEmpty()) zText = "Midna";
         this.buttonZText = ((vis & 4) != 0) ? zText : "";
 
         this.buttonLText = targeting ? "Target" : "";
-        this.buttonRText = ((vis & 8) != 0) ? getActionLabel(i[32], swimming, riding, transform) : "";
-        this.buttonXText = ((vis & 16) != 0) ? getActionLabel(i[33], swimming, riding, transform) : "";
-        this.buttonYText = ((vis & 32) != 0) ? getActionLabel(i[34], swimming, riding, transform) : "";
+        this.buttonRText = ((vis & 8) != 0) ? getActionLabel(i[32], isSwimming, isRiding, transform) : "";
+        this.buttonXText = ((vis & 16) != 0) ? getActionLabel(i[33], isSwimming, isRiding, transform) : "";
+        this.buttonYText = ((vis & 32) != 0) ? getActionLabel(i[34], isSwimming, isRiding, transform) : "";
 
-        this.dPadUpText    = getActionLabel(i[35], swimming, riding, transform);
-        this.dPadDownText  = getActionLabel(i[36], swimming, riding, transform);
-        this.dPadLeftText  = getActionLabel(i[37], swimming, riding, transform);
-        this.dPadRightText = getActionLabel(i[38], swimming, riding, transform);
+        this.dPadUpText    = getActionLabel(i[35], isSwimming, isRiding, transform);
+        this.dPadDownText  = getActionLabel(i[36], isSwimming, isRiding, transform);
+        this.dPadLeftText  = getActionLabel(i[37], isSwimming, isRiding, transform);
+        this.dPadRightText = getActionLabel(i[38], isSwimming, isRiding, transform);
 
         this.mapX = f[0]; this.mapY = f[1]; this.mapAngle = f[2];
         this.mapMinX = f[3]; this.mapMinZ = f[4]; this.mapMaxX = f[5]; this.mapMaxZ = f[6];
@@ -69,6 +72,7 @@ public class GameState {
 
     private String getActionLabel(int id, boolean isSwimming, boolean isRiding, int wolfForm) {
         if (id == 0) return "";
+        if (wolfForm == 0 && (id == 0x05 || id == 0x0D || id == 0x1F || id == 0x45 || id == 0x46 || id == 0x4E)) return "";
         switch (id) {
             case 0x01: return "Action";
             case 0x02: return "Peek";

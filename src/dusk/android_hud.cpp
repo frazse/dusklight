@@ -9,6 +9,7 @@
 #include "d/actor/d_a_alink.h"
 #include "dusk/map_loader_definitions.h"
 #include "SSystem/SComponent/c_xyz.h"
+#include "dusk/endian.h"
 
 #include <SDL3/SDL_system.h>
 #include <jni.h>
@@ -110,7 +111,7 @@ void hud_update() {
 
     s_secondScreenActive.store(true, std::memory_order_relaxed);
 
-    int iData[40] = {0};
+    int iData[60] = {0};
     iData[0] = dComIfGs_getLife();      iData[1] = dComIfGs_getMaxLife();
     iData[2] = dComIfGs_getMagic();     iData[3] = dComIfGs_getMaxMagic();
     iData[4] = dComIfGs_getOil();       iData[5] = dComIfGs_getMaxOil();
@@ -127,9 +128,16 @@ void hud_update() {
     iData[17] = dComIfGp_getSelectItem(0); iData[18] = dComIfGp_getSelectItem(1);
     iData[19] = dComIfGp_getSelectItemNum(0); iData[20] = dComIfGp_getSelectItemNum(1);
     iData[21] = dComIfGp_getSelectItem(2); iData[22] = dComIfGp_getSelectItemNum(2);
-    iData[23] = iData[17]; iData[24] = iData[19];
-    iData[25] = iData[18]; iData[26] = iData[20];
-    iData[27] = (dComIfGp_isZSetFlag(2) || dComIfGp_isZSetFlag(4)) ? 1 : 0;
+
+    // Use correct engine getters for D-Pad items
+    iData[23] = dComIfGp_getSelectItem(3); iData[24] = dComIfGp_getSelectItemNum(3); // Down
+    iData[25] = dComIfGp_getSelectItem(4); iData[26] = dComIfGp_getSelectItemNum(4); // Left
+    iData[27] = (dComIfGp_isZSetFlag(2) || dComIfGp_isZSetFlag(4)) ? 1 : 0; // Midna
+    iData[40] = dComIfGp_getSelectItem(5); iData[41] = dComIfGp_getSelectItemNum(5); // Right
+
+    // Safe Slots
+    iData[42] = dMeter2Info_getHorseLifeCount(); // Epona Spurs
+    iData[43] = (meter && meter->isShowFlag(11)) ? 1 : 0; // Engine Oxygen Flag
 
     // Player movement state
     dAttention_c* attn = dComIfGp_getAttention();
@@ -158,14 +166,7 @@ void hud_update() {
     iData[37] = (dPadD & 1) ? dPadS : 0; iData[38] = (dPadD & 4) ? dPadS : 0;
 
     // Visibility Mask
-    int visMask = 0;
-    if (dMeter2Info_isUseButton(METER2_USEBUTTON_A)) visMask |= 1;
-    if (dMeter2Info_isUseButton(METER2_USEBUTTON_B)) visMask |= 2;
-    if (dMeter2Info_isUseButton(METER2_USEBUTTON_Z)) visMask |= 4;
-    if (dMeter2Info_isUseButton(METER2_USEBUTTON_R)) visMask |= 8;
-    if (dMeter2Info_isUseButton(METER2_USEBUTTON_X)) visMask |= 16;
-    if (dMeter2Info_isUseButton(METER2_USEBUTTON_Y)) visMask |= 32;
-    iData[39] = visMask;
+    iData[39] = dMeter2Info_isUseButton(0xFFFF) ? 0xFFFF : 0;
 
     // Map Floats
     Vec playerPos = dMapInfo_n::getMapPlayerPos();
@@ -248,7 +249,7 @@ void hud_update() {
     }
 
     jstring jStage = env->NewStringUTF(friendlyName.c_str());
-    jintArray jInts = env->NewIntArray(40); env->SetIntArrayRegion(jInts, 0, 40, iData);
+    jintArray jInts = env->NewIntArray(60); env->SetIntArrayRegion(jInts, 0, 60, iData);
     jfloatArray jFloats = env->NewFloatArray(7); env->SetFloatArrayRegion(jFloats, 0, 7, fData);
     jfloatArray jLines = env->NewFloatArray(lines.size()); env->SetFloatArrayRegion(jLines, 0, lines.size(), lines.data());
     jfloatArray jIcons = env->NewFloatArray(icons.size()); env->SetFloatArrayRegion(jIcons, 0, icons.size(), icons.data());
