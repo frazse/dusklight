@@ -65,8 +65,13 @@ bool should_draw_icon(int type, const dTres_c::data_s* data, int stayNo) {
         return true;
     } else {
         // Overworld Rule:
-        // NEVER show: Chests (0, 10), Heart Pieces (2), or generic quest markers (4, 5, 16).
-        if (type == 0 || type == 10 || type == 2 || type == 3 || type == 4 || type == 5 || type == 16) {
+        // Show Light Drops (4) if we are in a Dark Area.
+        if (type == 4) {
+             return dComIfGp_getStartStageDarkArea() != 0;
+        }
+
+        // NEVER show: Chests (0, 10), Heart Pieces (2), Boss (3), or generic quest markers (5, 16).
+        if (type == 0 || type == 10 || type == 2 || type == 3 || type == 5 || type == 16) {
             return false;
         }
 
@@ -227,8 +232,13 @@ void hud_update() {
     // --- Process Icons ---
     for (int t = 0; t < dTres_c::TYPE_GROUP_ENUM_NUMBER; t++) {
         for (dTres_c::typeGroupData_c* data = dTres_c::getFirstData(t); data; data = dTres_c::getNextData(data)) {
-            // General filter: hidden if room hasn't been visited (unless Compass reveals it)
-            if (data->mRoomNo != -1 && !dComIfGs_isVisitedRoom(data->mRoomNo) && data->mRoomNo != stayNo && !is_d) continue;
+            // Overworld Interior Filter: If we are in a house/interior room,
+            // only show icons that are physically inside that room.
+            if (!is_d && stayNo != 0 && data->mRoomNo != -1 && data->mRoomNo != stayNo) continue;
+
+            // General filter: hidden if room hasn't been visited (unless Compass reveals it or it's a Light Drop)
+            bool is_light_drop = (t == 4);
+            if (!is_light_drop && data->mRoomNo != -1 && !dComIfGs_isVisitedRoom(data->mRoomNo) && data->mRoomNo != stayNo && !is_d) continue;
 
             if (should_draw_icon(t, data->getConstDataPointer(), stayNo)) {
                 BE(Vec) p = data->mPos; if (data->mRoomNo != -1) dMapInfo_n::correctionOriginPos(data->mRoomNo, &p);

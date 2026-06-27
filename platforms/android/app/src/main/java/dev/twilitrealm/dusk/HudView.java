@@ -532,8 +532,13 @@ public class HudView extends View {
                 canvas.drawRect(x - 8, y - 8, x + 8, y + 8, mPaint);
                 break;
             case 4: // Light Drop / Objective
-                mPaint.setColor(Color.rgb(100, 150, 255));
+                mPaint.setColor(Color.WHITE);
                 canvas.drawCircle(x, y, 6, mPaint);
+                mPaint.setStyle(Paint.Style.STROKE);
+                mPaint.setColor(Color.YELLOW);
+                mPaint.setStrokeWidth(2);
+                canvas.drawCircle(x, y, 6, mPaint);
+                mPaint.setStyle(Paint.Style.FILL);
                 break;
             case 3: // Boss
                 mPaint.setColor(Color.RED);
