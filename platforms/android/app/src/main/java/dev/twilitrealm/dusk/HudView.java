@@ -22,6 +22,10 @@ public class HudView extends View {
     private final float MAP_Y = 210;
     private final float MAP_SIZE = 720;
 
+    // Faithful Rupee Animation State
+    private int mDisplayRupees = -1;
+    private int mRupeeTimer = 0;
+
     public HudView(Context context) {
         super(context);
     }
@@ -60,6 +64,9 @@ public class HudView extends View {
         canvas.translate((getWidth() - 1280 * scale) / 2, (getHeight() - 1080 * scale) / 2);
         canvas.scale(scale, scale);
 
+        // Update Faithful Rupee Animation
+        updateRupeeAnimation();
+
         // DIAGNOSTIC BORDER
         mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(4); mPaint.setColor(Color.MAGENTA);
         canvas.drawRect(0, 0, 1280, 1080, mPaint);
@@ -69,7 +76,7 @@ public class HudView extends View {
         drawHearts(canvas, 20, 20);
         drawMagicBar(canvas, 20, 150);
         
-        // TOP RIGHT: 20px padding (Baseline 58 = 20 pad + 38 text)
+        // TOP RIGHT: 20px padding
         if (mState.showOxygen) drawOxygenBar(canvas, 780, 150);
         else drawOilBar(canvas, 780, 150);
         drawItems(canvas, 1260, 58);
@@ -77,7 +84,7 @@ public class HudView extends View {
         // BOTTOM LEFT: 20px padding
         drawRupeeCounter(canvas, 20, 1060);
         
-        // DYNAMIC CENTER: Stacking Tears and Horse Spurs
+        // DYNAMIC CENTER
         if (mState.showLightDrops && mState.maxLightDrops > 0) {
             float width = (mState.maxLightDrops - 1) * 32;
             drawLightDropZigZag(canvas, 640 - (width / 2), 1055);
@@ -90,11 +97,46 @@ public class HudView extends View {
         drawMiniMap(canvas, MAP_X, MAP_Y);
         drawContextButtons(canvas, 820, 280);
         
-        // BOTTOM RIGHT: 20px padding (1280-20, 1080-20)
+        // BOTTOM RIGHT: 20px padding
         drawStatusInfo(canvas, 1260, 1060);
 
         canvas.restore();
         if (mState.midnaCalling) postInvalidateOnAnimation();
+    }
+
+    private int getRupeeStep(int diff) {
+        if (diff > 100) return 10;
+        if (diff > 50)  return 5;
+        if (diff > 10)  return 2;
+        return 1;
+    }
+
+    private void updateRupeeAnimation() {
+        if (mDisplayRupees == -1) {
+            mDisplayRupees = mState.rupees;
+            return;
+        }
+
+        int delta = mState.rupees - mDisplayRupees;
+        if (delta == 0) return;
+
+        // Force frame requests while animating
+        postInvalidateOnAnimation();
+
+        // Tick delay system: Skip frame if timer is active
+        if (mRupeeTimer-- > 0) return;
+
+        int absDelta = Math.abs(delta);
+        int step = getRupeeStep(absDelta);
+        
+        // Convergence logic: slightly snappier loss feel
+        if (delta < 0) step = Math.min(step * 2, absDelta);
+        else step = Math.min(step, absDelta);
+
+        mDisplayRupees += (delta > 0) ? step : -step;
+        
+        // FASTER Timing: update every frame (0) when diff is large, or every 2nd frame (1) when small
+        mRupeeTimer = (absDelta > 50) ? 0 : 1;
     }
 
     private void drawHearts(Canvas canvas, float startX, float startY) {
@@ -110,32 +152,23 @@ public class HudView extends View {
     private void drawZeldaHeart(Canvas canvas, float x, float y, float size, int fill) {
         mPaint.setStrokeWidth(3); mPaint.setColor(Color.WHITE); mHeartPath.reset();
         float mid = size / 2;
-        
-        // NEW PUFFY HEART SHAPE (Matching user image)
-        mHeartPath.moveTo(x + mid, y + size * 0.25f); // Top center dip
-        // Right shoulder
+        mHeartPath.moveTo(x + mid, y + size * 0.25f);
         mHeartPath.cubicTo(x + mid + size * 0.1f, y + size * 0.05f, x + size, y + size * 0.05f, x + size * 0.95f, y + size * 0.45f);
-        // Bottom point
         mHeartPath.cubicTo(x + size * 0.9f, y + size * 0.7f, x + mid + size * 0.1f, y + size * 0.9f, x + mid, y + size * 0.95f);
-        // Left bottom side
         mHeartPath.cubicTo(x + mid - size * 0.1f, y + size * 0.9f, x + size * 0.1f, y + size * 0.7f, x + size * 0.05f, y + size * 0.45f);
-        // Left shoulder back to dip
         mHeartPath.cubicTo(x, y + size * 0.05f, x + mid - size * 0.1f, y + size * 0.05f, x + mid, y + size * 0.25f);
-
         mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.argb(80, 50, 0, 0));
         canvas.drawPath(mHeartPath, mPaint);
         mPaint.setStyle(Paint.Style.STROKE); mPaint.setColor(Color.WHITE);
         canvas.drawPath(mHeartPath, mPaint);
-        
         if (fill > 0) {
-            float splitY = y + size * 0.55f; // Adjusted for new shape dip
+            float splitY = y + size * 0.55f;
             mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.RED);
             canvas.save(); canvas.clipPath(mHeartPath);
-            // DEPLETION ORDER: Top-Left remains last.
-            if (fill >= 1) canvas.drawRect(x - size * 0.2f, y - size * 0.2f, x + mid, splitY, mPaint);    // Top-Left
-            if (fill >= 2) canvas.drawRect(x - size * 0.2f, splitY, x + mid, y + size * 1.2f, mPaint);   // Bottom-Left
-            if (fill >= 3) canvas.drawRect(x + mid, splitY, x + size * 1.2f, y + size * 1.2f, mPaint);  // Bottom-Right
-            if (fill >= 4) canvas.drawRect(x + mid, y - size * 0.2f, x + size * 1.2f, splitY, mPaint);   // Top-Right
+            if (fill >= 1) canvas.drawRect(x - size * 0.2f, y - size * 0.2f, x + mid, splitY, mPaint);
+            if (fill >= 2) canvas.drawRect(x - size * 0.2f, splitY, x + mid, y + size * 1.2f, mPaint);
+            if (fill >= 3) canvas.drawRect(x + mid, splitY, x + size * 1.2f, y + size * 1.2f, mPaint);
+            if (fill >= 4) canvas.drawRect(x + mid, y - size * 0.2f, x + size * 1.2f, splitY, mPaint);
             canvas.restore();
             mPaint.setStyle(Paint.Style.STROKE); mPaint.setColor(Color.WHITE); canvas.drawPath(mHeartPath, mPaint);
         }
@@ -175,58 +208,27 @@ public class HudView extends View {
     }
 
     private void drawRupeeCounter(Canvas canvas, float x, float y) {
-        // Draw geometric RUPEE at exactly x (20px from left)
-        float w = 40;
-        float h = 58; // Elongated gem shape
-        float centerY = y - 24; 
+        float w = 40, h = 58, centerY = y - 24; 
+        mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.rgb(0, 180, 0)); mDrawPath.reset();
+        mDrawPath.moveTo(x + w / 2f, centerY - h / 2f); mDrawPath.lineTo(x + w, centerY - h / 5f);
+        mDrawPath.lineTo(x + w, centerY + h / 5f); mDrawPath.lineTo(x + w / 2f, centerY + h / 2f);
+        mDrawPath.lineTo(x, centerY + h / 5f); mDrawPath.lineTo(x, centerY - h / 5f); mDrawPath.close();
+        canvas.drawPath(mDrawPath, mPaint);
+        mPaint.setColor(Color.rgb(100, 255, 100)); float iw = w * 0.5f, ih = h * 0.5f; mDrawPath.reset();
+        mDrawPath.moveTo(x + w / 2f, centerY - ih / 2f); mDrawPath.lineTo(x + w / 2f + iw / 2f, centerY - ih / 4f);
+        mDrawPath.lineTo(x + w / 2f + iw / 2f, centerY + ih / 4f); mDrawPath.lineTo(x + w / 2f, centerY + ih / 2f);
+        mDrawPath.lineTo(x + w / 2f - iw / 2f, centerY + ih / 4f); mDrawPath.lineTo(x + w / 2f - iw / 2f, centerY - ih / 4f); mDrawPath.close();
+        canvas.drawPath(mDrawPath, mPaint);
+        mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(2); mPaint.setColor(Color.rgb(0, 80, 0));
+        mDrawPath.reset(); mDrawPath.moveTo(x + w / 2f, centerY - h / 2f); mDrawPath.lineTo(x + w, centerY - h / 5f);
+        mDrawPath.lineTo(x + w, centerY + h / 5f); mDrawPath.lineTo(x + w / 2f, centerY + h / 2f);
+        mDrawPath.lineTo(x, centerY + h / 5f); mDrawPath.lineTo(x, centerY - h / 5f); mDrawPath.close();
+        canvas.drawPath(mDrawPath, mPaint);
         
-        // 1. Draw Outer Body
-        mPaint.setStyle(Paint.Style.FILL);
-        mPaint.setColor(Color.rgb(0, 180, 0)); // Forest Green
-        mDrawPath.reset();
-        mDrawPath.moveTo(x + w / 2f, centerY - h / 2f); // Top Tip
-        mDrawPath.lineTo(x + w, centerY - h / 5f);     // Top Right
-        mDrawPath.lineTo(x + w, centerY + h / 5f);     // Bottom Right
-        mDrawPath.lineTo(x + w / 2f, centerY + h / 2f); // Bottom Tip
-        mDrawPath.lineTo(x, centerY + h / 5f);         // Bottom Left
-        mDrawPath.lineTo(x, centerY - h / 5f);         // Top Left
-        mDrawPath.close();
-        canvas.drawPath(mDrawPath, mPaint);
-
-        // 2. Draw Inner Face (for that faceted gem look)
-        mPaint.setColor(Color.rgb(100, 255, 100)); // Light Highlight
-        float iw = w * 0.5f;
-        float ih = h * 0.5f;
-        mDrawPath.reset();
-        mDrawPath.moveTo(x + w / 2f, centerY - ih / 2f);
-        mDrawPath.lineTo(x + w / 2f + iw / 2f, centerY - ih / 4f);
-        mDrawPath.lineTo(x + w / 2f + iw / 2f, centerY + ih / 4f);
-        mDrawPath.lineTo(x + w / 2f, centerY + ih / 2f);
-        mDrawPath.lineTo(x + w / 2f - iw / 2f, centerY + ih / 4f);
-        mDrawPath.lineTo(x + w / 2f - iw / 2f, centerY - ih / 4f);
-        mDrawPath.close();
-        canvas.drawPath(mDrawPath, mPaint);
-
-        // 3. Draw Bevel Stroke
-        mPaint.setStyle(Paint.Style.STROKE);
-        mPaint.setStrokeWidth(2);
-        mPaint.setColor(Color.rgb(0, 80, 0)); // Dark edge
-        mDrawPath.reset();
-        mDrawPath.moveTo(x + w / 2f, centerY - h / 2f);
-        mDrawPath.lineTo(x + w, centerY - h / 5f);
-        mDrawPath.lineTo(x + w, centerY + h / 5f);
-        mDrawPath.lineTo(x + w / 2f, centerY + h / 2f);
-        mDrawPath.lineTo(x, centerY + h / 5f);
-        mDrawPath.lineTo(x, centerY - h / 5f);
-        mDrawPath.close();
-        canvas.drawPath(mDrawPath, mPaint);
-
-        // Draw text next to the rupee
-        mPaint.setStyle(Paint.Style.FILL);
-        mPaint.setTextAlign(Paint.Align.LEFT);
-        mPaint.setTextSize(65);
-        mPaint.setColor(Color.GREEN);
-        canvas.drawText(String.valueOf(mState.rupees), x + w + 15, y, mPaint);
+        mPaint.setStyle(Paint.Style.FILL); mPaint.setTextAlign(Paint.Align.LEFT); mPaint.setTextSize(65);
+        if (mState.rupees > mDisplayRupees) mPaint.setColor(Color.WHITE); 
+        else mPaint.setColor(Color.GREEN);
+        canvas.drawText(String.valueOf(mDisplayRupees), x + w + 15, y, mPaint);
     }
 
     private void drawLightDropZigZag(Canvas canvas, float x, float y) {
