@@ -64,27 +64,17 @@ public class HudView extends View {
         canvas.translate((getWidth() - 1280 * scale) / 2, (getHeight() - 1080 * scale) / 2);
         canvas.scale(scale, scale);
 
-        // Update Faithful Rupee Animation
         updateRupeeAnimation();
 
-        // DIAGNOSTIC BORDER
-        mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(4); mPaint.setColor(Color.MAGENTA);
-        canvas.drawRect(0, 0, 1280, 1080, mPaint);
-        mPaint.setStrokeWidth(2); 
-
-        // TOP LEFT: 20px padding
         drawHearts(canvas, 20, 20);
         drawMagicBar(canvas, 20, 150);
         
-        // TOP RIGHT: 20px padding
         if (mState.showOxygen) drawOxygenBar(canvas, 780, 150);
         else drawOilBar(canvas, 780, 150);
         drawItems(canvas, 1260, 58);
 
-        // BOTTOM LEFT: 20px padding
         drawRupeeCounter(canvas, 20, 1060);
         
-        // DYNAMIC CENTER
         if (mState.showLightDrops && mState.maxLightDrops > 0) {
             float width = (mState.maxLightDrops - 1) * 32;
             drawLightDropZigZag(canvas, 640 - (width / 2), 1055);
@@ -93,11 +83,9 @@ public class HudView extends View {
             drawHorseSpurs(canvas, 640 - (width / 2), 1060);
         }
         
-        // MIDDLE AREA
         drawMiniMap(canvas, MAP_X, MAP_Y);
         drawContextButtons(canvas, 820, 280);
         
-        // BOTTOM RIGHT: 20px padding
         drawStatusInfo(canvas, 1260, 1060);
 
         canvas.restore();
@@ -112,36 +100,128 @@ public class HudView extends View {
     }
 
     private void updateRupeeAnimation() {
-        if (mDisplayRupees == -1) {
-            mDisplayRupees = mState.rupees;
-            return;
-        }
-
+        if (mDisplayRupees == -1) { mDisplayRupees = mState.rupees; return; }
         int delta = mState.rupees - mDisplayRupees;
         if (delta == 0) return;
-
-        // Force frame requests while animating
         postInvalidateOnAnimation();
-
-        // Tick delay system: Skip frame if timer is active
         if (mRupeeTimer-- > 0) return;
-
         int absDelta = Math.abs(delta);
         int step = getRupeeStep(absDelta);
-        
-        // Convergence logic: slightly snappier loss feel
         if (delta < 0) step = Math.min(step * 2, absDelta);
         else step = Math.min(step, absDelta);
-
         mDisplayRupees += (delta > 0) ? step : -step;
+        mRupeeTimer = (absDelta > 50) ? 0 : 1; 
+    }
+
+    private void drawMiniMap(Canvas canvas, float x, float y) {
+        mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.argb(120, 15, 15, 50));
+        canvas.drawRect(x, y, x + MAP_SIZE, y + MAP_SIZE, mPaint);
+        mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(3); mPaint.setColor(Color.WHITE);
+        canvas.drawRect(x, y, x + MAP_SIZE, y + MAP_SIZE, mPaint);
+        if (mState.mapMaxX <= mState.mapMinX || mState.mapMaxZ <= mState.mapMinZ) return;
         
-        // FASTER Timing: update every frame (0) when diff is large, or every 2nd frame (1) when small
-        mRupeeTimer = (absDelta > 50) ? 0 : 1;
+        float baseScale = (MAP_SIZE * 0.92f) / Math.max(mState.mapMaxX - mState.mapMinX, mState.mapMaxZ - mState.mapMinZ);
+        float mS = (mMapZoomLevel > 0) ? baseScale * (float)Math.pow(2, mMapZoomLevel) : baseScale;
+        float sCX = (mMapZoomLevel > 0) ? mState.mapX : (mState.mapMaxX + mState.mapMinX)/2f;
+        float sCZ = (mMapZoomLevel > 0) ? mState.mapY : (mState.mapMaxZ + mState.mapMinZ)/2f;
+        float cX = x + MAP_SIZE/2, cY = y + MAP_SIZE/2;
+        
+        canvas.save(); canvas.clipRect(x, y, x + MAP_SIZE, y + MAP_SIZE);
+
+        int colorMint = Color.rgb(155, 205, 155);
+        int colorWater = Color.rgb(65, 110, 220);
+        int colorTerrain = Color.rgb(75, 125, 75);
+
+        if (mState.mapLines != null) {
+            int vCount = 0; float[] strip = new float[8192];
+            for (int i = 0; i < mState.mapLines.length; i += 2) {
+                if (Float.isNaN(mState.mapLines[i])) {
+                    if (i + 3 >= mState.mapLines.length) break;
+                    int id0 = (int)mState.mapLines[i+1];
+                    int id1 = (int)mState.mapLines[i+2];
+                    boolean isPoly = id1 > 1000;
+                    
+                    if (isPoly) {
+                        int polyId = id0 & 0x3F;
+                        // Use FILL_AND_STROKE with 0.5f width to seal triangle seams
+                        mPaint.setStyle(Paint.Style.FILL_AND_STROKE); mPaint.setStrokeWidth(0.5f);
+                        if (polyId == 5) mPaint.setColor(colorWater);
+                        else if (polyId == 1) mPaint.setColor(colorMint);
+                        else mPaint.setColor(colorTerrain);
+                        
+                        for (int j = 0; j < vCount - 2; j++) {
+                            mDrawPath.reset();
+                            mDrawPath.moveTo(strip[j*2], strip[j*2+1]);
+                            mDrawPath.lineTo(strip[(j+1)*2], strip[(j+1)*2+1]);
+                            mDrawPath.lineTo(strip[(j+2)*2], strip[(j+2)*2+1]);
+                            mDrawPath.close(); canvas.drawPath(mDrawPath, mPaint);
+                        }
+                    } else {
+                        // EXCLUSIVE WALL FILTER: Only IDs 2 and 4. Hide logical line box.
+                        if ((id1 == 2 || id1 == 4) && (id0 & 0x80) == 0) {
+                            mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(2.5f);
+                            mPaint.setColor(colorMint); mDrawPath.reset();
+                            for (int j = 0; j < vCount; j++) {
+                                if (j == 0) mDrawPath.moveTo(strip[j*2], strip[j*2+1]);
+                                else mDrawPath.lineTo(strip[j*2], strip[j*2+1]);
+                            }
+                            canvas.drawPath(mDrawPath, mPaint);
+                        }
+                    }
+                    vCount = 0; i += 2; continue;
+                }
+                if (vCount * 2 < strip.length - 1) {
+                    strip[vCount*2] = cX + (mState.mapLines[i] - sCX) * mS;
+                    strip[vCount*2+1] = cY + (mState.mapLines[i+1] - sCZ) * mS;
+                    vCount++;
+                }
+            }
+        }
+
+        // Icons & Doors
+        if (mState.mapIcons != null) {
+            for (int i = 0; i < mState.mapIcons.length; i += 4) {
+                float ix = cX + (mState.mapIcons[i+1] - sCX) * mS;
+                float iy = cY + (mState.mapIcons[i+2] - sCZ) * mS;
+                drawMapIcon(canvas, ix, iy, (int)mState.mapIcons[i]);
+            }
+        }
+        if (mState.mapDoors != null) {
+            for (int i = 0; i < mState.mapDoors.length; i += 4) {
+                float dx = cX + (mState.mapDoors[i] - sCX) * mS, dy = cY + (mState.mapDoors[i+1] - sCZ) * mS;
+                drawDoorIcon(canvas, dx, dy, mState.mapDoors[i+2]);
+            }
+        }
+
+        // Player Cursor
+        canvas.save(); canvas.translate(cX + (mState.mapX - sCX) * mS, cY + (mState.mapY - sCZ) * mS);
+        canvas.rotate(180 - mState.mapAngle); mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.YELLOW);
+        mDrawPath.reset(); mDrawPath.moveTo(0, -22); mDrawPath.lineTo(-13, 13); mDrawPath.lineTo(13, 13); mDrawPath.close();
+        canvas.drawPath(mDrawPath, mPaint); canvas.restore();
+        
+        canvas.restore();
+        mPaint.setTextAlign(Paint.Align.CENTER); mPaint.setTextSize(32); mPaint.setColor(Color.WHITE);
+        canvas.drawText(mState.stageName + (mMapZoomLevel == 0 ? "" : " (" + (1<<mMapZoomLevel) + "x)"), x + MAP_SIZE/2, y + MAP_SIZE + 40, mPaint);
+    }
+
+    private void drawMapIcon(Canvas canvas, float x, float y, int type) {
+        mPaint.setStyle(Paint.Style.FILL);
+        if (type == 4) { mPaint.setColor(Color.WHITE); canvas.drawCircle(x, y, 6, mPaint); mPaint.setStyle(Paint.Style.STROKE); mPaint.setColor(Color.YELLOW); mPaint.setStrokeWidth(2); canvas.drawCircle(x, y, 6, mPaint); mPaint.setStyle(Paint.Style.FILL); }
+        else if (type == 0 || type == 10) { mPaint.setColor(Color.YELLOW); canvas.drawRect(x-8, y-8, x+8, y+8, mPaint); }
+        else { mPaint.setColor(Color.RED); canvas.drawCircle(x, y, 8, mPaint); }
+    }
+
+    private void drawDoorIcon(Canvas canvas, float x, float y, float angle) {
+        mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.rgb(200, 200, 200));
+        canvas.save(); canvas.translate(x, y); canvas.rotate(180 - angle);
+        canvas.drawRect(-12, -4, 12, 4, mPaint);
+        mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(1); mPaint.setColor(Color.BLACK);
+        canvas.drawRect(-12, -4, 12, 4, mPaint);
+        canvas.restore();
     }
 
     private void drawHearts(Canvas canvas, float startX, float startY) {
-        int maxHearts = mState.maxHealth / 5;
-        float heartSize = 58, gap = 12;
+        int maxHearts = mState.maxHealth / 5; float heartSize = 58, gap = 12;
         for (int i = 0; i < maxHearts; i++) {
             float x = startX + (i % 10) * (heartSize + gap), y = startY + (i / 10) * (heartSize + gap);
             int fill = Math.min(4, Math.max(0, mState.health - (i * 4)));
@@ -224,10 +304,8 @@ public class HudView extends View {
         mDrawPath.lineTo(x + w, centerY + h / 5f); mDrawPath.lineTo(x + w / 2f, centerY + h / 2f);
         mDrawPath.lineTo(x, centerY + h / 5f); mDrawPath.lineTo(x, centerY - h / 5f); mDrawPath.close();
         canvas.drawPath(mDrawPath, mPaint);
-        
         mPaint.setStyle(Paint.Style.FILL); mPaint.setTextAlign(Paint.Align.LEFT); mPaint.setTextSize(65);
-        if (mState.rupees > mDisplayRupees) mPaint.setColor(Color.WHITE); 
-        else mPaint.setColor(Color.GREEN);
+        if (mState.rupees > mDisplayRupees) mPaint.setColor(Color.WHITE); else mPaint.setColor(Color.GREEN);
         canvas.drawText(String.valueOf(mDisplayRupees), x + w + 15, y, mPaint);
     }
 
@@ -308,36 +386,6 @@ public class HudView extends View {
             case 0x6A: return "Nasty Soup"; case 0x7D: return "Good Soup"; case 0x7F: return "Superb Soup";
             case 0xFF: return ""; default: return "Item 0x" + Integer.toHexString(id).toUpperCase();
         }
-    }
-
-    private void drawMiniMap(Canvas canvas, float x, float y) {
-        mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.argb(120, 15, 15, 50));
-        canvas.drawRect(x, y, x + MAP_SIZE, y + MAP_SIZE, mPaint);
-        mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(3); mPaint.setColor(Color.WHITE);
-        canvas.drawRect(x, y, x + MAP_SIZE, y + MAP_SIZE, mPaint);
-        if (mState.mapMaxX <= mState.mapMinX || mState.mapMaxZ <= mState.mapMinZ) return;
-        float baseScale = (MAP_SIZE * 0.92f) / Math.max(mState.mapMaxX - mState.mapMinX, mState.mapMaxZ - mState.mapMinZ);
-        float mS = (mMapZoomLevel > 0) ? baseScale * (float)Math.pow(2, mMapZoomLevel) : baseScale;
-        float sCX = (mMapZoomLevel > 0) ? mState.mapX : (mState.mapMaxX + mState.mapMinX)/2f;
-        float sCZ = (mMapZoomLevel > 0) ? mState.mapY : (mState.mapMaxZ + mState.mapMinZ)/2f;
-        float cX = x + MAP_SIZE/2, cY = y + MAP_SIZE/2;
-        canvas.save(); canvas.clipRect(x, y, x + MAP_SIZE, y + MAP_SIZE);
-        if (mState.mapLines != null) {
-            mPaint.setStyle(Paint.Style.STROKE); mPaint.setColor(Color.CYAN); mPaint.setStrokeWidth(2);
-            mDrawPath.reset(); boolean start = true;
-            for (int i = 0; i < mState.mapLines.length; i += 2) {
-                if (Float.isNaN(mState.mapLines[i])) { start = true; continue; }
-                float sx = cX + (mState.mapLines[i] - sCX) * mS, sy = cY + (mState.mapLines[i+1] - sCZ) * mS;
-                if (start) { mDrawPath.moveTo(sx, sy); start = false; } else mDrawPath.lineTo(sx, sy);
-            }
-            canvas.drawPath(mDrawPath, mPaint);
-        }
-        canvas.save(); canvas.translate(cX + (mState.mapX - sCX) * mS, cY + (mState.mapY - sCZ) * mS);
-        canvas.rotate(180 - mState.mapAngle); mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.YELLOW);
-        mDrawPath.reset(); mDrawPath.moveTo(0, -22); mDrawPath.lineTo(-13, 13); mDrawPath.lineTo(13, 13); mDrawPath.close();
-        canvas.drawPath(mDrawPath, mPaint); canvas.restore(); canvas.restore();
-        mPaint.setTextAlign(Paint.Align.CENTER); mPaint.setTextSize(32); mPaint.setColor(Color.WHITE);
-        canvas.drawText(mState.stageName + (mMapZoomLevel == 0 ? "" : " (" + (1<<mMapZoomLevel) + "x)"), x + MAP_SIZE/2, y + MAP_SIZE + 40, mPaint);
     }
 
     private void drawStatusInfo(Canvas canvas, float x, float y) {

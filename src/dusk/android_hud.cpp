@@ -142,7 +142,7 @@ void hud_update() {
                 for (int g = 0; g < room->mpFloor[f].mGroupNum; g++) {
                     auto& group = room->mpFloor[f].mpGroup[g];
 
-                    // 1. Pack LINES
+                    // 1. Pack LINES into finalLines
                     dDrawPath_c::line_class* lines = group.mpLine;
                     for (int ln = 0; ln < group.mLineNum; ln++) {
                         for (int i = 0; i < lines[ln].mDataNum; i++) {
@@ -154,14 +154,14 @@ void hud_update() {
                             minX = std::min(minX, px); maxX = std::max(maxX, px);
                             minZ = std::min(minZ, pz); maxZ = std::max(maxZ, pz);
                         }
-                        // Sentinel: NaN + ID0 + ID1 + Padding (Exactly 4 floats)
+                        // Sentinel: NaN + ID0 + ID1 + Padding (4 floats total)
                         finalLines.push_back(std::numeric_limits<float>::quiet_NaN());
                         finalLines.push_back((float)lines[ln].field_0x0);
                         finalLines.push_back((float)lines[ln].field_0x1);
                         finalLines.push_back(0.0f);
                     }
 
-                    // 2. Pack POLYGONS
+                    // 2. Pack POLYGONS into the SAME finalLines array
                     dDrawPath_c::poly_class* polys = group.mpPoly;
                     for (int pn = 0; pn < group.mPolyNum; pn++) {
                         for (int i = 0; i < polys[pn].mDataNum; i++) {
