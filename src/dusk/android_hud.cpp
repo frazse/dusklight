@@ -93,14 +93,14 @@ void hud_update() {
     iData[27] = (dComIfGp_isZSetFlag(2) || dComIfGp_isZSetFlag(4)) ? 1 : 0;
     iData[40] = dComIfGp_getSelectItem(5); iData[41] = dComIfGp_getSelectItemNum(5);
     iData[42] = dMeter2Info_getHorseLifeCount();
-    iData[43] = (meter && meter->isShowFlag(11)) ? 1 : 0; // Oxygen
+    iData[43] = dComIfGp_getOxygenShowFlag() ? 1 : 0; // Oxygen
 
     // RESTORED: Precise State Detection
     dAttention_c* attn = dComIfGp_getAttention();
     daPy_py_c* player = dComIfGp_getLinkPlayer();
     int stateFlags = 0;
     if (attn && attn->GetLockonCount() > 0) stateFlags |= 1; // Targeting
-    if (player && (player->checkWaterInMove() || player->checkSwimUp())) stateFlags |= 2; // Swimming
+    if (player && (player->checkWaterInMove() || player->checkSwimUp() || dComIfGp_getOxygenShowFlag())) stateFlags |= 2; // Swimming/Underwater
     if (player && player->checkHorseRide()) stateFlags |= 4; // Riding
     iData[31] = stateFlags;
 
