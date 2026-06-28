@@ -103,8 +103,7 @@ void hud_update() {
     if (player) {
         if (player->checkWaterInMove() || player->checkSwimUp() || iData[43]) stateFlags |= 2; // Swimming
         if (player->checkHorseRide()) stateFlags |= 4; // Riding
-        // Submerged check: Check if current Y is below ground Y (which represents the water surface while swimming)
-        if (player->current.pos.y < player->getGroundY() - 20.0f) stateFlags |= 8;
+        if (player->current.pos.y < player->getGroundY() - 20.0f) stateFlags |= 8; // Submerged
         if (iData[45] == 0x40) stateFlags |= 16; // Zora Armor
     }
     iData[31] = stateFlags;
@@ -139,14 +138,21 @@ void hud_update() {
     bool is_d = (stype == ST_DUNGEON);
     s8 sFloor = dMapInfo_c::getNowStayFloorNoDecisionFlg() ? dMapInfo_c::getNowStayFloorNo() : dMapInfo_c::calcFloorNo(playerPos.y, true, stayNo);
 
+    // Dynamic Stage Intelligence
+    bool isFieldStage = sName && sName[0] == 'F'; // Ordon Village, Fields
+    bool isRoomStage = sName && sName[0] == 'R';  // Link's House, Shops
+    bool isDungeonStage = sName && (sName[0] == 'D' || (is_d && !isFieldStage));
+
     float minX = 1e10f, minZ = 1e10f, maxX = -1e10f, maxZ = -1e10f;
     std::vector<float> finalLines, icons, doors;
 
     if (dMpath_c::mLayerList) for (int r = 0; r < 64; r++) {
         bool showRoom = (r == stayNo);
         if (!showRoom) {
-            if (is_d) showRoom = dComIfGs_isVisitedRoom(r) || dMapInfo_n::chkGetMap();
-            else if (stype == ST_FIELD || (int)stype == 2) showRoom = dComIfGs_isVisitedRoom(r);
+            // For overlapping Interiors (prefix 'R'), ONLY show current room.
+            if (isRoomStage) showRoom = false;
+            // For Fields and Dungeons, show all visited footprint.
+            else showRoom = dComIfGs_isVisitedRoom(r) || (isDungeonStage && dMapInfo_n::chkGetMap());
         }
         if (!showRoom) continue;
 
@@ -154,7 +160,9 @@ void hud_update() {
             dDrawPath_c::room_class* room = dMpath_c::getRoomPointer(l, r);
             if (!room || !room->mpFloatData) continue;
             for (int f = 0; f < room->mFloorNum; f++) {
-                if (stype != ST_FIELD && room->mpFloor[f].mFloorNo != sFloor) continue;
+                // For Dungeons, enable floor filtering to prevent clutter.
+                // For Fields/Villages, disable floor filtering to keep paths connected.
+                if (isDungeonStage && room->mpFloor[f].mFloorNo != sFloor) continue;
 
                 for (int g = 0; g < room->mpFloor[f].mGroupNum; g++) {
                     auto& group = room->mpFloor[f].mpGroup[g];
