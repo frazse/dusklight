@@ -93,15 +93,20 @@ void hud_update() {
     iData[27] = (dComIfGp_isZSetFlag(2) || dComIfGp_isZSetFlag(4)) ? 1 : 0;
     iData[40] = dComIfGp_getSelectItem(5); iData[41] = dComIfGp_getSelectItemNum(5);
     iData[42] = dMeter2Info_getHorseLifeCount();
-    iData[43] = dComIfGp_getOxygenShowFlag() ? 1 : 0; // Oxygen
+    iData[43] = dComIfGp_getOxygenShowFlag() ? 1 : 0;
+    iData[45] = dComIfGs_getSelectEquipClothes();
 
-    // RESTORED: Precise State Detection
     dAttention_c* attn = dComIfGp_getAttention();
     daPy_py_c* player = dComIfGp_getLinkPlayer();
     int stateFlags = 0;
     if (attn && attn->GetLockonCount() > 0) stateFlags |= 1; // Targeting
-    if (player && (player->checkWaterInMove() || player->checkSwimUp() || dComIfGp_getOxygenShowFlag())) stateFlags |= 2; // Swimming/Underwater
-    if (player && player->checkHorseRide()) stateFlags |= 4; // Riding
+    if (player) {
+        if (player->checkWaterInMove() || player->checkSwimUp() || iData[43]) stateFlags |= 2; // Swimming
+        if (player->checkHorseRide()) stateFlags |= 4; // Riding
+        // Submerged check: Check if current Y is below ground Y (which represents the water surface while swimming)
+        if (player->current.pos.y < player->getGroundY() - 20.0f) stateFlags |= 8;
+        if (iData[45] == 0x40) stateFlags |= 16; // Zora Armor
+    }
     iData[31] = stateFlags;
 
     iData[28] = dComIfGp_getDoStatusForce() ? dComIfGp_getDoStatusForce() : dComIfGp_getDoStatus();
@@ -138,7 +143,6 @@ void hud_update() {
     std::vector<float> finalLines, icons, doors;
 
     if (dMpath_c::mLayerList) for (int r = 0; r < 64; r++) {
-        // STRICT ROOM FILTER: Respects fog-of-war for all stage types.
         bool showRoom = (r == stayNo);
         if (!showRoom) {
             if (is_d) showRoom = dComIfGs_isVisitedRoom(r) || dMapInfo_n::chkGetMap();

@@ -155,7 +155,7 @@ public class GameState {
             case 0x58: return "Spin";
             case 0x5A: return "Spin Attack";
             case 0x5B: return "Reel Fast";
-            case 0x5C: return "Raise";
+            case 0x5C: return "Rise"; // Fixed typo (was Raise)
             case 0x5D: return "Release";
             case 0x5F: return "Map";
             case 0x60: return "Items";
