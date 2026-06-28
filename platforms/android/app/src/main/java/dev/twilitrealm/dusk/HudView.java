@@ -214,13 +214,25 @@ public class HudView extends View {
                 drawMapIcon(canvas, cX + (mState.mapIcons[i+1] - sCX) * mS, cY + (mState.mapIcons[i+2] - sCZ) * mS, (int)mState.mapIcons[i]);
             }
         }
-        canvas.save(); canvas.translate(cX + (mState.mapX - sCX) * mS, cY + (mState.mapY - sCZ) * mS);
-        canvas.rotate(180 - mState.mapAngle); mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.YELLOW);
-        mDrawPath.reset(); mDrawPath.moveTo(0, -22); mDrawPath.lineTo(-13, 13); mDrawPath.lineTo(13, 13); mDrawPath.close();
-        canvas.drawPath(mDrawPath, mPaint); canvas.restore();
+        
+        // Restart / Entrance Marker (Cyan)
+        if (mState.showRestart) {
+            drawMapPointer(canvas, cX + (mState.restartX - sCX) * mS, cY + (mState.restartY - sCZ) * mS, mState.restartAngle, Color.CYAN);
+        }
+
+        // Player Marker (Yellow)
+        drawMapPointer(canvas, cX + (mState.mapX - sCX) * mS, cY + (mState.mapY - sCZ) * mS, mState.mapAngle, Color.YELLOW);
+        
         canvas.restore();
         resetPaint(); mPaint.setTextAlign(Paint.Align.CENTER); mPaint.setTextSize(32); mPaint.setColor(Color.WHITE);
         canvas.drawText(mState.stageName, x + MAP_SIZE/2, y + MAP_SIZE + 40, mPaint);
+    }
+
+    private void drawMapPointer(Canvas canvas, float x, float y, float angle, int color) {
+        canvas.save(); canvas.translate(x, y);
+        canvas.rotate(180 - angle); mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(color);
+        mDrawPath.reset(); mDrawPath.moveTo(0, -22); mDrawPath.lineTo(-13, 13); mDrawPath.lineTo(13, 13); mDrawPath.close();
+        canvas.drawPath(mDrawPath, mPaint); canvas.restore();
     }
 
     private void drawMapIcon(Canvas canvas, float x, float y, int type) {

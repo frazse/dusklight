@@ -8,7 +8,9 @@ public class GameState {
     
     public final float mapX, mapY, mapAngle;
     public final float mapMinX, mapMinZ, mapMaxX, mapMaxZ;
+    public final float restartX, restartY, restartAngle;
     public final float[] mapLines, mapIcons, mapDoors;
+    public final boolean showRestart;
 
     public final String buttonAText, buttonBText, buttonZText, buttonLText, buttonRText, buttonXText, buttonYText;
     public final String dPadUpText, dPadDownText, dPadLeftText, dPadRightText;
@@ -63,6 +65,8 @@ public class GameState {
 
         this.mapX = f[0]; this.mapY = f[1]; this.mapAngle = f[2];
         this.mapMinX = f[3]; this.mapMinZ = f[4]; this.mapMaxX = f[5]; this.mapMaxZ = f[6];
+        this.restartX = f[7]; this.restartY = f[8]; this.restartAngle = f[9];
+        this.showRestart = i[46] != 0;
 
         this.stageName = stageName;
         this.mapLines = lines;

@@ -115,8 +115,6 @@ void hud_update() {
     iData[39] = dMeter2Info_isUseButton(0xFFFF) ? 0xFFFF : 0;
 
     Vec playerPos = dMapInfo_n::getMapPlayerPos();
-    float fData[7] = { playerPos.x, playerPos.z, (float)dMapInfo_n::getMapPlayerAngleY() * (180.0f / 32768.0f) };
-
     const char* sName = dComIfGp_getStartStageName();
     std::string friendlyName = sName ? sName : "Unknown Area";
     if (sName) {
@@ -137,6 +135,17 @@ void hud_update() {
     StageType stype = (StageType)dStage_stagInfo_GetSTType(stage->getStagInfo());
     bool is_d = (stype == ST_DUNGEON);
     s8 sFloor = dMapInfo_c::getNowStayFloorNoDecisionFlg() ? dMapInfo_c::getNowStayFloorNo() : dMapInfo_c::calcFloorNo(playerPos.y, true, stayNo);
+
+    // Restart Marker (Entrance)
+    Vec restartPos = dMapInfo_n::getMapRestartPos();
+    s8 restartFloor = dMapInfo_c::calcFloorNo(restartPos.y, true, dComIfGs_getRestartRoomNo());
+    iData[46] = (restartFloor == sFloor) ? 1 : 0;
+
+    float fData[10] = {
+        playerPos.x, playerPos.z, (float)dMapInfo_n::getMapPlayerAngleY() * (180.0f / 32768.0f),
+        0, 0, 0, 0, // minX, minZ, maxX, maxZ (set below)
+        restartPos.x, restartPos.z, (float)dMapInfo_n::getMapRestartAngleY() * (180.0f / 32768.0f)
+    };
 
     // Classification
     bool isRoomStage = sName && sName[0] == 'R';
@@ -160,10 +169,9 @@ void hud_update() {
             dDrawPath_c::room_class* room = dMpath_c::getRoomPointer(l, r);
             if (!room || !room->mpFloatData) continue;
             for (int f = 0; f < room->mFloorNum; f++) {
-                // FLOOR FILTERING: Enabled for ALL stages now.
-                // This cleans up the "doubled" lines in Ordon while keeping paths connected
-                // as long as Link is on the main ground floor.
-                if (room->mpFloor[f].mFloorNo != sFloor) continue;
+                // FLOOR FILTERING: Enabled for Dungeons/Interiors.
+                // Disabled for Fields (prefix 'F') to ensure path connectivity.
+                if (!isFieldStage && room->mpFloor[f].mFloorNo != sFloor) continue;
 
                 for (int g = 0; g < room->mpFloor[f].mGroupNum; g++) {
                     auto& group = room->mpFloor[f].mpGroup[g];
@@ -204,7 +212,7 @@ void hud_update() {
 
     jstring jStage = env->NewStringUTF(friendlyName.c_str());
     jintArray jInts = env->NewIntArray(60); env->SetIntArrayRegion(jInts, 0, 60, iData);
-    jfloatArray jFloats = env->NewFloatArray(7); env->SetFloatArrayRegion(jFloats, 0, 7, fData);
+    jfloatArray jFloats = env->NewFloatArray(10); env->SetFloatArrayRegion(jFloats, 0, 10, fData);
     jfloatArray jL = env->NewFloatArray(finalLines.size()); env->SetFloatArrayRegion(jL, 0, finalLines.size(), finalLines.data());
     jfloatArray jI = env->NewFloatArray(icons.size()); env->SetFloatArrayRegion(jI, 0, icons.size(), icons.data());
     jfloatArray jD = env->NewFloatArray(doors.size()); env->SetFloatArrayRegion(jD, 0, doors.size(), doors.data());
