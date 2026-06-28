@@ -22,7 +22,6 @@ public class HudView extends View {
     private final float MAP_Y = 210;
     private final float MAP_SIZE = 720;
 
-    // Faithful Rupee Animation State
     private int mDisplayRupees = -1;
     private int mRupeeTimer = 0;
 
@@ -143,12 +142,13 @@ public class HudView extends View {
                     
                     if (isPoly) {
                         int polyId = id0 & 0x3F;
-                        // Use FILL_AND_STROKE with 0.5f width to seal triangle seams
-                        mPaint.setStyle(Paint.Style.FILL_AND_STROKE); mPaint.setStrokeWidth(0.5f);
+                        // SEAM-SEAL TECHNIQUE: FILL_AND_STROKE with small width covers antialiasing gaps
+                        mPaint.setStyle(Paint.Style.FILL_AND_STROKE); mPaint.setStrokeWidth(0.6f);
                         if (polyId == 5) mPaint.setColor(colorWater);
                         else if (polyId == 1) mPaint.setColor(colorMint);
                         else mPaint.setColor(colorTerrain);
                         
+                        // RESTORE CORRECT TRIANGLE STRIP RENDERER
                         for (int j = 0; j < vCount - 2; j++) {
                             mDrawPath.reset();
                             mDrawPath.moveTo(strip[j*2], strip[j*2+1]);
@@ -157,7 +157,7 @@ public class HudView extends View {
                             mDrawPath.close(); canvas.drawPath(mDrawPath, mPaint);
                         }
                     } else {
-                        // EXCLUSIVE WALL FILTER: Only IDs 2 and 4. Hide logical line box.
+                        // STRICT EXCLUSIVE FILTER: ONLY ID 2 and 4. Hide logical line box.
                         if ((id1 == 2 || id1 == 4) && (id0 & 0x80) == 0) {
                             mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(2.5f);
                             mPaint.setColor(colorMint); mDrawPath.reset();

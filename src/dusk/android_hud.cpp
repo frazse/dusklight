@@ -175,7 +175,7 @@ void hud_update() {
                         }
                         finalLines.push_back(std::numeric_limits<float>::quiet_NaN());
                         finalLines.push_back((float)polys[pn].field_0x0);
-                        finalLines.push_back(1001.0f); // IS POLY FLAG
+                        finalLines.push_back(1001.0f); // IS POLY FLAG (id1)
                         finalLines.push_back(0.0f);
                     }
                 }
