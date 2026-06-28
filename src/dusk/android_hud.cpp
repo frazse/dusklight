@@ -67,7 +67,7 @@ void hud_update() {
     if (!activity || clear_pending_exception(env)) return;
     if (s_onGameStateUpdate == nullptr) {
         jclass cls = env->GetObjectClass(activity);
-        // Signature matching stable d457ea: 6 Parameters
+        // Signature: (int[], float[], String, float[], float[], float[])
         s_onGameStateUpdate = env->GetMethodID(cls, "onGameStateUpdate", "([I[FLjava/lang/String;[F[F[F)V");
         env->DeleteLocalRef(cls);
         if (s_onGameStateUpdate == nullptr || clear_pending_exception(env)) return;
@@ -154,14 +154,14 @@ void hud_update() {
                             minX = std::min(minX, px); maxX = std::max(maxX, px);
                             minZ = std::min(minZ, pz); maxZ = std::max(maxZ, pz);
                         }
-                        // Sentinel: NaN + ID0 + ID1 + Padding (4 floats total)
+                        // NaN + ID0 + ID1 + Padding (4 floats total)
                         finalLines.push_back(std::numeric_limits<float>::quiet_NaN());
                         finalLines.push_back((float)lines[ln].field_0x0);
                         finalLines.push_back((float)lines[ln].field_0x1);
                         finalLines.push_back(0.0f);
                     }
 
-                    // 2. Pack POLYGONS into the SAME finalLines array
+                    // 2. Pack POLYGONS
                     dDrawPath_c::poly_class* polys = group.mpPoly;
                     for (int pn = 0; pn < group.mPolyNum; pn++) {
                         for (int i = 0; i < polys[pn].mDataNum; i++) {
@@ -175,7 +175,7 @@ void hud_update() {
                         }
                         finalLines.push_back(std::numeric_limits<float>::quiet_NaN());
                         finalLines.push_back((float)polys[pn].field_0x0);
-                        finalLines.push_back(1001.0f); // IS POLY FLAG (id1)
+                        finalLines.push_back(1001.0f); // IS POLY FLAG
                         finalLines.push_back(0.0f);
                     }
                 }

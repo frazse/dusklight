@@ -132,9 +132,11 @@ public class HudView extends View {
         int colorTerrain = Color.rgb(75, 125, 75);
 
         if (mState.mapLines != null) {
-            int vCount = 0; float[] strip = new float[8192];
-            for (int i = 0; i < mState.mapLines.length; i += 2) {
-                if (Float.isNaN(mState.mapLines[i])) {
+            int vCount = 0; float[] strip = new float[16384];
+            int i = 0;
+            while (i < mState.mapLines.length - 1) {
+                float xCoord = mState.mapLines[i];
+                if (Float.isNaN(xCoord)) {
                     if (i + 3 >= mState.mapLines.length) break;
                     int id0 = (int)mState.mapLines[i+1];
                     int id1 = (int)mState.mapLines[i+2];
@@ -142,13 +144,13 @@ public class HudView extends View {
                     
                     if (isPoly) {
                         int polyId = id0 & 0x3F;
-                        // SEAM-SEAL TECHNIQUE: FILL_AND_STROKE with small width covers antialiasing gaps
+                        // SEAM-SEAL: FillAndStroke with 0.6f width removes triangle gap artifacts
                         mPaint.setStyle(Paint.Style.FILL_AND_STROKE); mPaint.setStrokeWidth(0.6f);
-                        if (polyId == 5) mPaint.setColor(colorWater);
-                        else if (polyId == 1) mPaint.setColor(colorMint);
-                        else mPaint.setColor(colorTerrain);
+                        if (polyId == 5) { mPaint.setColor(colorWater); }
+                        else if (polyId == 1) { mPaint.setColor(colorMint); }
+                        else { mPaint.setColor(colorTerrain); }
                         
-                        // RESTORE CORRECT TRIANGLE STRIP RENDERER
+                        // DRAW TRIANGLE STRIP
                         for (int j = 0; j < vCount - 2; j++) {
                             mDrawPath.reset();
                             mDrawPath.moveTo(strip[j*2], strip[j*2+1]);
@@ -157,8 +159,8 @@ public class HudView extends View {
                             mDrawPath.close(); canvas.drawPath(mDrawPath, mPaint);
                         }
                     } else {
-                        // STRICT EXCLUSIVE FILTER: ONLY ID 2 and 4. Hide logical line box.
-                        if ((id1 == 2 || id1 == 4) && (id0 & 0x80) == 0) {
+                        // EXCLUSIVE WALL FILTER: Only ID 2 (Cliffs/Walls). Hide ID 3 trapezoid.
+                        if (id1 == 2 && (id0 & 0x80) == 0) {
                             mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(2.5f);
                             mPaint.setColor(colorMint); mDrawPath.reset();
                             for (int j = 0; j < vCount; j++) {
@@ -168,13 +170,14 @@ public class HudView extends View {
                             canvas.drawPath(mDrawPath, mPaint);
                         }
                     }
-                    vCount = 0; i += 2; continue;
+                    vCount = 0; i += 4; continue;
                 }
                 if (vCount * 2 < strip.length - 1) {
                     strip[vCount*2] = cX + (mState.mapLines[i] - sCX) * mS;
                     strip[vCount*2+1] = cY + (mState.mapLines[i+1] - sCZ) * mS;
                     vCount++;
                 }
+                i += 2;
             }
         }
 
