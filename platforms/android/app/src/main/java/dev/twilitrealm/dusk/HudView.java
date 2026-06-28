@@ -95,10 +95,10 @@ public class HudView extends View {
         drawRupeeCounter(canvas, 20, 1060);
         
         if (mState.showLightDrops && mState.maxLightDrops > 0) {
-            float width = (mState.maxLightDrops - 1) * 32;
+            float width = (mState.maxLightDrops - 1) * 45;
             drawLightDropZigZag(canvas, 640 - (width / 2), 1055);
         } else if (mState.isRiding) {
-            float width = (6 - 1) * 53 + 45;
+            float width = (6 - 1) * 68 + 57;
             drawHorseSpurs(canvas, 640 - (width / 2), 1060);
         }
         
@@ -326,28 +326,33 @@ public class HudView extends View {
 
     private void drawLightDropZigZag(Canvas canvas, float x, float y) {
         resetPaint();
+        float spacing = 45;
         for (int i = 0; i < mState.maxLightDrops; i++) {
-            float dx = x + i * 32, dy = y - (i % 2 == 0 ? 0 : 18);
+            float dx = x + i * spacing, dy = y - (i % 2 == 0 ? 0 : 25);
+            float radius = 13;
             if (i < mState.lightDrops) {
-                mPaint.setColor(Color.WHITE); canvas.drawCircle(dx, dy, 9, mPaint);
-                mPaint.setStyle(Paint.Style.STROKE); mPaint.setColor(Color.YELLOW); mPaint.setStrokeWidth(3); canvas.drawCircle(dx, dy, 9, mPaint);
+                mPaint.setColor(Color.WHITE); canvas.drawCircle(dx, dy, radius, mPaint);
+                mPaint.setStyle(Paint.Style.STROKE); mPaint.setColor(Color.YELLOW); mPaint.setStrokeWidth(3.5f); canvas.drawCircle(dx, dy, radius, mPaint);
                 mPaint.setStyle(Paint.Style.FILL);
             } else {
-                mPaint.setStyle(Paint.Style.STROKE); mPaint.setColor(Color.GRAY); mPaint.setStrokeWidth(2); canvas.drawCircle(dx, dy, 9, mPaint);
-                mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.argb(40, 100, 100, 100)); canvas.drawCircle(dx, dy, 9, mPaint);
+                mPaint.setStyle(Paint.Style.STROKE); mPaint.setColor(Color.GRAY); mPaint.setStrokeWidth(2.5f); canvas.drawCircle(dx, dy, radius, mPaint);
+                mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.argb(40, 100, 100, 100)); canvas.drawCircle(dx, dy, radius, mPaint);
             }
         }
     }
 
     private void drawHorseSpurs(Canvas canvas, float x, float y) {
         resetPaint();
+        float spacing = 68;
+        float outerRadius = 28.5f;
+        float innerRadius = 24.5f;
         for (int i = 0; i < 6; i++) {
-            float cx = x + i * 53, cy = y - 15;
-            mPaint.setStyle(Paint.Style.STROKE); mPaint.setColor(Color.WHITE); mPaint.setStrokeWidth(2);
-            canvas.drawCircle(cx, cy, 22.5f, mPaint);
+            float cx = x + i * spacing, cy = y - 15;
+            mPaint.setStyle(Paint.Style.STROKE); mPaint.setColor(Color.WHITE); mPaint.setStrokeWidth(2.5f);
+            canvas.drawCircle(cx, cy, outerRadius, mPaint);
             if (i < mState.horseSpurs) {
                 mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.rgb(255, 140, 0));
-                canvas.drawCircle(cx, cy, 19.5f, mPaint);
+                canvas.drawCircle(cx, cy, innerRadius, mPaint);
             }
         }
     }

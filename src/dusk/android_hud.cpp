@@ -93,7 +93,17 @@ void hud_update() {
     iData[27] = (dComIfGp_isZSetFlag(2) || dComIfGp_isZSetFlag(4)) ? 1 : 0;
     iData[40] = dComIfGp_getSelectItem(5); iData[41] = dComIfGp_getSelectItemNum(5);
     iData[42] = dMeter2Info_getHorseLifeCount();
-    iData[43] = (meter && meter->isShowFlag(11)) ? 1 : 0;
+    iData[43] = (meter && meter->isShowFlag(11)) ? 1 : 0; // Oxygen
+
+    // Exact State Flag logic from eaafc2b
+    dAttention_c* attn = dComIfGp_getAttention();
+    daPy_py_c* player = dComIfGp_getLinkPlayer();
+    int stateFlags = 0;
+    if (attn && attn->GetLockonCount() > 0) stateFlags |= 1; // Targeting
+    if (player && (player->checkWaterInMove() || player->checkSwimUp())) stateFlags |= 2; // Swimming
+    if (player && player->checkHorseRide()) stateFlags |= 4; // Riding
+    iData[31] = stateFlags;
+
     iData[28] = dComIfGp_getDoStatusForce() ? dComIfGp_getDoStatusForce() : dComIfGp_getDoStatus();
     iData[29] = dComIfGp_getAStatusForce() ? dComIfGp_getAStatusForce() : dComIfGp_getAStatus();
     iData[30] = dComIfGp_getZStatus(); iData[32] = dComIfGp_getRStatus();
@@ -128,16 +138,18 @@ void hud_update() {
     std::vector<float> finalLines, icons, doors;
 
     if (dMpath_c::mLayerList) for (int r = 0; r < 64; r++) {
-        // CONTEXT-AWARE ROOM FILTER:
-        if (stype == ST_ROOM || stype == ST_BOSS_ROOM) { if (r != stayNo) continue; }
-        else if (is_d) { if (!dComIfGs_isVisitedRoom(r) && r != stayNo && !dMapInfo_n::chkGetMap()) continue; }
-        // Fields/Villages are lenient (allow all r) to preserve ridge lines.
+        // STRICT ROOM FILTER: Restores fog-of-war for Overworld.
+        bool showRoom = (r == stayNo);
+        if (!showRoom) {
+            if (is_d) showRoom = dComIfGs_isVisitedRoom(r) || dMapInfo_n::chkGetMap();
+            else if (stype == ST_FIELD || (int)stype == 2) showRoom = dComIfGs_isVisitedRoom(r);
+        }
+        if (!showRoom) continue;
 
         for (int l = 0; l < 2; l++) {
             dDrawPath_c::room_class* room = dMpath_c::getRoomPointer(l, r);
             if (!room || !room->mpFloatData) continue;
             for (int f = 0; f < room->mFloorNum; f++) {
-                // CONTEXT-AWARE FLOOR FILTER: Only filtered in non-field stages.
                 if (stype != ST_FIELD && room->mpFloor[f].mFloorNo != sFloor) continue;
 
                 for (int g = 0; g < room->mpFloor[f].mGroupNum; g++) {
