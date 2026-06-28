@@ -138,22 +138,21 @@ void hud_update() {
     bool is_d = (stype == ST_DUNGEON);
     s8 sFloor = dMapInfo_c::getNowStayFloorNoDecisionFlg() ? dMapInfo_c::getNowStayFloorNo() : dMapInfo_c::calcFloorNo(playerPos.y, true, stayNo);
 
-    // Stage Classification
-    bool isFieldStage = sName && sName[0] == 'F';
+    // Classification
     bool isRoomStage = sName && sName[0] == 'R';
-    bool isDungeonStage = sName && (sName[0] == 'D' || (is_d && !isFieldStage));
+    bool isFieldStage = sName && sName[0] == 'F';
 
     float minX = 1e10f, minZ = 1e10f, maxX = -1e10f, maxZ = -1e10f;
     std::vector<float> finalLines, icons, doors;
 
     if (dMpath_c::mLayerList) for (int r = 0; r < 64; r++) {
-        // FILTERING:
-        // - Small interiors (prefix 'R'): ONLY show current room to stop clutter.
-        // - Fields and Dungeons: Show visited footprint.
+        // PRECISION FOG-OF-WAR:
+        // - Prefix 'R' (Interiors): ONLY render the current room link is standing in.
+        // - Others: Render only rooms Link has visited (respects fog-of-war).
         bool showRoom = (r == stayNo);
         if (!showRoom) {
             if (isRoomStage) showRoom = false;
-            else showRoom = dComIfGs_isVisitedRoom(r) || (isDungeonStage && dMapInfo_n::chkGetMap());
+            else showRoom = dComIfGs_isVisitedRoom(r) || (is_d && dMapInfo_n::chkGetMap());
         }
         if (!showRoom) continue;
 
@@ -161,8 +160,10 @@ void hud_update() {
             dDrawPath_c::room_class* room = dMpath_c::getRoomPointer(l, r);
             if (!room || !room->mpFloatData) continue;
             for (int f = 0; f < room->mFloorNum; f++) {
-                // FLOOR FILTERING: Only enabled for Interiors and Dungeons to prevent overlap mess.
-                if (!isFieldStage && room->mpFloor[f].mFloorNo != sFloor) continue;
+                // FLOOR FILTERING: Enabled for ALL stages now.
+                // This cleans up the "doubled" lines in Ordon while keeping paths connected
+                // as long as Link is on the main ground floor.
+                if (room->mpFloor[f].mFloorNo != sFloor) continue;
 
                 for (int g = 0; g < room->mpFloor[f].mGroupNum; g++) {
                     auto& group = room->mpFloor[f].mpGroup[g];
@@ -170,7 +171,7 @@ void hud_update() {
                     for (int ln = 0; ln < group.mLineNum; ln++) {
                         for (int i = 0; i < lines[ln].mDataNum; i++) {
                             u16 idx = lines[ln].mpData[i];
-                            // ALIGNMENT: Geometry is already global; correctionOriginPos is removed.
+                            // ALIGNMENT FIX: Geography data is already global.
                             float px = room->mpFloatData[idx*2];
                             float pz = room->mpFloatData[idx*2+1];
                             finalLines.push_back(px); finalLines.push_back(pz);
@@ -189,8 +190,6 @@ void hud_update() {
                             float px = room->mpFloatData[idx*2];
                             float pz = room->mpFloatData[idx*2+1];
                             finalLines.push_back(px); finalLines.push_back(pz);
-                            minX = std::min(minX, px); maxX = std::max(maxX, px);
-                            minZ = std::min(minZ, pz); maxZ = std::max(maxZ, pz);
                         }
                         finalLines.push_back(std::numeric_limits<float>::quiet_NaN());
                         finalLines.push_back((float)polys[pn].field_0x0);
