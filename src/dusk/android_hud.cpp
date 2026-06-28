@@ -95,7 +95,7 @@ void hud_update() {
     iData[42] = dMeter2Info_getHorseLifeCount();
     iData[43] = (meter && meter->isShowFlag(11)) ? 1 : 0; // Oxygen
 
-    // Exact State Flag logic from eaafc2b
+    // RESTORED: Precise State Detection
     dAttention_c* attn = dComIfGp_getAttention();
     daPy_py_c* player = dComIfGp_getLinkPlayer();
     int stateFlags = 0;
@@ -138,7 +138,7 @@ void hud_update() {
     std::vector<float> finalLines, icons, doors;
 
     if (dMpath_c::mLayerList) for (int r = 0; r < 64; r++) {
-        // STRICT ROOM FILTER: Restores fog-of-war for Overworld.
+        // STRICT ROOM FILTER: Respects fog-of-war for all stage types.
         bool showRoom = (r == stayNo);
         if (!showRoom) {
             if (is_d) showRoom = dComIfGs_isVisitedRoom(r) || dMapInfo_n::chkGetMap();
