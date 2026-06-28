@@ -34,22 +34,6 @@ std::atomic<bool> s_secondScreenActive{false};
 constexpr int kHudUpdateInterval = 6;
 int s_frameCounter = 0;
 
-struct TempLine {
-    std::vector<float> coords;
-    float area = 0.0f;
-    bool isClosed = false;
-};
-
-float calculate_polygon_area(const std::vector<float>& pts) {
-    if (pts.size() < 6) return 0.0f;
-    float area = 0.0f;
-    for (size_t i = 0; i < pts.size() - 2; i += 2) {
-        area += pts[i] * pts[i+3];
-        area -= pts[i+2] * pts[i+1];
-    }
-    return std::abs(area) / 2.0f;
-}
-
 bool should_draw_icon(int type, const dTres_c::data_s* data, int stayNo) {
     if (data == nullptr) return false;
     auto* stage = dComIfGp_getStage();
@@ -83,6 +67,7 @@ void hud_update() {
     if (!activity || clear_pending_exception(env)) return;
     if (s_onGameStateUpdate == nullptr) {
         jclass cls = env->GetObjectClass(activity);
+        // Signature matching stable d457ea: 6 Parameters
         s_onGameStateUpdate = env->GetMethodID(cls, "onGameStateUpdate", "([I[FLjava/lang/String;[F[F[F)V");
         env->DeleteLocalRef(cls);
         if (s_onGameStateUpdate == nullptr || clear_pending_exception(env)) return;
@@ -110,21 +95,10 @@ void hud_update() {
     iData[40] = dComIfGp_getSelectItem(5); iData[41] = dComIfGp_getSelectItemNum(5);
     iData[42] = dMeter2Info_getHorseLifeCount();
     iData[43] = (meter && meter->isShowFlag(11)) ? 1 : 0;
-
-    dAttention_c* attn = dComIfGp_getAttention();
-    daPy_py_c* player = dComIfGp_getLinkPlayer();
-    int stateFlags = 0;
-    if (attn && attn->GetLockonCount() > 0) stateFlags |= 1;
-    if (player && (player->checkWaterInMove() || player->checkSwimUp())) stateFlags |= 2;
-    if (player && player->checkHorseRide()) stateFlags |= 4;
-    iData[31] = stateFlags;
     iData[28] = dComIfGp_getDoStatusForce() ? dComIfGp_getDoStatusForce() : dComIfGp_getDoStatus();
     iData[29] = dComIfGp_getAStatusForce() ? dComIfGp_getAStatusForce() : dComIfGp_getAStatus();
     iData[30] = dComIfGp_getZStatus(); iData[32] = dComIfGp_getRStatus();
     iData[33] = dComIfGp_getXStatus(); iData[34] = dComIfGp_getYStatus();
-    int dPadS = dComIfGp_get3DStatus(), dPadD = dComIfGp_get3DDirection();
-    iData[35] = (dPadD & 8) ? dPadS : 0; iData[36] = (dPadD & 2) ? dPadS : 0;
-    iData[37] = (dPadD & 1) ? dPadS : 0; iData[38] = (dPadD & 4) ? dPadS : 0;
     iData[39] = dMeter2Info_isUseButton(0xFFFF) ? 0xFFFF : 0;
 
     Vec playerPos = dMapInfo_n::getMapPlayerPos();
@@ -156,78 +130,75 @@ void hud_update() {
     std::vector<float> finalLines, icons, doors;
 
     if (dMpath_c::mLayerList) for (int r = 0; r < 64; r++) {
-        // --- ROOM VISIBILITY LOGIC ---
-        // 1. Interior/Boss stages: strictly show ONLY the current room to prevent overlap.
-        if (stype == ST_ROOM || stype == ST_BOSS_ROOM) {
-            if (r != stayNo) continue;
-        }
-        // 2. Dungeon stages: show all rooms if map is held, otherwise only visited.
-        else if (stype == ST_DUNGEON) {
-            if (!has_map && !dComIfGs_isVisitedRoom(r) && r != stayNo) continue;
-        }
-        // 3. Field/Castle Town: show all visited rooms (geographically separate).
-        else {
-            if (!dComIfGs_isVisitedRoom(r) && r != stayNo) continue;
-        }
-
-        std::vector<TempLine> roomLines;
-        float maxRoomArea = 0; int boundaryIdx = -1;
+        if (stype == ST_ROOM || stype == ST_BOSS_ROOM) { if (r != stayNo) continue; }
+        else if (is_d) { if (!has_map && !dComIfGs_isVisitedRoom(r) && r != stayNo) continue; }
+        else { if (!dComIfGs_isVisitedRoom(r) && r != stayNo) continue; }
 
         for (int l = 0; l < 2; l++) {
             dDrawPath_c::room_class* room = dMpath_c::getRoomPointer(l, r);
-            if (room && room->mpFloatData) for (int f = 0; f < room->mFloorNum; f++) {
+            if (!room || !room->mpFloatData) continue;
+            for (int f = 0; f < room->mFloorNum; f++) {
                 if (room->mpFloor[f].mFloorNo != sFloor) continue;
                 for (int g = 0; g < room->mpFloor[f].mGroupNum; g++) {
-                    dDrawPath_c::line_class* line = room->mpFloor[f].mpGroup[g].mpLine;
-                    for (int ln = 0; ln < room->mpFloor[f].mpGroup[g].mLineNum; ln++) {
-                        TempLine tl;
-                        for (int i = 0; i < line[ln].mDataNum; i++) {
-                            u16 idx = line[ln].mpData[i];
+                    auto& group = room->mpFloor[f].mpGroup[g];
+
+                    // 1. Pack LINES
+                    dDrawPath_c::line_class* lines = group.mpLine;
+                    for (int ln = 0; ln < group.mLineNum; ln++) {
+                        for (int i = 0; i < lines[ln].mDataNum; i++) {
+                            u16 idx = lines[ln].mpData[i];
                             BE<Vec> p = {room->mpFloatData[idx*2], 0.0f, room->mpFloatData[idx*2+1]};
                             dMapInfo_n::correctionOriginPos(r, &p);
-                            tl.coords.push_back(p.x); tl.coords.push_back(p.z);
+                            float px = p.x, pz = p.z;
+                            finalLines.push_back(px); finalLines.push_back(pz);
+                            minX = std::min(minX, px); maxX = std::max(maxX, px);
+                            minZ = std::min(minZ, pz); maxZ = std::max(maxZ, pz);
                         }
-                        if (tl.coords.size() >= 6) {
-                            float dist = std::hypot(tl.coords[0] - tl.coords[tl.coords.size()-2], tl.coords[1] - tl.coords[tl.coords.size()-1]);
-                            tl.isClosed = (dist < 5.0f);
-                            if (tl.isClosed) {
-                                tl.area = calculate_polygon_area(tl.coords);
-                                if (tl.area > maxRoomArea) { maxRoomArea = tl.area; boundaryIdx = (int)roomLines.size(); }
-                            }
+                        // Sentinel: NaN + ID0 + ID1 + Padding (Exactly 4 floats)
+                        finalLines.push_back(std::numeric_limits<float>::quiet_NaN());
+                        finalLines.push_back((float)lines[ln].field_0x0);
+                        finalLines.push_back((float)lines[ln].field_0x1);
+                        finalLines.push_back(0.0f);
+                    }
+
+                    // 2. Pack POLYGONS
+                    dDrawPath_c::poly_class* polys = group.mpPoly;
+                    for (int pn = 0; pn < group.mPolyNum; pn++) {
+                        for (int i = 0; i < polys[pn].mDataNum; i++) {
+                            u16 idx = polys[pn].mpData[i];
+                            BE<Vec> p = {room->mpFloatData[idx*2], 0.0f, room->mpFloatData[idx*2+1]};
+                            dMapInfo_n::correctionOriginPos(r, &p);
+                            float px = p.x, pz = p.z;
+                            finalLines.push_back(px); finalLines.push_back(pz);
+                            minX = std::min(minX, px); maxX = std::max(maxX, px);
+                            minZ = std::min(minZ, pz); maxZ = std::max(maxZ, pz);
                         }
-                        roomLines.push_back(tl);
+                        finalLines.push_back(std::numeric_limits<float>::quiet_NaN());
+                        finalLines.push_back((float)polys[pn].field_0x0);
+                        finalLines.push_back(1001.0f); // IS POLY FLAG
+                        finalLines.push_back(0.0f);
                     }
                 }
             }
         }
-
-        for (int i = 0; i < (int)roomLines.size(); i++) {
-            // DUNGEON/INTERIOR BYPASS: Never filter boundaries in temples or houses.
-            if (stype == ST_FIELD && i == boundaryIdx && maxRoomArea > 200000.0f) continue;
-
-            for (size_t j = 0; j < roomLines[i].coords.size(); j += 2) {
-                finalLines.push_back(roomLines[i].coords[j]); finalLines.push_back(roomLines[i].coords[j+1]);
-                minX = std::min(minX, roomLines[i].coords[j]); maxX = std::max(maxX, roomLines[i].coords[j]);
-                minZ = std::min(minZ, roomLines[i].coords[j+1]); maxZ = std::max(maxZ, roomLines[i].coords[j+1]);
-            }
-            finalLines.push_back(std::numeric_limits<float>::quiet_NaN()); finalLines.push_back(0.0f);
-        }
     }
     fData[3] = minX; fData[4] = minZ; fData[5] = maxX; fData[6] = maxZ;
 
-    // Original Dungeon Transitions
-    auto collect_orig_doors = [&](dStage_KeepDoorInfo* di, bool correct) {
-        if (!di) return;
-        for (int i = 0; i < di->mNum; i++) {
-            const stage_tgsc_data_class* d = &di->mDrTgData[i];
-            int p0 = (d->base.parameters >> 0xD) & 0x3F;
-            if (is_d && !has_map && !dComIfGs_isVisitedRoom(p0) && p0 != stayNo) continue;
-            if (dMapInfo_c::calcFloorNo(d->base.position.y, true, p0) != sFloor) continue;
-            BE(Vec) p = (Vec)(cXyz)d->base.position; if (correct) dMapInfo_n::correctionOriginPos(p0, &p);
-            doors.push_back(p.x); doors.push_back(p.z); doors.push_back((float)d->base.angle.y * (180.0f / 32768.0f)); doors.push_back(0.0f);
-        }
-    };
-    collect_orig_doors(dStage_GetKeepDoorInfo(), true); collect_orig_doors(dStage_GetRoomKeepDoorInfo(), false);
+    // Transitions - Strictly hide doors in Overworld (Field/Village)
+    if (is_d) {
+        auto collect_orig_doors = [&](dStage_KeepDoorInfo* di, bool correct) {
+            if (!di) return;
+            for (int i = 0; i < di->mNum; i++) {
+                const stage_tgsc_data_class* d = &di->mDrTgData[i];
+                int p0 = (d->base.parameters >> 0xD) & 0x3F;
+                if (!has_map && !dComIfGs_isVisitedRoom(p0) && p0 != stayNo) continue;
+                if (dMapInfo_c::calcFloorNo(d->base.position.y, true, p0) != sFloor) continue;
+                BE(Vec) p = (Vec)(cXyz)d->base.position; if (correct) dMapInfo_n::correctionOriginPos(p0, &p);
+                doors.push_back(p.x); doors.push_back(p.z); doors.push_back((float)d->base.angle.y * (180.0f / 32768.0f)); doors.push_back(0.0f);
+            }
+        };
+        collect_orig_doors(dStage_GetKeepDoorInfo(), true); collect_orig_doors(dStage_GetRoomKeepDoorInfo(), false);
+    }
 
     for (int t = 0; t < dTres_c::TYPE_GROUP_ENUM_NUMBER; t++) {
         for (dTres_c::typeGroupData_c* data = dTres_c::getFirstData(t); data; data = dTres_c::getNextData(data)) {
@@ -243,12 +214,14 @@ void hud_update() {
     jstring jStage = env->NewStringUTF(friendlyName.c_str());
     jintArray jInts = env->NewIntArray(60); env->SetIntArrayRegion(jInts, 0, 60, iData);
     jfloatArray jFloats = env->NewFloatArray(7); env->SetFloatArrayRegion(jFloats, 0, 7, fData);
-    jfloatArray jLines = env->NewFloatArray(finalLines.size()); env->SetFloatArrayRegion(jLines, 0, finalLines.size(), finalLines.data());
-    jfloatArray jIcons = env->NewFloatArray(icons.size()); env->SetFloatArrayRegion(jIcons, 0, icons.size(), icons.data());
-    jfloatArray jDoors = env->NewFloatArray(doors.size()); env->SetFloatArrayRegion(jDoors, 0, doors.size(), doors.data());
-    env->CallVoidMethod(activity, s_onGameStateUpdate, jInts, jFloats, jStage, jLines, jIcons, jDoors);
+    jfloatArray jL = env->NewFloatArray(finalLines.size()); env->SetFloatArrayRegion(jL, 0, finalLines.size(), finalLines.data());
+    jfloatArray jI = env->NewFloatArray(icons.size()); env->SetFloatArrayRegion(jI, 0, icons.size(), icons.data());
+    jfloatArray jD = env->NewFloatArray(doors.size()); env->SetFloatArrayRegion(jD, 0, doors.size(), doors.data());
+
+    env->CallVoidMethod(activity, s_onGameStateUpdate, jInts, jFloats, jStage, jL, jI, jD);
+
     env->DeleteLocalRef(jInts); env->DeleteLocalRef(jFloats); env->DeleteLocalRef(jStage);
-    env->DeleteLocalRef(jLines); env->DeleteLocalRef(jIcons); env->DeleteLocalRef(jDoors);
+    env->DeleteLocalRef(jL); env->DeleteLocalRef(jI); env->DeleteLocalRef(jD);
     env->DeleteLocalRef(activity);
 }
 } // namespace dusk::android
