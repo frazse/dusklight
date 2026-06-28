@@ -122,19 +122,24 @@ void hud_update() {
     auto* stage = dComIfGp_getStage();
     StageType stype = (StageType)dStage_stagInfo_GetSTType(stage->getStagInfo());
     bool is_d = (stype == ST_DUNGEON);
+    s8 sFloor = dMapInfo_c::getNowStayFloorNoDecisionFlg() ? dMapInfo_c::getNowStayFloorNo() : dMapInfo_c::calcFloorNo(playerPos.y, true, stayNo);
 
     float minX = 1e10f, minZ = 1e10f, maxX = -1e10f, maxZ = -1e10f;
     std::vector<float> finalLines, icons, doors;
 
     if (dMpath_c::mLayerList) for (int r = 0; r < 64; r++) {
-        // LENIENT ROOM FILTER: Only culled in Dungeons. Field/Village details always sent.
-        if (is_d && !dComIfGs_isVisitedRoom(r) && r != stayNo && !dMapInfo_n::chkGetMap()) continue;
+        // CONTEXT-AWARE ROOM FILTER:
+        if (stype == ST_ROOM || stype == ST_BOSS_ROOM) { if (r != stayNo) continue; }
+        else if (is_d) { if (!dComIfGs_isVisitedRoom(r) && r != stayNo && !dMapInfo_n::chkGetMap()) continue; }
+        // Fields/Villages are lenient (allow all r) to preserve ridge lines.
 
         for (int l = 0; l < 2; l++) {
             dDrawPath_c::room_class* room = dMpath_c::getRoomPointer(l, r);
             if (!room || !room->mpFloatData) continue;
             for (int f = 0; f < room->mFloorNum; f++) {
-                // LENIENT FLOOR FILTER: Field ridges often exist on Floor 1 while player is on Floor 0.
+                // CONTEXT-AWARE FLOOR FILTER: Only filtered in non-field stages.
+                if (stype != ST_FIELD && room->mpFloor[f].mFloorNo != sFloor) continue;
+
                 for (int g = 0; g < room->mpFloor[f].mGroupNum; g++) {
                     auto& group = room->mpFloor[f].mpGroup[g];
                     dDrawPath_c::line_class* lines = group.mpLine;
@@ -143,7 +148,7 @@ void hud_update() {
                             u16 idx = lines[ln].mpData[i];
                             BE<Vec> p = {room->mpFloatData[idx*2], 0.0f, room->mpFloatData[idx*2+1]};
                             dMapInfo_n::correctionOriginPos(r, &p);
-                            finalLines.push_back(p.x); finalLines.push_back(p.z);
+                            finalLines.push_back((float)p.x); finalLines.push_back((float)p.z);
                             minX = std::min(minX, (float)p.x); maxX = std::max(maxX, (float)p.x);
                             minZ = std::min(minZ, (float)p.z); maxZ = std::max(maxZ, (float)p.z);
                         }
@@ -158,7 +163,7 @@ void hud_update() {
                             u16 idx = polys[pn].mpData[i];
                             BE<Vec> p = {room->mpFloatData[idx*2], 0.0f, room->mpFloatData[idx*2+1]};
                             dMapInfo_n::correctionOriginPos(r, &p);
-                            finalLines.push_back(p.x); finalLines.push_back(p.z);
+                            finalLines.push_back((float)p.x); finalLines.push_back((float)p.z);
                         }
                         finalLines.push_back(std::numeric_limits<float>::quiet_NaN());
                         finalLines.push_back((float)polys[pn].field_0x0);
