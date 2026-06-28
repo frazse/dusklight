@@ -129,7 +129,7 @@ public class HudView extends View {
 
         int colorMint = Color.rgb(155, 205, 155);
         int colorWater = Color.rgb(65, 110, 220);
-        int colorTerrain = Color.rgb(75, 125, 75);
+        int colorTerrain = Color.rgb(55, 90, 55); // DARKENED TERRAIN
 
         if (mState.mapLines != null) {
             int vCount = 0; float[] strip = new float[16384];
@@ -144,13 +144,12 @@ public class HudView extends View {
                     
                     if (isPoly) {
                         int polyId = id0 & 0x3F;
-                        // SEAM-SEAL: FillAndStroke with 0.6f width removes triangle gap artifacts
+                        // SEAM-SEAL: FILL_AND_STROKE with 0.6f width removes triangle gaps
                         mPaint.setStyle(Paint.Style.FILL_AND_STROKE); mPaint.setStrokeWidth(0.6f);
-                        if (polyId == 5) { mPaint.setColor(colorWater); }
-                        else if (polyId == 1) { mPaint.setColor(colorMint); }
-                        else { mPaint.setColor(colorTerrain); }
+                        if (polyId == 5) mPaint.setColor(colorWater);
+                        else if (polyId == 1) mPaint.setColor(colorMint);
+                        else mPaint.setColor(colorTerrain);
                         
-                        // DRAW TRIANGLE STRIP
                         for (int j = 0; j < vCount - 2; j++) {
                             mDrawPath.reset();
                             mDrawPath.moveTo(strip[j*2], strip[j*2+1]);
@@ -159,9 +158,10 @@ public class HudView extends View {
                             mDrawPath.close(); canvas.drawPath(mDrawPath, mPaint);
                         }
                     } else {
-                        // EXCLUSIVE WALL FILTER: Only ID 2 (Cliffs/Walls). Hide ID 3 trapezoid.
+                        // EXCLUSIVE WALL FILTER: ONLY ID 2. Hide box (0,1,3,4,6).
                         if (id1 == 2 && (id0 & 0x80) == 0) {
-                            mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(2.5f);
+                            mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(4.5f); // THICKER WALL
+                            mPaint.setStrokeJoin(Paint.Join.ROUND); mPaint.setStrokeCap(Paint.Cap.ROUND);
                             mPaint.setColor(colorMint); mDrawPath.reset();
                             for (int j = 0; j < vCount; j++) {
                                 if (j == 0) mDrawPath.moveTo(strip[j*2], strip[j*2+1]);

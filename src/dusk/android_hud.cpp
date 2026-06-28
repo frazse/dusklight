@@ -154,14 +154,14 @@ void hud_update() {
                             minX = std::min(minX, px); maxX = std::max(maxX, px);
                             minZ = std::min(minZ, pz); maxZ = std::max(maxZ, pz);
                         }
-                        // NaN + ID0 + ID1 + Padding (4 floats total)
+                        // Sentinel: NaN + ID0 + ID1 + Padding (4 floats total)
                         finalLines.push_back(std::numeric_limits<float>::quiet_NaN());
                         finalLines.push_back((float)lines[ln].field_0x0);
                         finalLines.push_back((float)lines[ln].field_0x1);
                         finalLines.push_back(0.0f);
                     }
 
-                    // 2. Pack POLYGONS
+                    // 2. Pack POLYGONS into the SAME finalLines array
                     dDrawPath_c::poly_class* polys = group.mpPoly;
                     for (int pn = 0; pn < group.mPolyNum; pn++) {
                         for (int i = 0; i < polys[pn].mDataNum; i++) {
@@ -184,7 +184,7 @@ void hud_update() {
     }
     fData[3] = minX; fData[4] = minZ; fData[5] = maxX; fData[6] = maxZ;
 
-    // Transitions - Strictly hide doors in Overworld (Field/Village)
+    // Transitions - Hide doors in overworld
     if (is_d) {
         auto collect_orig_doors = [&](dStage_KeepDoorInfo* di, bool correct) {
             if (!di) return;
