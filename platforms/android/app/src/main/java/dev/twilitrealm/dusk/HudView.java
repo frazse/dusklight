@@ -63,6 +63,10 @@ public class HudView extends View {
         canvas.translate((getWidth() - 1280 * scale) / 2, (getHeight() - 1080 * scale) / 2);
         canvas.scale(scale, scale);
 
+        // Draw 1280x1080 Workspace Border
+        mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(2.0f); mPaint.setColor(Color.WHITE);
+        canvas.drawRect(0, 0, 1280, 1080, mPaint);
+
         updateRupeeAnimation();
 
         drawHearts(canvas, 20, 20);
@@ -129,38 +133,51 @@ public class HudView extends View {
 
         int colorMint = Color.rgb(155, 205, 155);
         int colorWater = Color.rgb(65, 110, 220);
-        int colorTerrain = Color.rgb(55, 90, 55); // DARKENED TERRAIN
+        int colorTerrain = Color.rgb(45, 75, 45);
 
         if (mState.mapLines != null) {
-            int vCount = 0; float[] strip = new float[16384];
-            int i = 0;
+            float[] strip = new float[32768];
+            
+            // PASS 1: DRAW ALL POLYGONS (GROUND/WATER)
+            int vCount = 0; int i = 0;
             while (i < mState.mapLines.length - 1) {
-                float xCoord = mState.mapLines[i];
-                if (Float.isNaN(xCoord)) {
-                    if (i + 3 >= mState.mapLines.length) break;
-                    int id0 = (int)mState.mapLines[i+1];
-                    int id1 = (int)mState.mapLines[i+2];
-                    boolean isPoly = id1 > 1000;
-                    
-                    if (isPoly) {
-                        int polyId = id0 & 0x3F;
-                        // SEAM-SEAL: FILL_AND_STROKE with 0.6f width removes triangle gaps
-                        mPaint.setStyle(Paint.Style.FILL_AND_STROKE); mPaint.setStrokeWidth(0.6f);
-                        if (polyId == 5) mPaint.setColor(colorWater);
-                        else if (polyId == 1) mPaint.setColor(colorMint);
-                        else mPaint.setColor(colorTerrain);
-                        
-                        for (int j = 0; j < vCount - 2; j++) {
-                            mDrawPath.reset();
-                            mDrawPath.moveTo(strip[j*2], strip[j*2+1]);
-                            mDrawPath.lineTo(strip[(j+1)*2], strip[(j+1)*2+1]);
-                            mDrawPath.lineTo(strip[(j+2)*2], strip[(j+2)*2+1]);
-                            mDrawPath.close(); canvas.drawPath(mDrawPath, mPaint);
+                float val = mState.mapLines[i];
+                if (Float.isNaN(val)) {
+                    int id0 = (int)mState.mapLines[i+1], id1 = (int)mState.mapLines[i+2];
+                    if (id1 > 1000) {
+                        int pId = id0 & 0x3F;
+                        if (pId != 3 && pId != 4 && pId != 6) {
+                            mPaint.setStyle(Paint.Style.FILL_AND_STROKE); mPaint.setStrokeWidth(0.8f);
+                            if (pId == 5) mPaint.setColor(colorWater);
+                            else if (pId == 1) mPaint.setColor(colorMint);
+                            else mPaint.setColor(colorTerrain);
+                            for (int j = 0; j < vCount - 2; j++) {
+                                mDrawPath.reset(); mDrawPath.moveTo(strip[j*2], strip[j*2+1]);
+                                mDrawPath.lineTo(strip[(j+1)*2], strip[(j+1)*2+1]);
+                                mDrawPath.lineTo(strip[(j+2)*2], strip[(j+2)*2+1]);
+                                mDrawPath.close(); canvas.drawPath(mDrawPath, mPaint);
+                            }
                         }
-                    } else {
-                        // EXCLUSIVE WALL FILTER: ONLY ID 2. Hide box (0,1,3,4,6).
-                        if (id1 == 2 && (id0 & 0x80) == 0) {
-                            mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(4.5f); // THICKER WALL
+                    }
+                    vCount = 0; i += 4; continue;
+                }
+                if (vCount * 2 < strip.length - 1) {
+                    strip[vCount*2] = cX + (val - sCX) * mS; strip[vCount*2+1] = cY + (mState.mapLines[i+1] - sCZ) * mS;
+                    vCount++;
+                }
+                i += 2;
+            }
+
+            // PASS 2: DRAW ALL LINES (WALLS/RIDGES) ON TOP
+            vCount = 0; i = 0;
+            while (i < mState.mapLines.length - 1) {
+                float val = mState.mapLines[i];
+                if (Float.isNaN(val)) {
+                    int id0 = (int)mState.mapLines[i+1], id1 = (int)mState.mapLines[i+2];
+                    if (id1 <= 1000) {
+                        if (id1 == 1 || id1 == 2) {
+                            mPaint.setStyle(Paint.Style.STROKE);
+                            mPaint.setStrokeWidth(id1 == 2 ? 4.0f : 2.5f); // Bold walls, subtle ridges
                             mPaint.setStrokeJoin(Paint.Join.ROUND); mPaint.setStrokeCap(Paint.Cap.ROUND);
                             mPaint.setColor(colorMint); mDrawPath.reset();
                             for (int j = 0; j < vCount; j++) {
@@ -173,26 +190,19 @@ public class HudView extends View {
                     vCount = 0; i += 4; continue;
                 }
                 if (vCount * 2 < strip.length - 1) {
-                    strip[vCount*2] = cX + (mState.mapLines[i] - sCX) * mS;
-                    strip[vCount*2+1] = cY + (mState.mapLines[i+1] - sCZ) * mS;
+                    strip[vCount*2] = cX + (val - sCX) * mS; strip[vCount*2+1] = cY + (mState.mapLines[i+1] - sCZ) * mS;
                     vCount++;
                 }
                 i += 2;
             }
         }
 
-        // Icons & Doors
+        // Icons
         if (mState.mapIcons != null) {
             for (int i = 0; i < mState.mapIcons.length; i += 4) {
                 float ix = cX + (mState.mapIcons[i+1] - sCX) * mS;
                 float iy = cY + (mState.mapIcons[i+2] - sCZ) * mS;
                 drawMapIcon(canvas, ix, iy, (int)mState.mapIcons[i]);
-            }
-        }
-        if (mState.mapDoors != null) {
-            for (int i = 0; i < mState.mapDoors.length; i += 4) {
-                float dx = cX + (mState.mapDoors[i] - sCX) * mS, dy = cY + (mState.mapDoors[i+1] - sCZ) * mS;
-                drawDoorIcon(canvas, dx, dy, mState.mapDoors[i+2]);
             }
         }
 
@@ -204,7 +214,7 @@ public class HudView extends View {
         
         canvas.restore();
         mPaint.setTextAlign(Paint.Align.CENTER); mPaint.setTextSize(32); mPaint.setColor(Color.WHITE);
-        canvas.drawText(mState.stageName + (mMapZoomLevel == 0 ? "" : " (" + (1<<mMapZoomLevel) + "x)"), x + MAP_SIZE/2, y + MAP_SIZE + 40, mPaint);
+        canvas.drawText(mState.stageName, x + MAP_SIZE/2, y + MAP_SIZE + 40, mPaint);
     }
 
     private void drawMapIcon(Canvas canvas, float x, float y, int type) {
@@ -212,15 +222,6 @@ public class HudView extends View {
         if (type == 4) { mPaint.setColor(Color.WHITE); canvas.drawCircle(x, y, 6, mPaint); mPaint.setStyle(Paint.Style.STROKE); mPaint.setColor(Color.YELLOW); mPaint.setStrokeWidth(2); canvas.drawCircle(x, y, 6, mPaint); mPaint.setStyle(Paint.Style.FILL); }
         else if (type == 0 || type == 10) { mPaint.setColor(Color.YELLOW); canvas.drawRect(x-8, y-8, x+8, y+8, mPaint); }
         else { mPaint.setColor(Color.RED); canvas.drawCircle(x, y, 8, mPaint); }
-    }
-
-    private void drawDoorIcon(Canvas canvas, float x, float y, float angle) {
-        mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.rgb(200, 200, 200));
-        canvas.save(); canvas.translate(x, y); canvas.rotate(180 - angle);
-        canvas.drawRect(-12, -4, 12, 4, mPaint);
-        mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(1); mPaint.setColor(Color.BLACK);
-        canvas.drawRect(-12, -4, 12, 4, mPaint);
-        canvas.restore();
     }
 
     private void drawHearts(Canvas canvas, float startX, float startY) {

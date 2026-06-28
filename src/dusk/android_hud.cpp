@@ -67,7 +67,6 @@ void hud_update() {
     if (!activity || clear_pending_exception(env)) return;
     if (s_onGameStateUpdate == nullptr) {
         jclass cls = env->GetObjectClass(activity);
-        // Signature: (int[], float[], String, float[], float[], float[])
         s_onGameStateUpdate = env->GetMethodID(cls, "onGameStateUpdate", "([I[FLjava/lang/String;[F[F[F)V");
         env->DeleteLocalRef(cls);
         if (s_onGameStateUpdate == nullptr || clear_pending_exception(env)) return;
@@ -120,62 +119,50 @@ void hud_update() {
     }
     found_name:;
 
-    bool has_map = dMapInfo_n::chkGetMap();
     auto* stage = dComIfGp_getStage();
     StageType stype = (StageType)dStage_stagInfo_GetSTType(stage->getStagInfo());
     bool is_d = (stype == ST_DUNGEON);
-    s8 sFloor = dMapInfo_c::getNowStayFloorNoDecisionFlg() ? dMapInfo_c::getNowStayFloorNo() : dMapInfo_c::calcFloorNo(playerPos.y, true, stayNo);
 
     float minX = 1e10f, minZ = 1e10f, maxX = -1e10f, maxZ = -1e10f;
     std::vector<float> finalLines, icons, doors;
 
     if (dMpath_c::mLayerList) for (int r = 0; r < 64; r++) {
-        if (stype == ST_ROOM || stype == ST_BOSS_ROOM) { if (r != stayNo) continue; }
-        else if (is_d) { if (!has_map && !dComIfGs_isVisitedRoom(r) && r != stayNo) continue; }
-        else { if (!dComIfGs_isVisitedRoom(r) && r != stayNo) continue; }
+        // LENIENT ROOM FILTER: Only culled in Dungeons. Field/Village details always sent.
+        if (is_d && !dComIfGs_isVisitedRoom(r) && r != stayNo && !dMapInfo_n::chkGetMap()) continue;
 
         for (int l = 0; l < 2; l++) {
             dDrawPath_c::room_class* room = dMpath_c::getRoomPointer(l, r);
             if (!room || !room->mpFloatData) continue;
             for (int f = 0; f < room->mFloorNum; f++) {
-                if (room->mpFloor[f].mFloorNo != sFloor) continue;
+                // LENIENT FLOOR FILTER: Field ridges often exist on Floor 1 while player is on Floor 0.
                 for (int g = 0; g < room->mpFloor[f].mGroupNum; g++) {
                     auto& group = room->mpFloor[f].mpGroup[g];
-
-                    // 1. Pack LINES into finalLines
                     dDrawPath_c::line_class* lines = group.mpLine;
                     for (int ln = 0; ln < group.mLineNum; ln++) {
                         for (int i = 0; i < lines[ln].mDataNum; i++) {
                             u16 idx = lines[ln].mpData[i];
                             BE<Vec> p = {room->mpFloatData[idx*2], 0.0f, room->mpFloatData[idx*2+1]};
                             dMapInfo_n::correctionOriginPos(r, &p);
-                            float px = p.x, pz = p.z;
-                            finalLines.push_back(px); finalLines.push_back(pz);
-                            minX = std::min(minX, px); maxX = std::max(maxX, px);
-                            minZ = std::min(minZ, pz); maxZ = std::max(maxZ, pz);
+                            finalLines.push_back(p.x); finalLines.push_back(p.z);
+                            minX = std::min(minX, (float)p.x); maxX = std::max(maxX, (float)p.x);
+                            minZ = std::min(minZ, (float)p.z); maxZ = std::max(maxZ, (float)p.z);
                         }
-                        // Sentinel: NaN + ID0 + ID1 + Padding (4 floats total)
                         finalLines.push_back(std::numeric_limits<float>::quiet_NaN());
                         finalLines.push_back((float)lines[ln].field_0x0);
                         finalLines.push_back((float)lines[ln].field_0x1);
                         finalLines.push_back(0.0f);
                     }
-
-                    // 2. Pack POLYGONS into the SAME finalLines array
                     dDrawPath_c::poly_class* polys = group.mpPoly;
                     for (int pn = 0; pn < group.mPolyNum; pn++) {
                         for (int i = 0; i < polys[pn].mDataNum; i++) {
                             u16 idx = polys[pn].mpData[i];
                             BE<Vec> p = {room->mpFloatData[idx*2], 0.0f, room->mpFloatData[idx*2+1]};
                             dMapInfo_n::correctionOriginPos(r, &p);
-                            float px = p.x, pz = p.z;
-                            finalLines.push_back(px); finalLines.push_back(pz);
-                            minX = std::min(minX, px); maxX = std::max(maxX, px);
-                            minZ = std::min(minZ, pz); maxZ = std::max(maxZ, pz);
+                            finalLines.push_back(p.x); finalLines.push_back(p.z);
                         }
                         finalLines.push_back(std::numeric_limits<float>::quiet_NaN());
                         finalLines.push_back((float)polys[pn].field_0x0);
-                        finalLines.push_back(1001.0f); // IS POLY FLAG
+                        finalLines.push_back(1001.0f);
                         finalLines.push_back(0.0f);
                     }
                 }
@@ -184,42 +171,13 @@ void hud_update() {
     }
     fData[3] = minX; fData[4] = minZ; fData[5] = maxX; fData[6] = maxZ;
 
-    // Transitions - Hide doors in overworld
-    if (is_d) {
-        auto collect_orig_doors = [&](dStage_KeepDoorInfo* di, bool correct) {
-            if (!di) return;
-            for (int i = 0; i < di->mNum; i++) {
-                const stage_tgsc_data_class* d = &di->mDrTgData[i];
-                int p0 = (d->base.parameters >> 0xD) & 0x3F;
-                if (!has_map && !dComIfGs_isVisitedRoom(p0) && p0 != stayNo) continue;
-                if (dMapInfo_c::calcFloorNo(d->base.position.y, true, p0) != sFloor) continue;
-                BE(Vec) p = (Vec)(cXyz)d->base.position; if (correct) dMapInfo_n::correctionOriginPos(p0, &p);
-                doors.push_back(p.x); doors.push_back(p.z); doors.push_back((float)d->base.angle.y * (180.0f / 32768.0f)); doors.push_back(0.0f);
-            }
-        };
-        collect_orig_doors(dStage_GetKeepDoorInfo(), true); collect_orig_doors(dStage_GetRoomKeepDoorInfo(), false);
-    }
-
-    for (int t = 0; t < dTres_c::TYPE_GROUP_ENUM_NUMBER; t++) {
-        for (dTres_c::typeGroupData_c* data = dTres_c::getFirstData(t); data; data = dTres_c::getNextData(data)) {
-            if (!is_d && stayNo != 0 && data->mRoomNo != -1 && data->mRoomNo != stayNo) continue;
-            if (t != 4 && data->mRoomNo != -1 && !dComIfGs_isVisitedRoom(data->mRoomNo) && data->mRoomNo != stayNo && !is_d) continue;
-            if (should_draw_icon(t, data->getConstDataPointer(), stayNo)) {
-                BE(Vec) p = data->mPos; if (data->mRoomNo != -1) dMapInfo_n::correctionOriginPos(data->mRoomNo, &p);
-                icons.push_back((float)t); icons.push_back(p.x); icons.push_back(p.z); icons.push_back((float)data->mStatus);
-            }
-        }
-    }
-
     jstring jStage = env->NewStringUTF(friendlyName.c_str());
     jintArray jInts = env->NewIntArray(60); env->SetIntArrayRegion(jInts, 0, 60, iData);
     jfloatArray jFloats = env->NewFloatArray(7); env->SetFloatArrayRegion(jFloats, 0, 7, fData);
     jfloatArray jL = env->NewFloatArray(finalLines.size()); env->SetFloatArrayRegion(jL, 0, finalLines.size(), finalLines.data());
     jfloatArray jI = env->NewFloatArray(icons.size()); env->SetFloatArrayRegion(jI, 0, icons.size(), icons.data());
     jfloatArray jD = env->NewFloatArray(doors.size()); env->SetFloatArrayRegion(jD, 0, doors.size(), doors.data());
-
     env->CallVoidMethod(activity, s_onGameStateUpdate, jInts, jFloats, jStage, jL, jI, jD);
-
     env->DeleteLocalRef(jInts); env->DeleteLocalRef(jFloats); env->DeleteLocalRef(jStage);
     env->DeleteLocalRef(jL); env->DeleteLocalRef(jI); env->DeleteLocalRef(jD);
     env->DeleteLocalRef(activity);
