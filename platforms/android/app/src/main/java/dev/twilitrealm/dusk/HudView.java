@@ -34,6 +34,16 @@ public class HudView extends View {
         invalidate();
     }
 
+    private void resetPaint() {
+        mPaint.reset();
+        mPaint.setAntiAlias(true);
+        mPaint.setStyle(Paint.Style.FILL);
+        mPaint.setTypeface(android.graphics.Typeface.DEFAULT);
+        mPaint.setShadowLayer(0, 0, 0, 0);
+        mPaint.setShader(null);
+        mPaint.setStrokeWidth(0);
+    }
+
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (event.getAction() == MotionEvent.ACTION_DOWN) {
@@ -63,7 +73,8 @@ public class HudView extends View {
         canvas.translate((getWidth() - 1280 * scale) / 2, (getHeight() - 1080 * scale) / 2);
         canvas.scale(scale, scale);
 
-        // Draw 1280x1080 Workspace Border
+        // Draw Workspace Border
+        resetPaint();
         mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(2.0f); mPaint.setColor(Color.WHITE);
         canvas.drawRect(0, 0, 1280, 1080, mPaint);
 
@@ -73,7 +84,12 @@ public class HudView extends View {
         drawMagicBar(canvas, 20, 150);
         
         if (mState.showOxygen) drawOxygenBar(canvas, 780, 150);
-        else drawOilBar(canvas, 780, 150);
+        else {
+            boolean hasLantern = (mState.itemXResId == 0x48 || mState.itemYResId == 0x48 || 
+                                 mState.itemDDownId == 0x48 || mState.itemDLeftId == 0x48 || 
+                                 mState.itemDRightId == 0x48);
+            if (hasLantern) drawOilBar(canvas, 780, 150);
+        }
         drawItems(canvas, 1260, 58);
 
         drawRupeeCounter(canvas, 20, 1060);
@@ -117,8 +133,8 @@ public class HudView extends View {
     }
 
     private void drawMiniMap(Canvas canvas, float x, float y) {
-        mPaint.setTypeface(android.graphics.Typeface.DEFAULT);
-        mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.argb(120, 15, 15, 50));
+        resetPaint();
+        mPaint.setColor(Color.argb(120, 15, 15, 50));
         canvas.drawRect(x, y, x + MAP_SIZE, y + MAP_SIZE, mPaint);
         mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(3); mPaint.setColor(Color.WHITE);
         canvas.drawRect(x, y, x + MAP_SIZE, y + MAP_SIZE, mPaint);
@@ -138,8 +154,6 @@ public class HudView extends View {
 
         if (mState.mapLines != null) {
             float[] strip = new float[32768];
-            
-            // PASS 1: DRAW ALL POLYGONS (GROUND/WATER)
             int vCount = 0; int i = 0;
             while (i < mState.mapLines.length - 1) {
                 float val = mState.mapLines[i];
@@ -168,8 +182,6 @@ public class HudView extends View {
                 }
                 i += 2;
             }
-
-            // PASS 2: DRAW ALL LINES (WALLS/RIDGES) ON TOP
             vCount = 0; i = 0;
             while (i < mState.mapLines.length - 1) {
                 float val = mState.mapLines[i];
@@ -178,7 +190,7 @@ public class HudView extends View {
                     if (id1 <= 1000) {
                         if (id1 == 1 || id1 == 2) {
                             mPaint.setStyle(Paint.Style.STROKE);
-                            mPaint.setStrokeWidth(id1 == 2 ? 4.0f : 2.5f); // Bold walls, subtle ridges
+                            mPaint.setStrokeWidth(id1 == 2 ? 4.0f : 2.5f);
                             mPaint.setStrokeJoin(Paint.Join.ROUND); mPaint.setStrokeCap(Paint.Cap.ROUND);
                             mPaint.setColor(colorMint); mDrawPath.reset();
                             for (int j = 0; j < vCount; j++) {
@@ -197,30 +209,23 @@ public class HudView extends View {
                 i += 2;
             }
         }
-
-        // Icons
         if (mState.mapIcons != null) {
             for (int i = 0; i < mState.mapIcons.length; i += 4) {
-                float ix = cX + (mState.mapIcons[i+1] - sCX) * mS;
-                float iy = cY + (mState.mapIcons[i+2] - sCZ) * mS;
-                drawMapIcon(canvas, ix, iy, (int)mState.mapIcons[i]);
+                drawMapIcon(canvas, cX + (mState.mapIcons[i+1] - sCX) * mS, cY + (mState.mapIcons[i+2] - sCZ) * mS, (int)mState.mapIcons[i]);
             }
         }
-
-        // Player Cursor
         canvas.save(); canvas.translate(cX + (mState.mapX - sCX) * mS, cY + (mState.mapY - sCZ) * mS);
         canvas.rotate(180 - mState.mapAngle); mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.YELLOW);
         mDrawPath.reset(); mDrawPath.moveTo(0, -22); mDrawPath.lineTo(-13, 13); mDrawPath.lineTo(13, 13); mDrawPath.close();
         canvas.drawPath(mDrawPath, mPaint); canvas.restore();
-        
         canvas.restore();
-        mPaint.setTextAlign(Paint.Align.CENTER); mPaint.setTextSize(32); mPaint.setColor(Color.WHITE);
+        resetPaint(); mPaint.setTextAlign(Paint.Align.CENTER); mPaint.setTextSize(32); mPaint.setColor(Color.WHITE);
         canvas.drawText(mState.stageName, x + MAP_SIZE/2, y + MAP_SIZE + 40, mPaint);
     }
 
     private void drawMapIcon(Canvas canvas, float x, float y, int type) {
-        mPaint.setStyle(Paint.Style.FILL);
-        if (type == 4) { mPaint.setColor(Color.WHITE); canvas.drawCircle(x, y, 6, mPaint); mPaint.setStyle(Paint.Style.STROKE); mPaint.setColor(Color.YELLOW); mPaint.setStrokeWidth(2); canvas.drawCircle(x, y, 6, mPaint); mPaint.setStyle(Paint.Style.FILL); }
+        resetPaint();
+        if (type == 4) { mPaint.setColor(Color.WHITE); canvas.drawCircle(x, y, 6, mPaint); mPaint.setStyle(Paint.Style.STROKE); mPaint.setColor(Color.YELLOW); mPaint.setStrokeWidth(2); canvas.drawCircle(x, y, 6, mPaint); }
         else if (type == 0 || type == 10) { mPaint.setColor(Color.YELLOW); canvas.drawRect(x-8, y-8, x+8, y+8, mPaint); }
         else { mPaint.setColor(Color.RED); canvas.drawCircle(x, y, 8, mPaint); }
     }
@@ -235,7 +240,7 @@ public class HudView extends View {
     }
 
     private void drawZeldaHeart(Canvas canvas, float x, float y, float size, int fill) {
-        mPaint.setStrokeWidth(3); mPaint.setColor(Color.WHITE); mHeartPath.reset();
+        resetPaint(); mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(3); mPaint.setColor(Color.WHITE); mHeartPath.reset();
         float mid = size / 2;
         mHeartPath.moveTo(x + mid, y + size * 0.25f);
         mHeartPath.cubicTo(x + mid + size * 0.1f, y + size * 0.05f, x + size, y + size * 0.05f, x + size * 0.95f, y + size * 0.45f);
@@ -261,19 +266,16 @@ public class HudView extends View {
 
     private void drawMagicBar(Canvas canvas, float x, float y) {
         if (mState.maxMagic <= 0) return;
-        float width = 740;
-        mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.argb(100, 0, 50, 0));
-        canvas.drawRect(x, y, x + width, y + 22, mPaint);
+        resetPaint(); mPaint.setColor(Color.argb(100, 0, 50, 0));
+        canvas.drawRect(x, y, x + 740, y + 22, mPaint);
         mPaint.setStyle(Paint.Style.STROKE); mPaint.setColor(Color.WHITE);
-        canvas.drawRect(x, y, x + width, y + 22, mPaint);
+        canvas.drawRect(x, y, x + 740, y + 22, mPaint);
         mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.rgb(0, 255, 120));
-        canvas.drawRect(x + 2, y + 2, x + (width * (float)mState.magic / mState.maxMagic) - 2, y + 20, mPaint);
+        canvas.drawRect(x + 2, y + 2, x + (740 * (float)mState.magic / mState.maxMagic) - 2, y + 20, mPaint);
     }
 
     private void drawOilBar(Canvas canvas, float x, float y) {
-        if (mState.maxOil <= 0) return;
-        float width = 300;
-        mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.argb(100, 50, 40, 0));
+        resetPaint(); mPaint.setColor(Color.argb(100, 50, 40, 0));
         canvas.drawRect(x, y, x + 300, y + 22, mPaint);
         mPaint.setStyle(Paint.Style.STROKE); mPaint.setColor(Color.WHITE);
         canvas.drawRect(x, y, x + 300, y + 22, mPaint);
@@ -282,9 +284,7 @@ public class HudView extends View {
     }
 
     private void drawOxygenBar(Canvas canvas, float x, float y) {
-        if (mState.maxOxygen <= 0) return;
-        float width = 300;
-        mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.argb(100, 0, 30, 50));
+        resetPaint(); mPaint.setColor(Color.argb(100, 0, 30, 50));
         canvas.drawRect(x, y, x + 300, y + 22, mPaint);
         mPaint.setStyle(Paint.Style.STROKE); mPaint.setColor(Color.WHITE);
         canvas.drawRect(x, y, x + 300, y + 22, mPaint);
@@ -293,8 +293,9 @@ public class HudView extends View {
     }
 
     private void drawRupeeCounter(Canvas canvas, float x, float y) {
+        resetPaint();
         float w = 40, h = 58, centerY = y - 24; 
-        mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.rgb(0, 180, 0)); mDrawPath.reset();
+        mPaint.setColor(Color.rgb(0, 180, 0)); mDrawPath.reset();
         mDrawPath.moveTo(x + w / 2f, centerY - h / 2f); mDrawPath.lineTo(x + w, centerY - h / 5f);
         mDrawPath.lineTo(x + w, centerY + h / 5f); mDrawPath.lineTo(x + w / 2f, centerY + h / 2f);
         mDrawPath.lineTo(x, centerY + h / 5f); mDrawPath.lineTo(x, centerY - h / 5f); mDrawPath.close();
@@ -310,45 +311,27 @@ public class HudView extends View {
         mDrawPath.lineTo(x, centerY + h / 5f); mDrawPath.lineTo(x, centerY - h / 5f); mDrawPath.close();
         canvas.drawPath(mDrawPath, mPaint);
 
-        // STYLIZED RUPEE TEXT
-        String text = String.valueOf(mDisplayRupees);
-        float textX = x + w + 15;
-        mPaint.setTextAlign(Paint.Align.LEFT);
-        mPaint.setTextSize(72);
+        String text = String.valueOf(mDisplayRupees); float textX = x + w + 15;
+        mPaint.setTextAlign(Paint.Align.LEFT); mPaint.setTextSize(72);
         mPaint.setTypeface(android.graphics.Typeface.create(android.graphics.Typeface.SERIF, android.graphics.Typeface.BOLD));
-
-        // 1. Draw heavy outline + shadow
-        mPaint.setStyle(Paint.Style.STROKE);
-        mPaint.setStrokeWidth(6.0f);
-        mPaint.setColor(Color.rgb(35, 26, 18)); // Outline: #231A12
-        mPaint.setShadowLayer(4.0f, 3.0f, 3.0f, Color.rgb(74, 56, 40)); // Shadow: #4A3828
+        mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(6.0f); mPaint.setColor(Color.rgb(35, 26, 18));
+        mPaint.setShadowLayer(4.0f, 3.0f, 3.0f, Color.rgb(74, 56, 40));
         canvas.drawText(text, textX, y, mPaint);
-        mPaint.clearShadowLayer();
-
-        // 2. Draw vertical gradient fill
-        mPaint.setStyle(Paint.Style.FILL);
-        int fillTop = Color.rgb(255, 249, 232); // Highlight: #FFF9E8
-        int fillBottom = Color.rgb(240, 232, 208); // Main fill: #F0E8D0
-        
-        // Use standard cream look by default. 
-        // Turns pure white (#FFFFFF) only when gaining rupees.
-        if (mState.rupees > mDisplayRupees) {
-            fillTop = Color.WHITE;
-            fillBottom = Color.rgb(230, 230, 230);
-        }
-
-        mPaint.setShader(new android.graphics.LinearGradient(0, y - 60, 0, y, fillTop, fillBottom, android.graphics.Shader.TileMode.CLAMP));
+        mPaint.clearShadowLayer(); mPaint.setStyle(Paint.Style.FILL);
+        int fT = Color.rgb(255, 249, 232), fB = Color.rgb(240, 232, 208);
+        if (mState.rupees > mDisplayRupees) { fT = Color.WHITE; fB = Color.rgb(230, 230, 230); }
+        mPaint.setShader(new android.graphics.LinearGradient(0, y - 60, 0, y, fT, fB, android.graphics.Shader.TileMode.CLAMP));
         canvas.drawText(text, textX, y, mPaint);
-        mPaint.setShader(null);
-        mPaint.setTypeface(android.graphics.Typeface.DEFAULT);
     }
 
     private void drawLightDropZigZag(Canvas canvas, float x, float y) {
+        resetPaint();
         for (int i = 0; i < mState.maxLightDrops; i++) {
             float dx = x + i * 32, dy = y - (i % 2 == 0 ? 0 : 18);
             if (i < mState.lightDrops) {
-                mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.WHITE); canvas.drawCircle(dx, dy, 9, mPaint);
+                mPaint.setColor(Color.WHITE); canvas.drawCircle(dx, dy, 9, mPaint);
                 mPaint.setStyle(Paint.Style.STROKE); mPaint.setColor(Color.YELLOW); mPaint.setStrokeWidth(3); canvas.drawCircle(dx, dy, 9, mPaint);
+                mPaint.setStyle(Paint.Style.FILL);
             } else {
                 mPaint.setStyle(Paint.Style.STROKE); mPaint.setColor(Color.GRAY); mPaint.setStrokeWidth(2); canvas.drawCircle(dx, dy, 9, mPaint);
                 mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.argb(40, 100, 100, 100)); canvas.drawCircle(dx, dy, 9, mPaint);
@@ -357,6 +340,7 @@ public class HudView extends View {
     }
 
     private void drawHorseSpurs(Canvas canvas, float x, float y) {
+        resetPaint();
         for (int i = 0; i < 6; i++) {
             float cx = x + i * 53, cy = y - 15;
             mPaint.setStyle(Paint.Style.STROKE); mPaint.setColor(Color.WHITE); mPaint.setStrokeWidth(2);
@@ -369,7 +353,7 @@ public class HudView extends View {
     }
 
     private void drawItems(Canvas canvas, float x, float y) {
-        mPaint.setTypeface(android.graphics.Typeface.DEFAULT);
+        resetPaint();
         mPaint.setTextAlign(Paint.Align.RIGHT); mPaint.setTextSize(38); mPaint.setColor(Color.WHITE);
         canvas.drawText("Arrows: " + mState.arrows, x, y, mPaint);
         canvas.drawText("Bombs:  " + mState.bombs, x, y + 45, mPaint);
@@ -377,44 +361,35 @@ public class HudView extends View {
     }
 
     private void drawContextButtons(Canvas canvas, float x, float startY) {
-        mPaint.setTypeface(android.graphics.Typeface.DEFAULT);
-        mPaint.setTextSize(42); float spacing = 95;
-        boolean isWolf = (mState.transform == 1);
+        resetPaint(); float spacing = 95;
         drawActionButton(canvas, x, startY, "L", Color.rgb(200, 200, 200), mState.buttonLText, mState.buttonLText != null && !mState.buttonLText.isEmpty());
         drawActionButton(canvas, x, startY + spacing, "R", Color.rgb(200, 200, 200), mState.buttonRText, mState.buttonRText != null && !mState.buttonRText.isEmpty());
         drawActionButton(canvas, x, startY + spacing * 2, "Z", Color.argb(255, 100, 200, 255), mState.buttonZText, mState.buttonZText != null && !mState.buttonZText.isEmpty());
         drawActionButton(canvas, x, startY + spacing * 3, "A", Color.rgb(0, 200, 50), mState.buttonAText, mState.buttonAText != null && !mState.buttonAText.isEmpty());
         drawActionButton(canvas, x, startY + spacing * 4, "B", Color.RED, mState.buttonBText, mState.buttonBText != null && !mState.buttonBText.isEmpty());
         String yT = mState.buttonYText; boolean yA = (yT != null && !yT.isEmpty());
-        if (!yA && !isWolf) { yT = getItemName(mState.itemYResId); yA = (mState.itemYResId != 0xFF); if (mState.itemYCount > 0) yT += " (" + mState.itemYCount + ")"; }
+        if (!yA && (mState.transform != 1)) { yT = getItemName(mState.itemYResId); yA = (mState.itemYResId != 0xFF); if (mState.itemYCount > 0) yT += " (" + mState.itemYCount + ")"; }
         drawActionButton(canvas, x, startY + spacing * 5, "Y", Color.rgb(255, 255, 0), yT, yA);
         String xT = mState.buttonXText; boolean xA = (xT != null && !xT.isEmpty());
-        if (!xA && !isWolf) { xT = getItemName(mState.itemXResId); xA = (mState.itemXResId != 0xFF); if (mState.itemXCount > 0) xT += " (" + mState.itemXCount + ")"; }
+        if (!xA && (mState.transform != 1)) { xT = getItemName(mState.itemXResId); xA = (mState.itemXResId != 0xFF); if (mState.itemXCount > 0) xT += " (" + mState.itemXCount + ")"; }
         drawActionButton(canvas, x, startY + spacing * 6, "X", Color.rgb(255, 165, 0), xT, xA);
     }
 
     private void drawActionButton(Canvas canvas, float x, float y, String label, int color, String text, boolean active) {
-        mPaint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        mPaint.setTextAlign(Paint.Align.CENTER); mPaint.setStyle(Paint.Style.FILL);
+        resetPaint(); mPaint.setTextAlign(Paint.Align.CENTER); mPaint.setTextSize(42);
         int circleColor = color; boolean isMidna = active && "Midna".equals(text); boolean isPulse = isMidna && mState.midnaCalling;
         if (isMidna) circleColor = isPulse ? Color.rgb(255, 200, 30) : Color.rgb(180, 50, 255);
         mPaint.setColor(active ? circleColor : Color.argb(60, 100, 100, 100));
         float r = isPulse ? 42 : 38; canvas.drawCircle(x, y, r, mPaint);
         mPaint.setColor(active ? Color.BLACK : Color.argb(100, 200, 200, 200));
         canvas.drawText(label, x, y + 15, mPaint);
-
         if (active && text != null && !text.isEmpty()) {
-            mPaint.setTextAlign(Paint.Align.LEFT);
+            mPaint.setTextAlign(Paint.Align.LEFT); mPaint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+            mPaint.setTextSize(42);
             float tx = x + 60, ty = y + 15;
-            
-            // DRAW "ROLL" STYLE: Heavy Black Outline + White Fill
-            mPaint.setStyle(Paint.Style.STROKE);
-            mPaint.setStrokeWidth(5.0f);
-            mPaint.setColor(Color.BLACK);
+            mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(5.0f); mPaint.setColor(Color.BLACK);
             canvas.drawText(text, tx, ty, mPaint);
-            
-            mPaint.setStyle(Paint.Style.FILL);
-            mPaint.setColor(Color.WHITE);
+            mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.WHITE);
             canvas.drawText(text, tx, ty, mPaint);
         }
     }
@@ -439,8 +414,7 @@ public class HudView extends View {
     }
 
     private void drawStatusInfo(Canvas canvas, float x, float y) {
-        mPaint.setTypeface(android.graphics.Typeface.DEFAULT);
-        mPaint.setTextAlign(Paint.Align.RIGHT); mPaint.setTextSize(38);
+        resetPaint(); mPaint.setTextAlign(Paint.Align.RIGHT); mPaint.setTextSize(38);
         mPaint.setColor(mState.transform == 1 ? Color.CYAN : Color.WHITE);
         canvas.drawText("FORM: " + (mState.transform == 1 ? "WOLF" : "HUMAN"), x, y, mPaint);
     }
