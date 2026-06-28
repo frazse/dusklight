@@ -117,6 +117,7 @@ public class HudView extends View {
     }
 
     private void drawMiniMap(Canvas canvas, float x, float y) {
+        mPaint.setTypeface(android.graphics.Typeface.DEFAULT);
         mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.argb(120, 15, 15, 50));
         canvas.drawRect(x, y, x + MAP_SIZE, y + MAP_SIZE, mPaint);
         mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(3); mPaint.setColor(Color.WHITE);
@@ -308,9 +309,38 @@ public class HudView extends View {
         mDrawPath.lineTo(x + w, centerY + h / 5f); mDrawPath.lineTo(x + w / 2f, centerY + h / 2f);
         mDrawPath.lineTo(x, centerY + h / 5f); mDrawPath.lineTo(x, centerY - h / 5f); mDrawPath.close();
         canvas.drawPath(mDrawPath, mPaint);
-        mPaint.setStyle(Paint.Style.FILL); mPaint.setTextAlign(Paint.Align.LEFT); mPaint.setTextSize(65);
-        if (mState.rupees > mDisplayRupees) mPaint.setColor(Color.WHITE); else mPaint.setColor(Color.GREEN);
-        canvas.drawText(String.valueOf(mDisplayRupees), x + w + 15, y, mPaint);
+
+        // STYLIZED RUPEE TEXT
+        String text = String.valueOf(mDisplayRupees);
+        float textX = x + w + 15;
+        mPaint.setTextAlign(Paint.Align.LEFT);
+        mPaint.setTextSize(72);
+        mPaint.setTypeface(android.graphics.Typeface.create(android.graphics.Typeface.SERIF, android.graphics.Typeface.BOLD));
+
+        // 1. Draw heavy outline + shadow
+        mPaint.setStyle(Paint.Style.STROKE);
+        mPaint.setStrokeWidth(6.0f);
+        mPaint.setColor(Color.rgb(35, 26, 18)); // Outline: #231A12
+        mPaint.setShadowLayer(4.0f, 3.0f, 3.0f, Color.rgb(74, 56, 40)); // Shadow: #4A3828
+        canvas.drawText(text, textX, y, mPaint);
+        mPaint.clearShadowLayer();
+
+        // 2. Draw vertical gradient fill
+        mPaint.setStyle(Paint.Style.FILL);
+        int fillTop = Color.rgb(255, 249, 232); // Highlight: #FFF9E8
+        int fillBottom = Color.rgb(240, 232, 208); // Main fill: #F0E8D0
+        
+        // Use standard cream look by default. 
+        // Turns pure white (#FFFFFF) only when gaining rupees.
+        if (mState.rupees > mDisplayRupees) {
+            fillTop = Color.WHITE;
+            fillBottom = Color.rgb(230, 230, 230);
+        }
+
+        mPaint.setShader(new android.graphics.LinearGradient(0, y - 60, 0, y, fillTop, fillBottom, android.graphics.Shader.TileMode.CLAMP));
+        canvas.drawText(text, textX, y, mPaint);
+        mPaint.setShader(null);
+        mPaint.setTypeface(android.graphics.Typeface.DEFAULT);
     }
 
     private void drawLightDropZigZag(Canvas canvas, float x, float y) {
@@ -339,6 +369,7 @@ public class HudView extends View {
     }
 
     private void drawItems(Canvas canvas, float x, float y) {
+        mPaint.setTypeface(android.graphics.Typeface.DEFAULT);
         mPaint.setTextAlign(Paint.Align.RIGHT); mPaint.setTextSize(38); mPaint.setColor(Color.WHITE);
         canvas.drawText("Arrows: " + mState.arrows, x, y, mPaint);
         canvas.drawText("Bombs:  " + mState.bombs, x, y + 45, mPaint);
@@ -346,6 +377,7 @@ public class HudView extends View {
     }
 
     private void drawContextButtons(Canvas canvas, float x, float startY) {
+        mPaint.setTypeface(android.graphics.Typeface.DEFAULT);
         mPaint.setTextSize(42); float spacing = 95;
         boolean isWolf = (mState.transform == 1);
         drawActionButton(canvas, x, startY, "L", Color.rgb(200, 200, 200), mState.buttonLText, mState.buttonLText != null && !mState.buttonLText.isEmpty());
@@ -362,6 +394,7 @@ public class HudView extends View {
     }
 
     private void drawActionButton(Canvas canvas, float x, float y, String label, int color, String text, boolean active) {
+        mPaint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         mPaint.setTextAlign(Paint.Align.CENTER); mPaint.setStyle(Paint.Style.FILL);
         int circleColor = color; boolean isMidna = active && "Midna".equals(text); boolean isPulse = isMidna && mState.midnaCalling;
         if (isMidna) circleColor = isPulse ? Color.rgb(255, 200, 30) : Color.rgb(180, 50, 255);
@@ -369,8 +402,21 @@ public class HudView extends View {
         float r = isPulse ? 42 : 38; canvas.drawCircle(x, y, r, mPaint);
         mPaint.setColor(active ? Color.BLACK : Color.argb(100, 200, 200, 200));
         canvas.drawText(label, x, y + 15, mPaint);
-        mPaint.setTextAlign(Paint.Align.LEFT); mPaint.setColor(active ? Color.WHITE : Color.argb(60, 150, 150, 150));
-        if (active && text != null && !text.isEmpty()) canvas.drawText(text, x + 50, y + 15, mPaint);
+
+        if (active && text != null && !text.isEmpty()) {
+            mPaint.setTextAlign(Paint.Align.LEFT);
+            float tx = x + 60, ty = y + 15;
+            
+            // DRAW "ROLL" STYLE: Heavy Black Outline + White Fill
+            mPaint.setStyle(Paint.Style.STROKE);
+            mPaint.setStrokeWidth(5.0f);
+            mPaint.setColor(Color.BLACK);
+            canvas.drawText(text, tx, ty, mPaint);
+            
+            mPaint.setStyle(Paint.Style.FILL);
+            mPaint.setColor(Color.WHITE);
+            canvas.drawText(text, tx, ty, mPaint);
+        }
     }
 
     private String getItemName(int id) {
@@ -393,6 +439,7 @@ public class HudView extends View {
     }
 
     private void drawStatusInfo(Canvas canvas, float x, float y) {
+        mPaint.setTypeface(android.graphics.Typeface.DEFAULT);
         mPaint.setTextAlign(Paint.Align.RIGHT); mPaint.setTextSize(38);
         mPaint.setColor(mState.transform == 1 ? Color.CYAN : Color.WHITE);
         canvas.drawText("FORM: " + (mState.transform == 1 ? "WOLF" : "HUMAN"), x, y, mPaint);
