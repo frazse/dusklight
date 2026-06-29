@@ -13,6 +13,10 @@ import android.view.View;
 public class HudView extends View {
     private static final String TAG = "HudView";
     private GameState mState;
+    private GameState mPrevState;
+    private long mLastUpdateTime;
+    private static final long UPDATE_INTERVAL_MS = 100; // 6 frames at 60fps
+
     private final Paint mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path mHeartPath = new Path();
     private final Path mDrawPath = new Path();
@@ -30,7 +34,9 @@ public class HudView extends View {
     }
 
     public void update(GameState state) {
+        mPrevState = mState;
         mState = state;
+        mLastUpdateTime = System.currentTimeMillis();
         invalidate();
     }
 
@@ -68,6 +74,24 @@ public class HudView extends View {
         canvas.drawColor(Color.BLACK);
         if (mState == null) return;
 
+        long now = System.currentTimeMillis();
+        float t = (now - mLastUpdateTime) / (float) UPDATE_INTERVAL_MS;
+        t = Math.max(0, Math.min(1.2f, t)); // Allow slight overshoot for smoothness if frames drop
+
+        float interMapX = mState.mapX;
+        float interMapY = mState.mapY;
+        float interMapAngle = mState.mapAngle;
+
+        if (mPrevState != null && mPrevState.stageName.equals(mState.stageName)) {
+            interMapX = mPrevState.mapX + (mState.mapX - mPrevState.mapX) * t;
+            interMapY = mPrevState.mapY + (mState.mapY - mPrevState.mapY) * t;
+            
+            float diff = mState.mapAngle - mPrevState.mapAngle;
+            while (diff < -180) diff += 360;
+            while (diff > 180) diff -= 360;
+            interMapAngle = mPrevState.mapAngle + diff * t;
+        }
+
         float scale = Math.min((float) getWidth() / 1280f, (float) getHeight() / 1080f);
         canvas.save();
         canvas.translate((getWidth() - 1280 * scale) / 2, (getHeight() - 1080 * scale) / 2);
@@ -102,13 +126,13 @@ public class HudView extends View {
             drawHorseSpurs(canvas, 640 - (width / 2), 1060);
         }
         
-        drawMiniMap(canvas, MAP_X, MAP_Y);
+        drawMiniMap(canvas, MAP_X, MAP_Y, interMapX, interMapY, interMapAngle);
         drawContextButtons(canvas, 820, 280);
         
         drawStatusInfo(canvas, 1260, 1060);
 
         canvas.restore();
-        if (mState.midnaCalling) postInvalidateOnAnimation();
+        if (mState.midnaCalling || t < 1.0f) postInvalidateOnAnimation();
     }
 
     private int getRupeeStep(int diff) {
@@ -132,7 +156,7 @@ public class HudView extends View {
         mRupeeTimer = (absDelta > 50) ? 0 : 1; 
     }
 
-    private void drawMiniMap(Canvas canvas, float x, float y) {
+    private void drawMiniMap(Canvas canvas, float x, float y, float interX, float interY, float interAngle) {
         resetPaint();
         mPaint.setColor(Color.argb(120, 15, 15, 50));
         canvas.drawRect(x, y, x + MAP_SIZE, y + MAP_SIZE, mPaint);
@@ -142,8 +166,8 @@ public class HudView extends View {
         
         float baseScale = (MAP_SIZE * 0.92f) / Math.max(mState.mapMaxX - mState.mapMinX, mState.mapMaxZ - mState.mapMinZ);
         float mS = (mMapZoomLevel > 0) ? baseScale * (float)Math.pow(2, mMapZoomLevel) : baseScale;
-        float sCX = (mMapZoomLevel > 0) ? mState.mapX : (mState.mapMaxX + mState.mapMinX)/2f;
-        float sCZ = (mMapZoomLevel > 0) ? mState.mapY : (mState.mapMaxZ + mState.mapMinZ)/2f;
+        float sCX = (mMapZoomLevel > 0) ? interX : (mState.mapMaxX + mState.mapMinX)/2f;
+        float sCZ = (mMapZoomLevel > 0) ? interY : (mState.mapMaxZ + mState.mapMinZ)/2f;
         float cX = x + MAP_SIZE/2, cY = y + MAP_SIZE/2;
         
         canvas.save(); canvas.clipRect(x, y, x + MAP_SIZE, y + MAP_SIZE);
@@ -221,11 +245,13 @@ public class HudView extends View {
         }
 
         // Player Marker (Yellow)
-        drawMapPointer(canvas, cX + (mState.mapX - sCX) * mS, cY + (mState.mapY - sCZ) * mS, mState.mapAngle, Color.YELLOW);
+        drawMapPointer(canvas, cX + (interX - sCX) * mS, cY + (interY - sCZ) * mS, interAngle, Color.YELLOW);
         
         canvas.restore();
         resetPaint(); mPaint.setTextAlign(Paint.Align.CENTER); mPaint.setTextSize(32); mPaint.setColor(Color.WHITE);
-        canvas.drawText(mState.stageName, x + MAP_SIZE/2, y + MAP_SIZE + 40, mPaint);
+        String mapLabel = mState.stageName;
+        if (mMapZoomLevel > 0) mapLabel += " (" + (int)Math.pow(2, mMapZoomLevel) + "x)";
+        canvas.drawText(mapLabel, x + MAP_SIZE/2, y + MAP_SIZE + 40, mPaint);
     }
 
     private void drawMapPointer(Canvas canvas, float x, float y, float angle, int color) {
