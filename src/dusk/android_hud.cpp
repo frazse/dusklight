@@ -136,6 +136,11 @@ void hud_update() {
     bool is_d = (stype == ST_DUNGEON);
     s8 sFloor = dMapInfo_c::getNowStayFloorNoDecisionFlg() ? dMapInfo_c::getNowStayFloorNo() : dMapInfo_c::calcFloorNo(playerPos.y, true, stayNo);
 
+    // Classification & Context Markers
+    bool isFieldStage = sName && sName[0] == 'F';
+    bool isRoomStage = sName && sName[0] == 'R';
+    iData[47] = (sName && (sName[0] == 'D' || (is_d && !isFieldStage))) ? 1 : 0; // isDungeon
+
     // Restart Marker (Entrance)
     Vec restartPos = dMapInfo_n::getMapRestartPos();
     s8 restartFloor = dMapInfo_c::calcFloorNo(restartPos.y, true, dComIfGs_getRestartRoomNo());
@@ -147,10 +152,6 @@ void hud_update() {
         restartPos.x, restartPos.z, (float)dMapInfo_n::getMapRestartAngleY() * (180.0f / 32768.0f)
     };
 
-    // Classification
-    bool isRoomStage = sName && sName[0] == 'R';
-    bool isFieldStage = sName && sName[0] == 'F';
-
     float minX = 1e10f, minZ = 1e10f, maxX = -1e10f, maxZ = -1e10f;
     std::vector<float> finalLines, icons, doors;
 
@@ -161,7 +162,7 @@ void hud_update() {
         bool showRoom = (r == stayNo);
         if (!showRoom) {
             if (isRoomStage) showRoom = false;
-            else showRoom = dComIfGs_isVisitedRoom(r) || (is_d && dMapInfo_n::chkGetMap());
+            else showRoom = dComIfGs_isVisitedRoom(r) || (iData[47] && dMapInfo_n::chkGetMap());
         }
         if (!showRoom) continue;
 

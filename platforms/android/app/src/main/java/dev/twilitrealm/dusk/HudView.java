@@ -148,9 +148,9 @@ public class HudView extends View {
         
         canvas.save(); canvas.clipRect(x, y, x + MAP_SIZE, y + MAP_SIZE);
 
-        int colorMint = Color.rgb(155, 205, 155);
-        int colorWater = Color.rgb(65, 110, 220);
-        int colorTerrain = Color.rgb(45, 75, 45);
+        int colorMint = Color.parseColor("#9FE173");
+        int colorWater = Color.parseColor("#3984C5");
+        int colorTerrain = Color.parseColor("#3E8E1F");
 
         if (mState.mapLines != null) {
             float[] strip = new float[32768];
@@ -370,11 +370,30 @@ public class HudView extends View {
     }
 
     private void drawItems(Canvas canvas, float x, float y) {
+        if (!mState.isDungeon) return;
         resetPaint();
-        mPaint.setTextAlign(Paint.Align.RIGHT); mPaint.setTextSize(38); mPaint.setColor(Color.WHITE);
-        canvas.drawText("Arrows: " + mState.arrows, x, y, mPaint);
-        canvas.drawText("Bombs:  " + mState.bombs, x, y + 45, mPaint);
-        canvas.drawText("Keys:   " + mState.keys, x, y + 90, mPaint);
+        
+        // Key Count (using Rupee Font, aligned to the right)
+        String text = String.valueOf(mState.keys);
+        mPaint.setTextAlign(Paint.Align.RIGHT); mPaint.setTextSize(64);
+        mPaint.setTypeface(android.graphics.Typeface.create(android.graphics.Typeface.SERIF, android.graphics.Typeface.BOLD));
+        mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(5.0f); mPaint.setColor(Color.rgb(35, 26, 18));
+        canvas.drawText(text, x - 50, y, mPaint);
+        mPaint.setStyle(Paint.Style.FILL);
+        int fT = Color.rgb(255, 249, 232), fB = Color.rgb(240, 232, 208);
+        mPaint.setShader(new android.graphics.LinearGradient(0, y - 50, 0, y, fT, fB, android.graphics.Shader.TileMode.CLAMP));
+        canvas.drawText(text, x - 50, y, mPaint);
+        
+        // Key Icon (placed to the right of the text)
+        resetPaint();
+        float iconX = x - 25, iconY = y - 22;
+        mPaint.setColor(Color.rgb(180, 180, 180)); mPaint.setStyle(Paint.Style.FILL);
+        canvas.drawCircle(iconX, iconY, 15, mPaint);
+        mPaint.setColor(Color.BLACK); canvas.drawCircle(iconX, iconY, 7, mPaint);
+        mPaint.setColor(Color.rgb(180, 180, 180));
+        canvas.drawRect(iconX + 10, iconY - 3, iconX + 40, iconY + 3, mPaint);
+        canvas.drawRect(iconX + 30, iconY, iconX + 36, iconY + 12, mPaint);
+        canvas.drawRect(iconX + 22, iconY, iconX + 28, iconY + 8, mPaint);
     }
 
     private void drawContextButtons(Canvas canvas, float x, float startY) {
