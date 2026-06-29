@@ -9,83 +9,18 @@ set(DUSK_VERSION_OVERRIDE "" CACHE STRING "Override version string (skips git de
 
 if (DUSK_VERSION_OVERRIDE)
     set(DUSK_WC_DESCRIBE "${DUSK_VERSION_OVERRIDE}")
-    set(DUSK_VERSION_STRING "0.0.0.0")
-    set(DUSK_SHORT_VERSION_STRING "0.0.0")
-    set(DUSK_VERSION_CODE "1")
+    set(DUSK_VERSION_STRING "1.4.1.0")
+    set(DUSK_SHORT_VERSION_STRING "1.4.1")
+    set(DUSK_VERSION_CODE "14100")
     set(DUSK_WC_REVISION "")
     set(DUSK_WC_BRANCH "")
     set(DUSK_WC_DATE "")
     message(STATUS "Dusklight version overridden to ${DUSK_WC_DESCRIBE}")
 else ()
-    # obtain revision info from git
-    find_package(Git)
-if (GIT_FOUND)
-    # make sure version information gets re-run when the current Git HEAD changes
-    execute_process(WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} COMMAND ${GIT_EXECUTABLE} rev-parse --git-path HEAD
-            OUTPUT_VARIABLE dusk_git_head_filename
-            OUTPUT_STRIP_TRAILING_WHITESPACE)
-    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${dusk_git_head_filename}")
-
-    execute_process(WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} COMMAND ${GIT_EXECUTABLE} rev-parse --symbolic-full-name HEAD
-            OUTPUT_VARIABLE dusk_git_head_symbolic
-            OUTPUT_STRIP_TRAILING_WHITESPACE)
-    execute_process(WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-            COMMAND ${GIT_EXECUTABLE} rev-parse --git-path ${dusk_git_head_symbolic}
-            OUTPUT_VARIABLE dusk_git_head_symbolic_filename
-            OUTPUT_STRIP_TRAILING_WHITESPACE)
-    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${dusk_git_head_symbolic_filename}")
-
-    # defines DUSK_WC_REVISION
-    execute_process(WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} COMMAND ${GIT_EXECUTABLE} rev-parse HEAD
-            OUTPUT_VARIABLE DUSK_WC_REVISION
-            OUTPUT_STRIP_TRAILING_WHITESPACE)
-    # defines DUSK_WC_DESCRIBE
-    execute_process(WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} COMMAND ${GIT_EXECUTABLE} describe --tags --long --dirty --match "v*"
-            OUTPUT_VARIABLE DUSK_WC_DESCRIBE
-            OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-    # remove the git hash, then collapse a clean "-0" suffix only
-    string(REGEX REPLACE "-[^-]+(-dirty|)$" "\\1" DUSK_WC_DESCRIBE "${DUSK_WC_DESCRIBE}")
-    string(REGEX REPLACE "-0$" "" DUSK_WC_DESCRIBE "${DUSK_WC_DESCRIBE}")
-
-    # defines DUSK_WC_BRANCH
-    execute_process(WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} COMMAND ${GIT_EXECUTABLE} rev-parse --abbrev-ref HEAD
-            OUTPUT_VARIABLE DUSK_WC_BRANCH
-            OUTPUT_STRIP_TRAILING_WHITESPACE)
-    # defines DUSK_WC_DATE
-    execute_process(WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} COMMAND ${GIT_EXECUTABLE} log -1 --format=%ad
-            OUTPUT_VARIABLE DUSK_WC_DATE
-            OUTPUT_STRIP_TRAILING_WHITESPACE)
-else ()
-    message(STATUS "Unable to find git, commit information will not be available")
-endif ()
-
-if (DUSK_WC_DESCRIBE MATCHES "^v([0-9]+)\\.([0-9]+)\\.([0-9]+)([-+].*)?$")
-    set(DUSK_SHORT_VERSION_STRING "${CMAKE_MATCH_1}.${CMAKE_MATCH_2}.${CMAKE_MATCH_3}")
-    set(_ver_major ${CMAKE_MATCH_1})
-    set(_ver_minor ${CMAKE_MATCH_2})
-    set(_ver_patch ${CMAKE_MATCH_3})
-    set(DUSK_VERSION_TWEAK "0")
-    if (DUSK_WC_DESCRIBE MATCHES "^v[0-9]+\\.[0-9]+\\.[0-9]+-([0-9]+)(-dirty)?$")
-        set(DUSK_VERSION_TWEAK "${CMAKE_MATCH_1}")
-    elseif (DUSK_WC_DESCRIBE MATCHES "^v[0-9]+\\.[0-9]+\\.[0-9]+-[0-9A-Za-z.-]+-([0-9]+)(-dirty)?$")
-        set(DUSK_VERSION_TWEAK "${CMAKE_MATCH_1}")
-    endif ()
-    set(DUSK_VERSION_STRING "${DUSK_SHORT_VERSION_STRING}.${DUSK_VERSION_TWEAK}")
-    if(DUSK_VERSION_TWEAK GREATER 999)
-        set(_tweak 999)
-    else()
-        set(_tweak ${DUSK_VERSION_TWEAK})
-    endif()
-    # encoding: major*1e7 + minor*1e5 + patch*1e3 + tweak; collision-free for major<210, minor<100, patch<100, tweak<=999
-    math(EXPR DUSK_VERSION_CODE
-        "${_ver_major} * 10000000 + ${_ver_minor} * 100000 + ${_ver_patch} * 1000 + ${_tweak}")
-else ()
-    set(DUSK_WC_DESCRIBE "UNKNOWN-VERSION")
-    set(DUSK_VERSION_STRING "0.0.0.0")
-    set(DUSK_SHORT_VERSION_STRING "0.0.0")
-    set(DUSK_VERSION_CODE "1")
-endif ()
+    set(DUSK_WC_DESCRIBE "v1.4.1-Thor-Edition")
+    set(DUSK_VERSION_STRING "1.4.1.0")
+    set(DUSK_SHORT_VERSION_STRING "1.4.1")
+    set(DUSK_VERSION_CODE "14100")
 
 endif ()
 
@@ -173,7 +108,7 @@ endif ()
 option(DUSK_BUILD_WARNINGS "Enable compiler warnings (off by default)")
 option(DUSK_SELECTED_OPT "If on, selected parts of the project will be compiled with optimizations on Debug, intending to make the game run at 30 FPS. Note for MSVC: you will need to remove '/RTC1' from your debug flags in CMake.")
 option(DUSK_MOVIE_SUPPORT "If on, compile against libjpeg-turbo to enable THP file decoding" ON)
-option(DUSK_ENABLE_UPDATE_CHECKER "Enable update checking support" ON)
+option(DUSK_ENABLE_UPDATE_CHECKER "Enable update checking support" OFF)
 option(DUSK_ENABLE_SENTRY_NATIVE "Enable sentry-native crash reporting support" OFF)
 option(DUSK_PACKAGE_INSTALL "Install Dusklight with a Linux-native file structure" OFF)
 option(DUSK_GFX_DEBUG_GROUPS "Report debug groups to the native graphics API" ${DUSK_GFX_DEBUG_GROUPS_DEFAULT})

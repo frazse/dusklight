@@ -234,6 +234,7 @@ std::optional<DiscVerificationResult> take_finished_disc_verification() {
 }
 
 void begin_update_check() {
+#ifdef DUSK_ENABLE_UPDATE_CHECKER
     if (!getSettings().backend.checkForUpdates.getValue()) {
         return;
     }
@@ -241,9 +242,11 @@ void begin_update_check() {
         return;
     }
     sUpdateCheckTask = std::make_unique<UpdateCheckTask>();
+#endif
 }
 
 std::optional<update_check::Result> take_finished_update_check() {
+#ifdef DUSK_ENABLE_UPDATE_CHECKER
     if (sUpdateCheckTask == nullptr || !sUpdateCheckTask->finished()) {
         return std::nullopt;
     }
@@ -252,6 +255,9 @@ std::optional<update_check::Result> take_finished_update_check() {
     auto result = std::move(sUpdateCheckTask->result);
     sUpdateCheckTask.reset();
     return result;
+#else
+    return std::nullopt;
+#endif
 }
 
 std::string update_release_label(const update_check::Release& release) {
@@ -890,32 +896,8 @@ void Prelaunch::update() {
         mVersion->SetInnerRML(escape(versionStr));
     }
     if (mUpdateStatus != nullptr && mUpdateMessage != nullptr) {
-        if (auto result = take_finished_update_check()) {
-            if (result->status == update_check::Status::Failed) {
-                PrelaunchLog.error("Failed to check for updates: {}", result->message);
-            }
-            sUpdateCheckResult = std::move(*result);
-        }
-
-        if (sUpdateCheckTask != nullptr) {
-            mUpdateStatus->SetAttribute("state", "checking");
-            mUpdateMessage->SetInnerRML("Checking for updates...");
-        } else if (!sUpdateCheckResult.has_value() ||
-                   sUpdateCheckResult->status == update_check::Status::UpToDate)
-        {
-            mUpdateStatus->RemoveAttribute("state");
-            mUpdateMessage->SetInnerRML("");
-        } else if (sUpdateCheckResult->status == update_check::Status::UpdateAvailable) {
-            mUpdateStatus->SetAttribute("state", "available");
-            mUpdateMessage->SetInnerRML("Update available!");
-            if (mUpdateDownloadLabel != nullptr) {
-                mUpdateDownloadLabel->SetInnerRML(escape(
-                    fmt::format("Download {}", update_release_label(sUpdateCheckResult->latest))));
-            }
-        } else {
-            mUpdateStatus->SetAttribute("state", "failed");
-            mUpdateMessage->SetInnerRML("Failed to check for updates");
-        }
+        mUpdateStatus->RemoveAttribute("state");
+        mUpdateMessage->SetInnerRML("");
     }
 
     Document::update();
