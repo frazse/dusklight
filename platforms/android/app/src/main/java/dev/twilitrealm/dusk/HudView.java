@@ -90,7 +90,7 @@ public class HudView extends View {
                                  mState.itemDRightId == 0x48);
             if (hasLantern) drawOilBar(canvas, 780, 150);
         }
-        drawItems(canvas, 1260, 58);
+        drawItems(canvas, 1280, 20);
 
         drawRupeeCounter(canvas, 20, 1060);
         
@@ -373,27 +373,163 @@ public class HudView extends View {
         if (!mState.isDungeon) return;
         resetPaint();
         
-        // Key Count (using Rupee Font, aligned to the right)
+        float keyH = 80;
+        // The key in the SVG is approx 266px wide by 562px tall.
+        float keyW = keyH * (266f / 562f); 
+        
+        // 20px padding from top/right edges to match Rupee/Heart logic
+        float iconRightX = x - 20;
+        float iconTopY = y; 
+        float iconCenterX = iconRightX - (keyW / 2);
+        float iconCenterY = iconTopY + (keyH / 2);
+
+        // Key Count (Grouped tightly with the icon)
         String text = String.valueOf(mState.keys);
-        mPaint.setTextAlign(Paint.Align.RIGHT); mPaint.setTextSize(64);
+        mPaint.setTextAlign(Paint.Align.RIGHT); mPaint.setTextSize(72); // Matched to Rupee font size
         mPaint.setTypeface(android.graphics.Typeface.create(android.graphics.Typeface.SERIF, android.graphics.Typeface.BOLD));
-        mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(5.0f); mPaint.setColor(Color.rgb(35, 26, 18));
-        canvas.drawText(text, x - 50, y, mPaint);
+        
+        float textGap = 15; // Exact distance matching the Rupee counter
+        float textX = iconRightX - keyW - textGap;
+        float textY = iconCenterY + 25; // Adjusted vertical centering for 72pt font
+        
+        mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(6.0f); mPaint.setColor(Color.rgb(35, 26, 18));
+        canvas.drawText(text, textX, textY, mPaint);
         mPaint.setStyle(Paint.Style.FILL);
         int fT = Color.rgb(255, 249, 232), fB = Color.rgb(240, 232, 208);
-        mPaint.setShader(new android.graphics.LinearGradient(0, y - 50, 0, y, fT, fB, android.graphics.Shader.TileMode.CLAMP));
-        canvas.drawText(text, x - 50, y, mPaint);
+        mPaint.setShader(new android.graphics.LinearGradient(0, textY - 60, 0, textY, fT, fB, android.graphics.Shader.TileMode.CLAMP));
+        canvas.drawText(text, textX, textY, mPaint);
+        mPaint.setShader(null);
         
-        // Key Icon (placed to the right of the text)
+        drawZeldaKey(canvas, iconCenterX, iconCenterY, keyH);
+    }
+
+    private void drawZeldaKey(Canvas canvas, float cx, float cy, float size) {
+        canvas.save();
+        // Scale and Center using the actual key bounds (X[294, 560], Y[11, 573])
+        float svgScale = size / 562f; 
+        canvas.translate(cx, cy);
+        canvas.scale(-svgScale, svgScale); // Horizontally flip (teeth point RIGHT)
+        canvas.translate(-427, -292); // Center of the actual key geometry
+
+        Path path = new Path();
+        path.setFillType(Path.FillType.EVEN_ODD); 
+        
+        // Key silhouette (Sub-path starting at M523.43)
+        path.moveTo(523.43f, 507.94f);
+        path.cubicTo(523.78f, 507.76f, 523.91f, 507.49f, 523.89f, 506.40f);
+        path.cubicTo(518.27f, 499.92f, 512.65f, 493.44f, 506.51f, 486.39f);
+        path.cubicTo(504.10f, 485.98f, 501.70f, 485.23f, 499.28f, 485.20f);
+        path.cubicTo(484.22f, 485.02f, 469.15f, 485.00f, 454.00f, 484.01f);
+        path.lineTo(454.99f, 452.96f);
+        path.cubicTo(481.08f, 452.96f, 507.17f, 453.07f, 533.26f, 452.81f);
+        path.cubicTo(536.68f, 452.78f, 541.02f, 451.80f, 543.32f, 449.58f);
+        path.cubicTo(548.82f, 444.25f, 553.37f, 437.93f, 558.83f, 431.65f);
+        path.lineTo(541.55f, 411.36f);
+        path.cubicTo(539.32f, 410.96f, 537.10f, 410.22f, 534.87f, 410.21f);
+        path.cubicTo(507.94f, 410.05f, 481.01f, 410.01f, 454.00f, 409.01f);
+        path.lineTo(454.17f, 323.33f);
+        path.cubicTo(456.93f, 322.19f, 459.60f, 320.63f, 462.48f, 320.02f);
+        path.cubicTo(465.92f, 319.30f, 468.18f, 318.53f, 468.08f, 314.20f);
+        path.cubicTo(467.82f, 302.58f, 468.06f, 290.95f, 467.90f, 279.32f);
+        path.cubicTo(467.88f, 277.86f, 466.66f, 276.42f, 465.34f, 274.56f);
+        path.lineTo(454.04f, 271.08f);
+        path.lineTo(454.08f, 248.11f);
+        path.cubicTo(454.12f, 246.64f, 455.09f, 244.43f, 456.25f, 243.87f);
+        path.cubicTo(464.65f, 239.83f, 473.17f, 236.03f, 481.76f, 232.40f);
+        path.cubicTo(483.35f, 231.73f, 485.73f, 231.54f, 487.22f, 232.24f);
+        path.cubicTo(495.89f, 236.29f, 504.41f, 240.68f, 513.67f, 245.16f);
+        path.lineTo(530.38f, 229.35f);
+        path.lineTo(516.27f, 198.27f);
+        path.lineTo(517.84f, 196.42f);
+        path.cubicTo(522.27f, 186.64f, 526.64f, 176.83f, 531.80f, 166.99f);
+        path.lineTo(552.44f, 159.75f);
+        path.lineTo(559.68f, 155.54f);
+        path.lineTo(560.87f, 154.09f);
+        path.lineTo(560.90f, 133.76f);
+        path.cubicTo(560.88f, 132.86f, 559.99f, 131.51f, 559.17f, 131.16f);
+        path.lineTo(532.00f, 119.08f);
+        path.cubicTo(529.35f, 106.93f, 525.20f, 95.38f, 518.45f, 84.83f);
+        path.lineTo(518.53f, 81.62f);
+        path.lineTo(530.90f, 57.09f);
+        path.lineTo(516.45f, 43.08f);
+        path.cubicTo(515.60f, 42.30f, 513.71f, 41.78f, 512.70f, 42.17f);
+        path.lineTo(487.26f, 52.11f);
+        path.lineTo(462.97f, 39.19f);
+        path.lineTo(454.82f, 12.11f);
+        path.lineTo(453.37f, 11.11f);
+        path.lineTo(401.94f, 11.06f);
+        path.lineTo(393.23f, 40.13f);
+        path.lineTo(368.62f, 51.26f);
+        path.lineTo(344.10f, 41.70f);
+        path.cubicTo(342.61f, 41.16f, 340.04f, 41.49f, 338.90f, 42.48f);
+        path.lineTo(326.85f, 54.44f);
+        path.lineTo(325.94f, 58.17f);
+        path.lineTo(338.89f, 82.95f);
+        path.cubicTo(331.78f, 94.10f, 327.41f, 106.38f, 323.36f, 119.30f);
+        path.lineTo(297.97f, 130.26f);
+        path.cubicTo(296.48f, 130.92f, 294.29f, 132.34f, 294.23f, 133.51f);
+        path.lineTo(294.18f, 153.84f);
+        path.lineTo(296.36f, 156.58f);
+        path.lineTo(300.17f, 158.82f);
+        path.lineTo(326.09f, 168.80f);
+        path.lineTo(339.13f, 199.49f);
+        path.lineTo(326.91f, 226.67f);
+        path.cubicTo(325.59f, 229.52f, 325.86f, 231.49f, 328.25f, 233.65f);
+        path.lineTo(339.35f, 244.44f);
+        path.cubicTo(340.80f, 245.65f, 343.78f, 246.55f, 345.32f, 245.89f);
+        path.lineTo(370.30f, 233.99f);
+        path.lineTo(373.04f, 230.79f);
+        path.lineTo(385.16f, 237.79f);
+        path.lineTo(398.21f, 243.62f);
+        path.lineTo(402.07f, 248.93f);
+        path.lineTo(402.16f, 265.90f);
+        path.lineTo(396.19f, 274.78f);
+        path.lineTo(394.37f, 274.69f);
+        path.lineTo(388.89f, 279.06f);
+        path.lineTo(389.43f, 318.70f);
+        path.lineTo(394.47f, 320.04f);
+        path.lineTo(402.19f, 323.85f);
+        path.lineTo(402.19f, 538.07f);
+        path.lineTo(404.39f, 544.56f);
+        path.lineTo(428.80f, 560.92f);
+        path.lineTo(451.76f, 544.53f);
+        path.lineTo(453.89f, 539.48f);
+        path.lineTo(454.96f, 527.98f);
+        path.lineTo(501.38f, 527.91f);
+        path.lineTo(506.64f, 526.81f);
+        path.lineTo(523.00f, 507.96f);
+        path.close();
+
+        // Hex Cutout (Nested path from M378)
+        Path hex = new Path();
+        hex.moveTo(378.02f, 114.99f);
+        hex.cubicTo(377.46f, 115.31f, 374.20f, 122.31f, 367.79f, 136.35f);
+        hex.cubicTo(368.51f, 138.72f, 368.95f, 140.68f, 371.63f, 146.82f);
+        hex.cubicTo(376.09f, 159.43f, 380.08f, 169.64f, 384.47f, 179.66f);
+        hex.cubicTo(385.29f, 181.54f, 387.59f, 183.19f, 389.58f, 184.06f);
+        hex.cubicTo(400.61f, 188.86f, 411.65f, 193.68f, 422.93f, 197.81f);
+        hex.cubicTo(426.14f, 198.98f, 430.53f, 198.78f, 433.79f, 197.60f);
+        hex.cubicTo(444.49f, 193.72f, 454.98f, 189.26f, 465.39f, 184.65f);
+        hex.cubicTo(467.94f, 183.52f, 470.86f, 181.44f, 471.92f, 179.04f);
+        hex.cubicTo(476.63f, 168.51f, 480.71f, 157.71f, 485.63f, 146.60f);
+        hex.cubicTo(485.59f, 133.37f, 481.91f, 125.28f, 475.20f, 108.78f);
+        hex.lineTo(468.68f, 97.22f);
+        hex.lineTo(429.37f, 81.03f);
+        hex.lineTo(388.96f, 94.28f);
+        hex.close();
+        path.addPath(hex);
+
+        // Render ---
         resetPaint();
-        float iconX = x - 25, iconY = y - 22;
-        mPaint.setColor(Color.rgb(180, 180, 180)); mPaint.setStyle(Paint.Style.FILL);
-        canvas.drawCircle(iconX, iconY, 15, mPaint);
-        mPaint.setColor(Color.BLACK); canvas.drawCircle(iconX, iconY, 7, mPaint);
-        mPaint.setColor(Color.rgb(180, 180, 180));
-        canvas.drawRect(iconX + 10, iconY - 3, iconX + 40, iconY + 3, mPaint);
-        canvas.drawRect(iconX + 30, iconY, iconX + 36, iconY + 12, mPaint);
-        canvas.drawRect(iconX + 22, iconY, iconX + 28, iconY + 8, mPaint);
+        mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(6.5f); mPaint.setColor(Color.rgb(35, 26, 18));
+        mPaint.setStrokeJoin(Paint.Join.ROUND); canvas.drawPath(path, mPaint);
+        
+        mPaint.setStyle(Paint.Style.FILL);
+        mPaint.setShader(new android.graphics.LinearGradient(0, 0, size, size, 
+                         Color.rgb(235, 235, 240), Color.rgb(115, 115, 125), android.graphics.Shader.TileMode.CLAMP));
+        canvas.drawPath(path, mPaint);
+        
+        canvas.restore();
     }
 
     private void drawContextButtons(Canvas canvas, float x, float startY) {
