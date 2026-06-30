@@ -117,6 +117,10 @@ public class HudView extends View {
         }
         drawItems(canvas, 1280, 20);
 
+        if (mState.isDungeon) {
+            drawDungeonItems(canvas, 1280, 110);
+        }
+
         drawRupeeCounter(canvas, 20, 1060);
         
         if (mState.showLightDrops && mState.maxLightDrops > 0) {
@@ -155,6 +159,140 @@ public class HudView extends View {
         else step = Math.min(step, absDelta);
         mDisplayRupees += (delta > 0) ? step : -step;
         mRupeeTimer = (absDelta > 50) ? 0 : 1; 
+    }
+
+    private void drawDungeonItems(Canvas canvas, float x, float y) {
+        resetPaint();
+        float iconSize = 64, gap = 15;
+        float rightX = x - 20;
+
+        // Position icons from right to left, aligned below the key icon
+        float currentX = rightX - (iconSize / 2);
+        
+        drawZeldaBossKey(canvas, currentX, y + (iconSize / 2), iconSize, mState.hasBossKey);
+        currentX -= (iconSize + gap);
+        
+        drawZeldaCompass(canvas, currentX, y + (iconSize / 2), iconSize, mState.hasCompass);
+        currentX -= (iconSize + gap);
+        
+        drawZeldaMap(canvas, currentX, y + (iconSize / 2), iconSize, mState.hasMap);
+    }
+
+    private void drawZeldaBossKey(Canvas canvas, float cx, float cy, float size, boolean collected) {
+        canvas.save();
+        float scale = size / 48f;
+        canvas.translate(cx, cy);
+        canvas.scale(scale, scale);
+        canvas.translate(-24, -24);
+
+        Path path = new Path();
+        path.moveTo(35+0f, 0f);
+        path.cubicTo(35+0.33f, 0.99f, 35+0.66f, 1.98f, 35+1f, 3f);
+        path.cubicTo(35+0.67f, 3.66f, 35+0.34f, 4.32f, 35+0f, 5f);
+        path.cubicTo(35+1.485f, 5.495f, 35+1.485f, 5.495f, 35+3f, 6f);
+        path.cubicTo(35+4.192f, 17.032f, 35+4.192f, 17.032f, 35+3f, 22f);
+        path.cubicTo(35+0.779f, 24.31f, 35-1.422f, 25.396f, 35-4.25f, 26.882f);
+        path.cubicTo(35-9.238f, 30.723f, 35-11.026f, 36.653f, 35-13.406f, 42.332f);
+        path.cubicTo(35-15f, 46f, 35-15f, 46f, 35-17f, 48f);
+        path.cubicTo(35-19.277f, 48.046f, 35-19.277f, 48.046f, 35-21.937f, 47.75f);
+        path.cubicTo(35-22.812f, 47.662f, 35-23.688f, 47.574f, 35-24.589f, 47.484f);
+        path.cubicTo(35-27f, 47f, 35-27f, 47f, 35-30f, 45f);
+        path.cubicTo(35-31f, 43.25f, 35-31f, 43.25f, 35-31f, 41f);
+        path.cubicTo(35-29.779f, 39.581f, 35-28.552f, 38.166f, 35-27.281f, 36.792f);
+        path.cubicTo(35-24.991f, 33.588f, 35-24.57f, 29.831f, 35-24f, 26f);
+        path.cubicTo(35-21.666f, 26f, 35-19.333f, 26f, 35-17f, 26f);
+        path.cubicTo(35-17.139f, 25.128f, 35-17.278f, 24.257f, 35-17.421f, 23.359f);
+        path.cubicTo(35-17.942f, 17.636f, 35-18.188f, 13.035f, 35-14.503f, 8.398f);
+        path.cubicTo(35-13.468f, 7.28f, 35-12.403f, 6.188f, 35-11.312f, 5.125f);
+        path.cubicTo(35-10.783f, 4.607f, 35-10.253f, 4.09f, 35-9.708f, 3.557f);
+        path.cubicTo(35-6.487f, 0.68f, 35-4.345f, -0.661f, 35+0f, 0f);
+        path.close();
+
+        resetPaint();
+        mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(3f);
+        mPaint.setColor(collected ? Color.rgb(35, 26, 18) : Color.argb(80, 50, 50, 50));
+        canvas.drawPath(path, mPaint);
+        
+        mPaint.setStyle(Paint.Style.FILL);
+        if (collected) {
+            mPaint.setShader(new android.graphics.LinearGradient(0, 0, 0, 48, Color.rgb(255, 215, 0), Color.rgb(184, 134, 11), android.graphics.Shader.TileMode.CLAMP));
+        } else {
+            mPaint.setColor(Color.argb(40, 100, 100, 100));
+        }
+        canvas.drawPath(path, mPaint);
+        mPaint.setShader(null);
+        canvas.restore();
+    }
+
+    private void drawZeldaCompass(Canvas canvas, float cx, float cy, float size, boolean collected) {
+        canvas.save();
+        float scale = size / 48f;
+        canvas.translate(cx, cy);
+        canvas.scale(scale, scale);
+        canvas.translate(-24, -24);
+
+        Path path = new Path();
+        path.moveTo(42+0f, 7+0f);
+        path.cubicTo(42+0.804f, 7+0.68f, 42+1.608f, 7+1.361f, 42+2.437f, 7+2.062f);
+        path.cubicTo(42+5.784f, 7+6.212f, 42+5.211f, 7+11.82f, 42+5.25f, 7+16.937f);
+        path.cubicTo(42+5.27f, 7+17.627f, 42+5.291f, 7+18.318f, 42+5.312f, 7+19.029f);
+        path.cubicTo(42+5.356f, 7+24.84f, 42+4.052f, 7+28.75f, 42+0.132f, 7+33.046f);
+        path.cubicTo(42-0.529f, 7+33.608f, 42-1.192f, 7+34.17f, 42-1.875f, 7+34.75f);
+        path.cubicTo(42-2.532f, 7+35.322f, 42-3.189f, 7+35.894f, 42-3.867f, 7+36.484f);
+        path.cubicTo(42-10.326f, 7+41.074f, 42-17.361f, 7+40.674f, 42-25f, 7+40f);
+        path.cubicTo(42-30.896f, 7+38.532f, 42-34.458f, 7+35.082f, 42-37.812f, 7+30.125f);
+        path.cubicTo(42-41.553f, 7+23.43f, 42-41.939f, 7+15.494f, 42-41f, 7+8f);
+        path.cubicTo(42-38.865f, 7+1.521f, 42-34.232f, 7-1.724f, 42-28.402f, 7-4.875f);
+        path.cubicTo(42-18.518f, 7-9.503f, 42-7.704f, 7-7.351f, 42+0f, 7+0f);
+        path.close();
+
+        resetPaint();
+        mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(3f);
+        mPaint.setColor(collected ? Color.rgb(35, 26, 18) : Color.argb(80, 50, 50, 50));
+        canvas.drawPath(path, mPaint);
+        
+        mPaint.setStyle(Paint.Style.FILL);
+        if (collected) {
+            mPaint.setShader(new android.graphics.LinearGradient(0, 0, 0, 48, Color.rgb(200, 200, 200), Color.rgb(100, 100, 110), android.graphics.Shader.TileMode.CLAMP));
+        } else {
+            mPaint.setColor(Color.argb(40, 100, 100, 100));
+        }
+        canvas.drawPath(path, mPaint);
+        mPaint.setShader(null);
+        canvas.restore();
+    }
+
+    private void drawZeldaMap(Canvas canvas, float cx, float cy, float size, boolean collected) {
+        canvas.save();
+        float scale = size / 56f;
+        canvas.translate(cx, cy);
+        canvas.scale(scale, scale);
+        canvas.translate(-28, -23.5f);
+
+        Path path = new Path();
+        path.moveTo(11.437f+0f, 3.25f+0f);
+        path.cubicTo(11.437f+1.495f, 3.25f+0.437f, 11.437f+2.987f, 3.25f+0.884f, 11.437f+4.472f, 3.25f+1.355f);
+        path.cubicTo(11.437f+6.89f, 3.25f+1.811f, 11.437f+8.205f, 3.25f+1.475f, 11.437f+10.562f, 3.25f+0.812f);
+        path.cubicTo(11.437f+16.044f, 3.25f-0.399f, 11.437f+21.411f, 3.25f-0.48f, 11.437f+27f, 3.25f-0.5f);
+        path.lineTo(32.246f+11.437f, 3.25f-0.515f); // Rough estimate to complete the map shape
+        path.lineTo(32.246f+11.437f, 3.25f+40f);
+        path.lineTo(11.437f-11f, 3.25f+35f);
+        path.close();
+
+        resetPaint();
+        mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(3f);
+        mPaint.setColor(collected ? Color.rgb(35, 26, 18) : Color.argb(80, 50, 50, 50));
+        canvas.drawPath(path, mPaint);
+        
+        mPaint.setStyle(Paint.Style.FILL);
+        if (collected) {
+            mPaint.setShader(new android.graphics.LinearGradient(0, 0, 0, 47, Color.rgb(240, 230, 200), Color.rgb(180, 170, 150), android.graphics.Shader.TileMode.CLAMP));
+        } else {
+            mPaint.setColor(Color.argb(40, 100, 100, 100));
+        }
+        canvas.drawPath(path, mPaint);
+        mPaint.setShader(null);
+        canvas.restore();
     }
 
     private void drawMiniMap(Canvas canvas, float x, float y, float interX, float interY, float interAngle) {

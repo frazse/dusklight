@@ -96,6 +96,11 @@ void hud_update() {
     iData[43] = dComIfGp_getOxygenShowFlag() ? 1 : 0;
     iData[45] = dComIfGs_getSelectEquipClothes();
 
+    // Dungeon Progress Tracking
+    iData[48] = dMapInfo_n::chkGetMap() ? 1 : 0;
+    iData[49] = dMapInfo_n::chkGetCompass() ? 1 : 0;
+    iData[58] = dComIfGs_isDungeonItemBossKey() ? 1 : 0;
+
     dAttention_c* attn = dComIfGp_getAttention();
     daPy_py_c* player = dComIfGp_getLinkPlayer();
     int stateFlags = 0;

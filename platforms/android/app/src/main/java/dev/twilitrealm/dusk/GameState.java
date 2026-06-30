@@ -5,6 +5,7 @@ public class GameState {
     public final int rupees, keys, arrows, bombs, transform, roomNo;
     public final int lightDrops, maxLightDrops, horseSpurs;
     public final boolean showLightDrops, midnaCalling, isRiding, isSwimming, showOxygen, isDungeon;
+    public final boolean hasMap, hasCompass, hasBossKey;
     
     public final float mapX, mapY, mapAngle;
     public final float mapMinX, mapMinZ, mapMaxX, mapMaxZ;
@@ -41,6 +42,9 @@ public class GameState {
         this.showOxygen = i[43] != 0;
         this.midnaCalling = i[27] != 0;
         this.isDungeon = i[47] != 0;
+        this.hasMap = i[48] != 0;
+        this.hasCompass = i[49] != 0;
+        this.hasBossKey = i[58] != 0;
 
         int stateFlags = i[31];
         boolean targeting = (stateFlags & 1) != 0;
