@@ -9,6 +9,7 @@ public class GameState {
     
     public final float mapX, mapY, mapAngle;
     public final float mapMinX, mapMinZ, mapMaxX, mapMaxZ;
+    public final float roomMinX, roomMinZ, roomMaxX, roomMaxZ;
     public final float restartX, restartY, restartAngle;
     public final float[] mapLines, mapIcons, mapDoors;
     public final boolean showRestart;
@@ -72,6 +73,7 @@ public class GameState {
         this.mapX = f[0]; this.mapY = f[1]; this.mapAngle = f[2];
         this.mapMinX = f[3]; this.mapMinZ = f[4]; this.mapMaxX = f[5]; this.mapMaxZ = f[6];
         this.restartX = f[7]; this.restartY = f[8]; this.restartAngle = f[9];
+        this.roomMinX = f[10]; this.roomMinZ = f[11]; this.roomMaxX = f[12]; this.roomMaxZ = f[13];
         this.showRestart = i[46] != 0;
 
         // Physical Label Resolution
@@ -224,6 +226,11 @@ public class GameState {
             case 0x7C: return "Help";
             case 0x7D: return "Zoom In";
             case 0x7E: return "Zoom Out";
+            case 0x80: return "Check";
+            case 0x81: return "Talk";
+            case 0x82: return "Open";
+            case 0x83: return "Read";
+            case 0x85: return "Examine";
             default: return "ID: 0x" + Integer.toHexString(id).toUpperCase();
         }
     }

@@ -22,7 +22,7 @@ public class HudView extends View {
     private final Path mDrawPath = new Path();
     
     private int mMapZoomLevel = 0; 
-    private static final float[] ZOOM_FACTORS = {1.0f, 1.5f, 2.5f, 4.0f};
+    private static final float[] ZOOM_FACTORS = {1.0f, 1.5f, 1.0f};
     private final float MAP_X = 20;
     private final float MAP_Y = 210;
     private final float MAP_SIZE = 720;
@@ -35,6 +35,10 @@ public class HudView extends View {
     }
 
     public void update(GameState state) {
+        if (mState == null || !mState.stageName.equals(state.stageName)) {
+            // Default zoom: Full Map (2) for Field/Room, Room View (0) for Dungeons
+            mMapZoomLevel = state.isDungeon ? 0 : 2;
+        }
         mPrevState = mState;
         mState = state;
         mLastUpdateTime = System.currentTimeMillis();
@@ -141,9 +145,9 @@ public class HudView extends View {
     }
 
     private int getRupeeStep(int diff) {
-        if (diff > 100) return 10;
+        if (diff > 200) return 10;
         if (diff > 50)  return 5;
-        if (diff > 10)  return 2;
+        if (diff > 20)  return 2;
         return 1;
     }
 
@@ -158,7 +162,7 @@ public class HudView extends View {
         if (delta < 0) step = Math.min(step * 2, absDelta);
         else step = Math.min(step, absDelta);
         mDisplayRupees += (delta > 0) ? step : -step;
-        mRupeeTimer = (absDelta > 50) ? 0 : 1; 
+        mRupeeTimer = (absDelta > 100) ? 1 : 2;
     }
 
     private void drawDungeonItems(Canvas canvas, float x, float y) {
@@ -303,10 +307,34 @@ public class HudView extends View {
         canvas.drawRect(x, y, x + MAP_SIZE, y + MAP_SIZE, mPaint);
         if (mState.mapMaxX <= mState.mapMinX || mState.mapMaxZ <= mState.mapMinZ) return;
         
-        float baseScale = (MAP_SIZE * 0.92f) / Math.max(mState.mapMaxX - mState.mapMinX, mState.mapMaxZ - mState.mapMinZ);
+        float targetMinX = (mMapZoomLevel == 0) ? mState.roomMinX : mState.mapMinX;
+        float targetMaxX = (mMapZoomLevel == 0) ? mState.roomMaxX : mState.mapMaxX;
+        float targetMinZ = (mMapZoomLevel == 0) ? mState.roomMinZ : mState.mapMinZ;
+        float targetMaxZ = (mMapZoomLevel == 0) ? mState.roomMaxZ : mState.mapMaxZ;
+
+        // Ideal Room View: Use 65% occupancy instead of 90% to give more context
+        float diffX = Math.max(2000f, targetMaxX - targetMinX);
+        float diffZ = Math.max(2000f, targetMaxZ - targetMinZ);
+        float baseScale = (MAP_SIZE * 0.65f) / Math.max(diffX, diffZ);
+        
+        if (mMapZoomLevel == 2) { // Full Map mode (Old Default)
+            baseScale = (MAP_SIZE * 0.90f) / Math.max(mState.mapMaxX - mState.mapMinX, mState.mapMaxZ - mState.mapMinZ);
+        }
+
         float mS = baseScale * ZOOM_FACTORS[mMapZoomLevel];
-        float sCX = (mMapZoomLevel > 0) ? interX : (mState.mapMaxX + mState.mapMinX)/2f;
-        float sCZ = (mMapZoomLevel > 0) ? interY : (mState.mapMaxZ + mState.mapMinZ)/2f;
+        
+        float sCX, sCZ;
+        if (mMapZoomLevel == 0) { // Room center
+            sCX = (targetMaxX + targetMinX)/2f;
+            sCZ = (targetMaxZ + targetMinZ)/2f;
+        } else if (mMapZoomLevel == 2) { // Floor center
+            sCX = (mState.mapMaxX + mState.mapMinX)/2f;
+            sCZ = (mState.mapMaxZ + mState.mapMinZ)/2f;
+        } else { // Player center
+            sCX = interX;
+            sCZ = interY;
+        }
+        
         float cX = x + MAP_SIZE/2, cY = y + MAP_SIZE/2;
         
         canvas.save(); canvas.clipRect(x, y, x + MAP_SIZE, y + MAP_SIZE);
@@ -395,7 +423,9 @@ public class HudView extends View {
         canvas.restore();
         resetPaint(); mPaint.setTextAlign(Paint.Align.CENTER); mPaint.setTextSize(32); mPaint.setColor(Color.WHITE);
         String mapLabel = mState.stageName;
-        if (mMapZoomLevel > 0) mapLabel += " (" + ZOOM_FACTORS[mMapZoomLevel] + "x)";
+        if (mMapZoomLevel == 0) mapLabel += " (Room View)";
+        else if (mMapZoomLevel == 2) mapLabel += " (Full Map)";
+        else mapLabel += " (" + ZOOM_FACTORS[mMapZoomLevel] + "x)";
         canvas.drawText(mapLabel, x + MAP_SIZE/2, y + MAP_SIZE + 40, mPaint);
     }
 
@@ -435,6 +465,13 @@ public class HudView extends View {
             mPaint.setStrokeWidth(2.5f);
             canvas.drawRect(x-9, y-9, x+9, y+9, mPaint);
             canvas.drawLine(x-9, y, x+9, y, mPaint);
+        } else if (type == 4) { // Light Drop (Dark Area) - Tear of Light
+            mPaint.setColor(Color.WHITE);
+            canvas.drawCircle(x, y, 6, mPaint);
+            mPaint.setStyle(Paint.Style.STROKE);
+            mPaint.setColor(Color.YELLOW);
+            mPaint.setStrokeWidth(2);
+            canvas.drawCircle(x, y, 6, mPaint);
         } else if ((type >= 1 && type <= 6) || type == 8) { // Special Objectives (Monkeys, Sols, etc)
             mPaint.setColor(Color.CYAN);
             canvas.drawCircle(x, y, 8, mPaint);
@@ -442,13 +479,6 @@ public class HudView extends View {
             mPaint.setColor(Color.WHITE);
             mPaint.setStrokeWidth(2);
             canvas.drawCircle(x, y, 8, mPaint);
-        } else if (type == 4) { // Light Drop (Dark Area)
-            mPaint.setColor(Color.WHITE);
-            canvas.drawCircle(x, y, 6, mPaint);
-            mPaint.setStyle(Paint.Style.STROKE);
-            mPaint.setColor(Color.YELLOW);
-            mPaint.setStrokeWidth(2);
-            canvas.drawCircle(x, y, 6, mPaint);
         } else {
             mPaint.setColor(Color.RED);
             canvas.drawCircle(x, y, 8, mPaint);

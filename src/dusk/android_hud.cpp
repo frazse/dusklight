@@ -54,9 +54,14 @@ bool should_draw_icon(int type, const dTres_c::data_s* data, int stayNo, s8 sFlo
         // In dungeons, the Compass reveals all remaining icons on this floor.
         return dComIfGs_isDungeonItemCompass();
     } else {
-        // Field logic (Mist areas, etc)
-        if (type == 4) return dComIfGp_getStartStageDarkArea() != 0;
-        // Never show chests/bosses on field maps per request
+        // Field logic: Only show Tears of Light (Type 4) and ONLY if the area is still in Twilight.
+        if (type == 4) {
+            int darkArea = dComIfGp_getStartStageDarkArea();
+            if (darkArea == 0) return false;
+            // If we have all the drops for this area, hide the icons.
+            if (dComIfGs_getLightDropNum(darkArea) >= dComIfGp_getNeedLightDropNum()) return false;
+            return true;
+        }
         return false;
     }
 }
@@ -200,10 +205,16 @@ void hud_update() {
     s8 restartFloor = dMapInfo_c::calcFloorNo(restartPos.y, true, dComIfGs_getRestartRoomNo());
     iData[46] = (restartFloor == sFloor) ? 1 : 0;
 
-    float fData[10] = {
+    float restartAngle = (float)dMapInfo_n::getMapRestartAngleY() * (180.0f / 32768.0f);
+
+    float roomMinX, roomMinZ, roomMaxX, roomMaxZ;
+    dMapInfo_n::getRoomMinMaxXZ(stayNo, &roomMinX, &roomMinZ, &roomMaxX, &roomMaxZ);
+
+    float fData[14] = {
         playerPos.x, playerPos.z, (float)dMapInfo_n::getMapPlayerAngleY() * (180.0f / 32768.0f),
-        0, 0, 0, 0, // minX, minZ, maxX, maxZ (set below)
-        restartPos.x, restartPos.z, (float)dMapInfo_n::getMapRestartAngleY() * (180.0f / 32768.0f)
+        0, 0, 0, 0, // minX, minZ, maxX, maxZ (all visible, set below)
+        restartPos.x, restartPos.z, restartAngle,
+        roomMinX, roomMinZ, roomMaxX, roomMaxZ
     };
 
     float minX = 1e10f, minZ = 1e10f, maxX = -1e10f, maxZ = -1e10f;
@@ -269,8 +280,11 @@ void hud_update() {
     for (int g = 0; g < 17; g++) {
         for (auto* data = dTres_c::getFirstData(g); data != nullptr; data = dTres_c::getNextData(data)) {
             if (should_draw_icon(data->mType, data, stayNo, sFloor)) {
-                // Send 'g' (Group Index) as the type for reliable classification
-                icons.push_back((float)g);
+                float iconType = (float)g;
+                // If it's a field map and we are drawing a Tear of Light, force type 4 for correct HUD color
+                if (!is_d && data->mType == 4) iconType = 4.0f;
+
+                icons.push_back(iconType);
                 icons.push_back(data->mPos.x);
                 icons.push_back(data->mPos.z);
                 icons.push_back((float)data->mRoomNo);
@@ -303,7 +317,7 @@ void hud_update() {
 
     jstring jStage = env->NewStringUTF(friendlyName.c_str());
     jintArray jInts = env->NewIntArray(60); env->SetIntArrayRegion(jInts, 0, 60, iData);
-    jfloatArray jFloats = env->NewFloatArray(10); env->SetFloatArrayRegion(jFloats, 0, 10, fData);
+    jfloatArray jFloats = env->NewFloatArray(14); env->SetFloatArrayRegion(jFloats, 0, 14, fData);
     jfloatArray jL = env->NewFloatArray(finalLines.size()); env->SetFloatArrayRegion(jL, 0, finalLines.size(), finalLines.data());
     jfloatArray jI = env->NewFloatArray(icons.size()); env->SetFloatArrayRegion(jI, 0, icons.size(), icons.data());
     jfloatArray jD = env->NewFloatArray(doors.size()); env->SetFloatArrayRegion(jD, 0, doors.size(), doors.data());
