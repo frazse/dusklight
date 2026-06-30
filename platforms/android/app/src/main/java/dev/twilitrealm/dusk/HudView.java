@@ -102,11 +102,6 @@ public class HudView extends View {
         canvas.translate((getWidth() - 1280 * scale) / 2, (getHeight() - 1080 * scale) / 2);
         canvas.scale(scale, scale);
 
-        // Draw Workspace Border
-        resetPaint();
-        mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(2.0f); mPaint.setColor(Color.WHITE);
-        canvas.drawRect(0, 0, 1280, 1080, mPaint);
-
         updateRupeeAnimation();
 
         drawHearts(canvas, 20, 20);
@@ -122,7 +117,7 @@ public class HudView extends View {
         drawItems(canvas, 1280, 20);
 
         if (mState.isDungeon) {
-            drawDungeonItems(canvas, 1280, 110);
+            drawDungeonIcons(canvas, 1280 - 60, 110);
         }
 
         drawRupeeCounter(canvas, 20, 1060);
@@ -165,21 +160,14 @@ public class HudView extends View {
         mRupeeTimer = (absDelta > 100) ? 1 : 2;
     }
 
-    private void drawDungeonItems(Canvas canvas, float x, float y) {
+    private void drawDungeonIcons(Canvas canvas, float x, float y) {
         resetPaint();
-        float iconSize = 64, gap = 15;
-        float rightX = x - 20;
-
-        // Position icons from right to left, aligned below the key icon
-        float currentX = rightX - (iconSize / 2);
+        float iconSize = 64, spacing = 80;
         
-        drawZeldaBossKey(canvas, currentX, y + (iconSize / 2), iconSize, mState.hasBossKey);
-        currentX -= (iconSize + gap);
-        
-        drawZeldaCompass(canvas, currentX, y + (iconSize / 2), iconSize, mState.hasCompass);
-        currentX -= (iconSize + gap);
-        
-        drawZeldaMap(canvas, currentX, y + (iconSize / 2), iconSize, mState.hasMap);
+        // Vertical list below the small key icon
+        drawZeldaMap(canvas, x, y, iconSize, mState.hasMap);
+        drawZeldaCompass(canvas, x, y + spacing, iconSize, mState.hasCompass);
+        drawZeldaBossKey(canvas, x, y + (spacing * 2), iconSize, mState.hasBossKey);
     }
 
     private void drawZeldaBossKey(Canvas canvas, float cx, float cy, float size, boolean collected) {
@@ -189,42 +177,33 @@ public class HudView extends View {
         canvas.scale(scale, scale);
         canvas.translate(-24, -24);
 
-        Path path = new Path();
-        path.moveTo(35+0f, 0f);
-        path.cubicTo(35+0.33f, 0.99f, 35+0.66f, 1.98f, 35+1f, 3f);
-        path.cubicTo(35+0.67f, 3.66f, 35+0.34f, 4.32f, 35+0f, 5f);
-        path.cubicTo(35+1.485f, 5.495f, 35+1.485f, 5.495f, 35+3f, 6f);
-        path.cubicTo(35+4.192f, 17.032f, 35+4.192f, 17.032f, 35+3f, 22f);
-        path.cubicTo(35+0.779f, 24.31f, 35-1.422f, 25.396f, 35-4.25f, 26.882f);
-        path.cubicTo(35-9.238f, 30.723f, 35-11.026f, 36.653f, 35-13.406f, 42.332f);
-        path.cubicTo(35-15f, 46f, 35-15f, 46f, 35-17f, 48f);
-        path.cubicTo(35-19.277f, 48.046f, 35-19.277f, 48.046f, 35-21.937f, 47.75f);
-        path.cubicTo(35-22.812f, 47.662f, 35-23.688f, 47.574f, 35-24.589f, 47.484f);
-        path.cubicTo(35-27f, 47f, 35-27f, 47f, 35-30f, 45f);
-        path.cubicTo(35-31f, 43.25f, 35-31f, 43.25f, 35-31f, 41f);
-        path.cubicTo(35-29.779f, 39.581f, 35-28.552f, 38.166f, 35-27.281f, 36.792f);
-        path.cubicTo(35-24.991f, 33.588f, 35-24.57f, 29.831f, 35-24f, 26f);
-        path.cubicTo(35-21.666f, 26f, 35-19.333f, 26f, 35-17f, 26f);
-        path.cubicTo(35-17.139f, 25.128f, 35-17.278f, 24.257f, 35-17.421f, 23.359f);
-        path.cubicTo(35-17.942f, 17.636f, 35-18.188f, 13.035f, 35-14.503f, 8.398f);
-        path.cubicTo(35-13.468f, 7.28f, 35-12.403f, 6.188f, 35-11.312f, 5.125f);
-        path.cubicTo(35-10.783f, 4.607f, 35-10.253f, 4.09f, 35-9.708f, 3.557f);
-        path.cubicTo(35-6.487f, 0.68f, 35-4.345f, -0.661f, 35+0f, 0f);
-        path.close();
+        int c1 = collected ? Color.parseColor("#25150A") : Color.argb(60, 40, 40, 40);
+        int c2 = collected ? Color.parseColor("#665A55") : Color.argb(60, 60, 60, 60);
+        int c3 = collected ? Color.parseColor("#605F5E") : Color.argb(60, 50, 50, 50);
 
-        resetPaint();
-        mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(3f);
-        mPaint.setColor(collected ? Color.rgb(35, 26, 18) : Color.argb(80, 50, 50, 50));
-        canvas.drawPath(path, mPaint);
-        
-        mPaint.setStyle(Paint.Style.FILL);
-        if (collected) {
-            mPaint.setShader(new android.graphics.LinearGradient(0, 0, 0, 48, Color.rgb(255, 215, 0), Color.rgb(184, 134, 11), android.graphics.Shader.TileMode.CLAMP));
-        } else {
-            mPaint.setColor(Color.argb(40, 100, 100, 100));
-        }
-        canvas.drawPath(path, mPaint);
-        mPaint.setShader(null);
+        // Sub-path 1 (35,0)
+        Path p1 = new Path();
+        p1.moveTo(35, 0); p1.cubicTo(35.33f, 0.99f, 35.66f, 1.98f, 36, 3);
+        p1.cubicTo(35.67f, 3.66f, 35.34f, 4.32f, 35, 5); p1.cubicTo(36.485f, 5.495f, 36.485f, 5.495f, 38, 6);
+        p1.cubicTo(39.192f, 17.032f, 39.192f, 17.032f, 38, 22); p1.cubicTo(35.779f, 24.31f, 33.577f, 25.396f, 30.75f, 26.882f);
+        p1.cubicTo(25.761f, 30.723f, 23.973f, 36.653f, 21.593f, 42.332f); p1.cubicTo(20, 46, 20, 46, 18, 48);
+        p1.cubicTo(15.722f, 48.046f, 15.722f, 48.046f, 13.062f, 47.75f); p1.cubicTo(12.187f, 47.662f, 11.312f, 47.574f, 10.41f, 47.484f);
+        p1.cubicTo(8, 47, 8, 47, 5, 45); p1.cubicTo(4, 43.25f, 4, 43.25f, 4, 41);
+        p1.cubicTo(5.22f, 39.581f, 6.447f, 38.166f, 7.718f, 36.792f); p1.cubicTo(10.008f, 33.588f, 10.429f, 29.831f, 11, 26);
+        p1.cubicTo(13.333f, 26, 15.666f, 26, 18, 26); p1.cubicTo(17.86f, 25.128f, 17.721f, 24.257f, 17.578f, 23.359f);
+        p1.cubicTo(17.057f, 17.636f, 16.811f, 13.035f, 20.496f, 8.398f); p1.cubicTo(21.531f, 7.28f, 22.596f, 6.188f, 23.687f, 5.125f);
+        p1.cubicTo(24.216f, 4.607f, 24.746f, 4.09f, 25.291f, 3.557f); p1.cubicTo(28.512f, 0.68f, 30.654f, -0.661f, 35, 0); p1.close();
+        resetPaint(); mPaint.setColor(c1); canvas.drawPath(p1, mPaint);
+
+        // Teeth area (22, 27)
+        Path p3 = new Path();
+        p3.moveTo(22, 27); p3.lineTo(24, 27); p3.lineTo(24, 29); p3.lineTo(27, 29);
+        p3.lineTo(22, 48); p3.lineTo(13, 47.6f); p3.lineTo(10.3f, 47.4f); p3.lineTo(6, 45);
+        p3.lineTo(8, 44); p3.lineTo(8, 42); p3.lineTo(10, 42); p3.lineTo(10, 40); p3.lineTo(14, 41);
+        p3.lineTo(14, 40); p3.lineTo(12, 39); p3.lineTo(12, 37); p3.lineTo(16, 36); p3.lineTo(13, 36);
+        p3.lineTo(14, 30); p3.lineTo(19, 32); p3.lineTo(20, 31); p3.lineTo(22, 27); p3.close();
+        mPaint.setColor(c3); canvas.drawPath(p3, mPaint);
+
         canvas.restore();
     }
 
@@ -235,34 +214,23 @@ public class HudView extends View {
         canvas.scale(scale, scale);
         canvas.translate(-24, -24);
 
-        Path path = new Path();
-        path.moveTo(42+0f, 7+0f);
-        path.cubicTo(42+0.804f, 7+0.68f, 42+1.608f, 7+1.361f, 42+2.437f, 7+2.062f);
-        path.cubicTo(42+5.784f, 7+6.212f, 42+5.211f, 7+11.82f, 42+5.25f, 7+16.937f);
-        path.cubicTo(42+5.27f, 7+17.627f, 42+5.291f, 7+18.318f, 42+5.312f, 7+19.029f);
-        path.cubicTo(42+5.356f, 7+24.84f, 42+4.052f, 7+28.75f, 42+0.132f, 7+33.046f);
-        path.cubicTo(42-0.529f, 7+33.608f, 42-1.192f, 7+34.17f, 42-1.875f, 7+34.75f);
-        path.cubicTo(42-2.532f, 7+35.322f, 42-3.189f, 7+35.894f, 42-3.867f, 7+36.484f);
-        path.cubicTo(42-10.326f, 7+41.074f, 42-17.361f, 7+40.674f, 42-25f, 7+40f);
-        path.cubicTo(42-30.896f, 7+38.532f, 42-34.458f, 7+35.082f, 42-37.812f, 7+30.125f);
-        path.cubicTo(42-41.553f, 7+23.43f, 42-41.939f, 7+15.494f, 42-41f, 7+8f);
-        path.cubicTo(42-38.865f, 7+1.521f, 42-34.232f, 7-1.724f, 42-28.402f, 7-4.875f);
-        path.cubicTo(42-18.518f, 7-9.503f, 42-7.704f, 7-7.351f, 42+0f, 7+0f);
-        path.close();
+        int c1 = collected ? Color.parseColor("#604F37") : Color.argb(60, 50, 50, 50);
+        int c2 = collected ? Color.parseColor("#392518") : Color.argb(60, 40, 40, 40);
 
-        resetPaint();
-        mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(3f);
-        mPaint.setColor(collected ? Color.rgb(35, 26, 18) : Color.argb(80, 50, 50, 50));
-        canvas.drawPath(path, mPaint);
-        
-        mPaint.setStyle(Paint.Style.FILL);
-        if (collected) {
-            mPaint.setShader(new android.graphics.LinearGradient(0, 0, 0, 48, Color.rgb(200, 200, 200), Color.rgb(100, 100, 110), android.graphics.Shader.TileMode.CLAMP));
-        } else {
-            mPaint.setColor(Color.argb(40, 100, 100, 100));
-        }
-        canvas.drawPath(path, mPaint);
-        mPaint.setShader(null);
+        Path p1 = new Path();
+        p1.moveTo(42, 7); p1.cubicTo(42.8f, 7.68f, 43.6f, 8.36f, 44.43f, 9.06f);
+        p1.cubicTo(47.78f, 13.21f, 47.21f, 18.82f, 47.25f, 23.93f); p1.cubicTo(47.27f, 24.62f, 47.29f, 25.31f, 47.31f, 26.02f);
+        p1.cubicTo(47.35f, 31.84f, 46.05f, 35.75f, 42.13f, 40.04f); p1.cubicTo(41.47f, 40.6f, 40.8f, 41.17f, 40.12f, 41.75f);
+        p1.cubicTo(39.46f, 42.32f, 38.81f, 42.89f, 38.13f, 43.48f); p1.cubicTo(31.67f, 48.07f, 24.63f, 47.67f, 17, 47);
+        p1.cubicTo(11.1f, 45.53f, 7.54f, 42.08f, 4.18f, 37.12f); p1.cubicTo(0.44f, 30.43f, 0.06f, 22.49f, 1, 15);
+        p1.cubicTo(3.13f, 8.52f, 7.76f, 5.27f, 13.59f, 2.12f); p1.cubicTo(23.48f, -2.5f, 34.29f, -0.35f, 42, 7); p1.close();
+        resetPaint(); mPaint.setColor(c1); canvas.drawPath(p1, mPaint);
+
+        Path p2 = new Path();
+        p2.moveTo(34, 1); p2.lineTo(42, 7); p2.lineTo(47.25f, 23.93f); p2.lineTo(42.13f, 40.04f);
+        p2.lineTo(38.13f, 43.48f); p2.lineTo(24, 47.25f); p2.lineTo(12, 47.26f); p2.lineTo(34, 1); p2.close();
+        mPaint.setColor(c2); canvas.drawPath(p2, mPaint);
+
         canvas.restore();
     }
 
@@ -273,29 +241,21 @@ public class HudView extends View {
         canvas.scale(scale, scale);
         canvas.translate(-28, -23.5f);
 
-        Path path = new Path();
-        path.moveTo(11.437f+0f, 3.25f+0f);
-        path.cubicTo(11.437f+1.495f, 3.25f+0.437f, 11.437f+2.987f, 3.25f+0.884f, 11.437f+4.472f, 3.25f+1.355f);
-        path.cubicTo(11.437f+6.89f, 3.25f+1.811f, 11.437f+8.205f, 3.25f+1.475f, 11.437f+10.562f, 3.25f+0.812f);
-        path.cubicTo(11.437f+16.044f, 3.25f-0.399f, 11.437f+21.411f, 3.25f-0.48f, 11.437f+27f, 3.25f-0.5f);
-        path.lineTo(32.246f+11.437f, 3.25f-0.515f); // Rough estimate to complete the map shape
-        path.lineTo(32.246f+11.437f, 3.25f+40f);
-        path.lineTo(11.437f-11f, 3.25f+35f);
-        path.close();
+        int c1 = collected ? Color.parseColor("#60544A") : Color.argb(60, 60, 60, 60);
+        int c2 = collected ? Color.parseColor("#736C56") : Color.argb(60, 80, 80, 80);
 
-        resetPaint();
-        mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(3f);
-        mPaint.setColor(collected ? Color.rgb(35, 26, 18) : Color.argb(80, 50, 50, 50));
-        canvas.drawPath(path, mPaint);
-        
-        mPaint.setStyle(Paint.Style.FILL);
-        if (collected) {
-            mPaint.setShader(new android.graphics.LinearGradient(0, 0, 0, 47, Color.rgb(240, 230, 200), Color.rgb(180, 170, 150), android.graphics.Shader.TileMode.CLAMP));
-        } else {
-            mPaint.setColor(Color.argb(40, 100, 100, 100));
-        }
-        canvas.drawPath(path, mPaint);
-        mPaint.setShader(null);
+        Path p1 = new Path();
+        p1.moveTo(11.43f, 3.25f); p1.cubicTo(12.92f, 3.68f, 14.41f, 4.13f, 15.9f, 4.6f);
+        p1.cubicTo(18.32f, 5.06f, 19.64f, 4.72f, 22, 4.06f); p1.cubicTo(27.48f, 2.85f, 32.84f, 2.77f, 38.43f, 2.75f);
+        p1.lineTo(51, 5); p1.lineTo(50, 20); p1.lineTo(56, 20); p1.lineTo(56, 24); p1.lineTo(48, 29);
+        p1.lineTo(48, 44); p1.lineTo(11.43f, 40.75f); p1.lineTo(0, 38); p1.lineTo(3.3f, 16); p1.lineTo(11.43f, 3.25f); p1.close();
+        resetPaint(); mPaint.setColor(c1); canvas.drawPath(p1, mPaint);
+
+        Path p2 = new Path();
+        p2.moveTo(38, 8); p2.cubicTo(40.96f, 11.12f, 41.38f, 13.31f, 41.31f, 17.56f);
+        p2.lineTo(39, 35); p2.lineTo(21.8f, 37); p2.lineTo(10.8f, 33.7f); p2.lineTo(14, 13); p2.lineTo(38, 8); p2.close();
+        mPaint.setColor(c2); canvas.drawPath(p2, mPaint);
+
         canvas.restore();
     }
 
