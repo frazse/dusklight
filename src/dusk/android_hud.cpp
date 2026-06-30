@@ -34,22 +34,30 @@ std::atomic<bool> s_secondScreenActive{false};
 constexpr int kHudUpdateInterval = 6;
 int s_frameCounter = 0;
 
-bool should_draw_icon(int type, const dTres_c::data_s* data, int stayNo) {
+bool should_draw_icon(int type, const dTres_c::data_s* data, int stayNo, s8 sFloor) {
     if (data == nullptr) return false;
+
+    // GLOBAL FILTER: If it's already collected or completed, never draw it.
+    if (data->mNo != 0xFF && dComIfGs_isTbox(data->mNo)) return false;
+    if (data->mSwBit != 0xFF && dComIfGs_isSwitch(data->mSwBit, data->mRoomNo)) return false;
+
     auto* stage = dComIfGp_getStage();
     if (stage == nullptr) return false;
     StageType stype = (StageType)dStage_stagInfo_GetSTType(stage->getStagInfo());
     bool is_d = (stype == ST_DUNGEON);
-    bool visited = dComIfGs_isVisitedRoom(data->mRoomNo) || data->mRoomNo == stayNo;
-    if (data->mNo != 0xFF && dComIfGs_isTbox(data->mNo)) return false;
-    if (data->mSwBit != 0xFF && dComIfGs_isSwitch(data->mSwBit, data->mRoomNo)) return false;
+
+    // FLOOR FILTER: Only draw icons on the current floor
+    s8 iconFloor = dMapInfo_c::calcFloorNo(data->mPos.y, true, data->mRoomNo);
+    if (iconFloor != sFloor) return false;
+
     if (is_d) {
-        if (!dMapInfo_n::chkGetCompass()) return false;
-        return true;
+        // In dungeons, the Compass reveals all remaining icons on this floor.
+        return dComIfGs_isDungeonItemCompass();
     } else {
+        // Field logic (Mist areas, etc)
         if (type == 4) return dComIfGp_getStartStageDarkArea() != 0;
-        if (type == 0 || type == 10 || type == 2 || type == 3 || type == 5 || type == 16) return false;
-        return visited;
+        // Never show chests/bosses on field maps per request
+        return false;
     }
 }
 } // namespace
@@ -86,7 +94,17 @@ void hud_update() {
     dMeter2_c* meter = dMeter2Info_getMeterClass();
     iData[16] = (meter && meter->isShowLightDrop()) ? 1 : 0;
     iData[17] = dComIfGp_getSelectItem(0); iData[18] = dComIfGp_getSelectItem(1);
-    iData[19] = dComIfGp_getSelectItemNum(0); iData[20] = dComIfGp_getSelectItemNum(1);
+
+    // Explicit Ammo Sync for Consumables
+    auto get_ammo = [](u8 item, u8 slotNum) {
+        if (item == 0x43) return (int)dComIfGs_getArrowNum(); // Bow
+        if (item == 0x4B) return (int)dComIfGs_getPachinkoNum(); // Slingshot
+        if (item >= 0x70 && item <= 0x72) return (int)dComIfGs_getBombNum(item - 0x70); // Bombs
+        return (int)dComIfGp_getSelectItemNum(slotNum);
+    };
+
+    iData[19] = get_ammo(iData[17], 0);
+    iData[20] = get_ammo(iData[18], 1);
     iData[21] = dComIfGp_getSelectItem(2); iData[22] = dComIfGp_getSelectItemNum(2);
     iData[23] = dComIfGp_getSelectItem(3); iData[24] = dComIfGp_getSelectItemNum(3);
     iData[25] = dComIfGp_getSelectItem(4); iData[26] = dComIfGp_getSelectItemNum(4);
@@ -96,9 +114,9 @@ void hud_update() {
     iData[43] = dComIfGp_getOxygenShowFlag() ? 1 : 0;
     iData[45] = dComIfGs_getSelectEquipClothes();
 
-    // Dungeon Progress Tracking
-    iData[48] = dMapInfo_n::chkGetMap() ? 1 : 0;
-    iData[49] = dMapInfo_n::chkGetCompass() ? 1 : 0;
+    // Dungeon Progress Tracking (Global Save Hooks for instant update)
+    iData[48] = dComIfGs_isDungeonItemMap() ? 1 : 0;
+    iData[49] = dComIfGs_isDungeonItemCompass() ? 1 : 0;
     iData[58] = dComIfGs_isDungeonItemBossKey() ? 1 : 0;
 
     dAttention_c* attn = dComIfGp_getAttention();
@@ -198,7 +216,7 @@ void hud_update() {
         bool showRoom = (r == stayNo);
         if (!showRoom) {
             if (isRoomStage) showRoom = false;
-            else showRoom = dComIfGs_isVisitedRoom(r) || (iData[47] && dMapInfo_n::chkGetMap());
+            else showRoom = dComIfGs_isVisitedRoom(r) || (iData[47] && iData[48]);
         }
         if (!showRoom) continue;
 
@@ -246,6 +264,42 @@ void hud_update() {
         }
     }
     fData[3] = minX; fData[4] = minZ; fData[5] = maxX; fData[6] = maxZ;
+
+    // Collect Map Icons (Chests, Bosses, etc.)
+    for (int g = 0; g < 17; g++) {
+        for (auto* data = dTres_c::getFirstData(g); data != nullptr; data = dTres_c::getNextData(data)) {
+            if (should_draw_icon(data->mType, data, stayNo, sFloor)) {
+                // Send 'g' (Group Index) as the type for reliable classification
+                icons.push_back((float)g);
+                icons.push_back(data->mPos.x);
+                icons.push_back(data->mPos.z);
+                icons.push_back((float)data->mRoomNo);
+            }
+        }
+    }
+
+    // Collect Doors
+    auto add_doors = [&](dStage_KeepDoorInfo* info) {
+        if (!info) return;
+        for (int i = 0; i < info->mNum; i++) {
+            stage_tgsc_data_class& door = info->mDrTgData[i];
+            int roomNo = (door.base.parameters >> 24) & 0x3F;
+
+            // FLOOR FILTERING for Doors
+            s8 doorFloor = dMapInfo_c::calcFloorNo(door.base.position.y, true, roomNo);
+            if (doorFloor != sFloor) continue;
+
+            bool showDoor = (roomNo == stayNo) || dComIfGs_isVisitedRoom(roomNo) || (iData[47] && iData[48]);
+            if (!showDoor) continue;
+
+            doors.push_back(door.base.position.x);
+            doors.push_back(door.base.position.z);
+            doors.push_back((float)door.base.angle.y * (180.0f / 32768.0f));
+            doors.push_back(0.0f); // Type placeholder
+        }
+    };
+    add_doors(dStage_GetKeepDoorInfo());
+    add_doors(dStage_GetRoomKeepDoorInfo());
 
     jstring jStage = env->NewStringUTF(friendlyName.c_str());
     jintArray jInts = env->NewIntArray(60); env->SetIntArrayRegion(jInts, 0, 60, iData);

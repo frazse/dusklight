@@ -35,8 +35,8 @@ public class GameState {
         this.itemXResId = i[17];    this.itemYResId = i[18];
         this.itemXCount = i[19];    this.itemYCount = i[20];
         this.itemDDownId = i[21];   this.itemDDownCount = i[22];
-        this.itemDLeftId = i[25];   this.itemDLeftCount = i[26];
-        this.itemDRightId = i[40];  this.itemDRightCount = i[41];
+        this.itemDLeftId = i[23];   this.itemDLeftCount = i[24];
+        this.itemDRightId = i[25];  this.itemDRightCount = i[26];
         
         this.horseSpurs = i[42];
         this.showOxygen = i[43] != 0;

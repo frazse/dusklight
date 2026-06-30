@@ -377,6 +377,12 @@ public class HudView extends View {
                 drawMapIcon(canvas, cX + (mState.mapIcons[i+1] - sCX) * mS, cY + (mState.mapIcons[i+2] - sCZ) * mS, (int)mState.mapIcons[i]);
             }
         }
+
+        if (mState.mapDoors != null) {
+            for (int i = 0; i < mState.mapDoors.length; i += 4) {
+                drawMapDoor(canvas, cX + (mState.mapDoors[i] - sCX) * mS, cY + (mState.mapDoors[i+1] - sCZ) * mS, mState.mapDoors[i+2]);
+            }
+        }
         
         // Restart / Entrance Marker (Cyan)
         if (mState.showRestart) {
@@ -400,11 +406,53 @@ public class HudView extends View {
         canvas.drawPath(mDrawPath, mPaint); canvas.restore();
     }
 
+    private void drawMapDoor(Canvas canvas, float x, float y, float angle) {
+        canvas.save();
+        canvas.translate(x, y);
+        canvas.rotate(180 - angle);
+        resetPaint();
+        mPaint.setColor(Color.YELLOW);
+        canvas.drawRect(-8, -2, 8, 2, mPaint);
+        canvas.restore();
+    }
+
     private void drawMapIcon(Canvas canvas, float x, float y, int type) {
         resetPaint();
-        if (type == 4) { mPaint.setColor(Color.WHITE); canvas.drawCircle(x, y, 6, mPaint); mPaint.setStyle(Paint.Style.STROKE); mPaint.setColor(Color.YELLOW); mPaint.setStrokeWidth(2); canvas.drawCircle(x, y, 6, mPaint); }
-        else if (type == 0 || type == 10) { mPaint.setColor(Color.YELLOW); canvas.drawRect(x-8, y-8, x+8, y+8, mPaint); }
-        else { mPaint.setColor(Color.RED); canvas.drawCircle(x, y, 8, mPaint); }
+        if (type == 7) { // Boss (Group 7)
+            mPaint.setColor(Color.rgb(220, 0, 255)); // Magenta/Purple
+            canvas.drawCircle(x, y, 12, mPaint);
+            mPaint.setStyle(Paint.Style.STROKE);
+            mPaint.setColor(Color.WHITE);
+            mPaint.setStrokeWidth(3);
+            canvas.drawCircle(x, y, 12, mPaint);
+        } else if (type == 0) { // Treasure Chest (Group 0)
+            // Yellow background
+            mPaint.setColor(Color.YELLOW);
+            canvas.drawRect(x-9, y-9, x+9, y+9, mPaint);
+            // Black border & Divider
+            mPaint.setStyle(Paint.Style.STROKE);
+            mPaint.setColor(Color.BLACK);
+            mPaint.setStrokeWidth(2.5f);
+            canvas.drawRect(x-9, y-9, x+9, y+9, mPaint);
+            canvas.drawLine(x-9, y, x+9, y, mPaint);
+        } else if ((type >= 1 && type <= 6) || type == 8) { // Special Objectives (Monkeys, Sols, etc)
+            mPaint.setColor(Color.CYAN);
+            canvas.drawCircle(x, y, 8, mPaint);
+            mPaint.setStyle(Paint.Style.STROKE);
+            mPaint.setColor(Color.WHITE);
+            mPaint.setStrokeWidth(2);
+            canvas.drawCircle(x, y, 8, mPaint);
+        } else if (type == 4) { // Light Drop (Dark Area)
+            mPaint.setColor(Color.WHITE);
+            canvas.drawCircle(x, y, 6, mPaint);
+            mPaint.setStyle(Paint.Style.STROKE);
+            mPaint.setColor(Color.YELLOW);
+            mPaint.setStrokeWidth(2);
+            canvas.drawCircle(x, y, 6, mPaint);
+        } else {
+            mPaint.setColor(Color.RED);
+            canvas.drawCircle(x, y, 8, mPaint);
+        }
     }
 
     private void drawHearts(Canvas canvas, float startX, float startY) {
@@ -437,7 +485,7 @@ public class HudView extends View {
             if (fill >= 3) canvas.drawRect(x + mid, splitY, x + size * 1.2f, y + size * 1.2f, mPaint);
             if (fill >= 4) canvas.drawRect(x + mid, y - size * 0.2f, x + size * 1.2f, splitY, mPaint);
             canvas.restore();
-            mPaint.setStyle(Paint.Style.STROKE); mPaint.setColor(Color.WHITE); canvas.drawPath(mHeartPath, mPaint);
+            mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(3); mPaint.setColor(Color.WHITE); canvas.drawPath(mHeartPath, mPaint);
         }
     }
 
@@ -445,7 +493,7 @@ public class HudView extends View {
         if (mState.maxMagic <= 0) return;
         resetPaint(); mPaint.setColor(Color.argb(100, 0, 50, 0));
         canvas.drawRect(x, y, x + 740, y + 22, mPaint);
-        mPaint.setStyle(Paint.Style.STROKE); mPaint.setColor(Color.WHITE);
+        mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(3); mPaint.setColor(Color.WHITE);
         canvas.drawRect(x, y, x + 740, y + 22, mPaint);
         mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.rgb(0, 255, 120));
         canvas.drawRect(x + 2, y + 2, x + (740 * (float)mState.magic / mState.maxMagic) - 2, y + 20, mPaint);
@@ -454,7 +502,7 @@ public class HudView extends View {
     private void drawOilBar(Canvas canvas, float x, float y) {
         resetPaint(); mPaint.setColor(Color.argb(100, 50, 40, 0));
         canvas.drawRect(x, y, x + 300, y + 22, mPaint);
-        mPaint.setStyle(Paint.Style.STROKE); mPaint.setColor(Color.WHITE);
+        mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(3); mPaint.setColor(Color.WHITE);
         canvas.drawRect(x, y, x + 300, y + 22, mPaint);
         mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.rgb(255, 220, 0));
         canvas.drawRect(x + 2, y + 2, x + (300 * (float)mState.oil / mState.maxOil) - 2, y + 20, mPaint);
@@ -463,7 +511,7 @@ public class HudView extends View {
     private void drawOxygenBar(Canvas canvas, float x, float y) {
         resetPaint(); mPaint.setColor(Color.argb(100, 0, 30, 50));
         canvas.drawRect(x, y, x + 300, y + 22, mPaint);
-        mPaint.setStyle(Paint.Style.STROKE); mPaint.setColor(Color.WHITE);
+        mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(3); mPaint.setColor(Color.WHITE);
         canvas.drawRect(x, y, x + 300, y + 22, mPaint);
         mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.rgb(0, 180, 255));
         canvas.drawRect(x + 2, y + 2, x + (300 * (float)mState.oxygen / mState.maxOxygen) - 2, y + 20, mPaint);
@@ -525,7 +573,7 @@ public class HudView extends View {
         float innerRadius = 24.5f;
         for (int i = 0; i < 6; i++) {
             float cx = x + i * spacing, cy = y - 15;
-            mPaint.setStyle(Paint.Style.STROKE); mPaint.setColor(Color.WHITE); mPaint.setStrokeWidth(2.5f);
+            mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(3); mPaint.setColor(Color.WHITE);
             canvas.drawCircle(cx, cy, outerRadius, mPaint);
             if (i < mState.horseSpurs) {
                 mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.rgb(255, 140, 0));
@@ -699,17 +747,30 @@ public class HudView extends View {
 
     private void drawContextButtons(Canvas canvas, float x, float startY) {
         resetPaint(); float spacing = 95;
+        // 1. Shoulders/Triggers
         drawActionButton(canvas, x, startY, mState.labelL, Color.rgb(200, 200, 200), mState.buttonLText, mState.buttonLText != null && !mState.buttonLText.isEmpty());
         drawActionButton(canvas, x, startY + spacing, mState.labelR, Color.rgb(200, 200, 200), mState.buttonRText, mState.buttonRText != null && !mState.buttonRText.isEmpty());
         drawActionButton(canvas, x, startY + spacing * 2, mState.labelZ, Color.argb(255, 100, 200, 255), mState.buttonZText, mState.buttonZText != null && !mState.buttonZText.isEmpty());
+        
+        // 2. A (Action)
         drawActionButton(canvas, x, startY + spacing * 3, mState.labelA, Color.rgb(0, 200, 50), mState.buttonAText, mState.buttonAText != null && !mState.buttonAText.isEmpty());
+
+        // 3. B (Sword/Attack)
         drawActionButton(canvas, x, startY + spacing * 4, mState.labelB, Color.RED, mState.buttonBText, mState.buttonBText != null && !mState.buttonBText.isEmpty());
+
+        // 4. Y (Item Slot 1)
         String yT = mState.buttonYText; boolean yA = (yT != null && !yT.isEmpty());
-        if (!yA && (mState.transform != 1)) { yT = getItemName(mState.itemYResId); yA = (mState.itemYResId != 0xFF); if (mState.itemYCount > 0) yT += " (" + mState.itemYCount + ")"; }
-        drawActionButton(canvas, x, startY + spacing * 5, mState.labelY, Color.rgb(255, 255, 0), yT, yA);
+        if (!yA) yT = getItemName(mState.itemYResId);
+        if (mState.itemYCount > 0) yT += " (" + mState.itemYCount + ")";
+        yA = yA || (mState.itemYResId != 0xFF);
+        drawActionButton(canvas, x, startY + spacing * 5, mState.labelY, Color.rgb(200, 200, 200), yT, yA);
+        
+        // 5. X (Item Slot 2)
         String xT = mState.buttonXText; boolean xA = (xT != null && !xT.isEmpty());
-        if (!xA && (mState.transform != 1)) { xT = getItemName(mState.itemXResId); xA = (mState.itemXResId != 0xFF); if (mState.itemXCount > 0) xT += " (" + mState.itemXCount + ")"; }
-        drawActionButton(canvas, x, startY + spacing * 6, mState.labelX, Color.rgb(255, 165, 0), xT, xA);
+        if (!xA) xT = getItemName(mState.itemXResId);
+        if (mState.itemXCount > 0) xT += " (" + mState.itemXCount + ")";
+        xA = xA || (mState.itemXResId != 0xFF);
+        drawActionButton(canvas, x, startY + spacing * 6, mState.labelX, Color.rgb(200, 200, 200), xT, xA);
     }
 
     private void drawActionButton(Canvas canvas, float x, float y, String label, int color, String text, boolean active) {
@@ -723,11 +784,11 @@ public class HudView extends View {
         if (active && text != null && !text.isEmpty()) {
             mPaint.setTextAlign(Paint.Align.LEFT); mPaint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
             mPaint.setTextSize(42);
-            float tx = x + 60, ty = y + 15;
+            float lx = x + 60, ly = y + 15;
             mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(5.0f); mPaint.setColor(Color.BLACK);
-            canvas.drawText(text, tx, ty, mPaint);
+            canvas.drawText(text, lx, ly, mPaint);
             mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.WHITE);
-            canvas.drawText(text, tx, ty, mPaint);
+            canvas.drawText(text, lx, ly, mPaint);
         }
     }
 
