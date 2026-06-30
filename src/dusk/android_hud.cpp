@@ -114,6 +114,37 @@ void hud_update() {
     iData[33] = dComIfGp_getXStatus(); iData[34] = dComIfGp_getYStatus();
     iData[39] = dMeter2Info_isUseButton(0xFFFF) ? 0xFFFF : 0;
 
+    // --- Odin 2 / Thor Physical Mapping ---
+    // Initialize to -1 (Invalid)
+    for (int k = 50; k <= 57; k++) iData[k] = -1;
+    // --- Odin 2 / Thor Physical Mapping ---
+    // Initialize to -1 (Invalid)
+    for (int k = 50; k <= 57; k++) iData[k] = -1;
+
+    u32 btnCount = 0;
+    PADButtonMapping* maps = PADGetButtonMappings(0, &btnCount);
+    if (maps) {
+        for (u32 m = 0; m < btnCount; m++) {
+            switch (maps[m].padButton) {
+                case PAD_BUTTON_A:  iData[50] = maps[m].nativeButton; break;
+                case PAD_BUTTON_B:  iData[51] = maps[m].nativeButton; break;
+                case PAD_BUTTON_X:  iData[52] = maps[m].nativeButton; break;
+                case PAD_BUTTON_Y:  iData[53] = maps[m].nativeButton; break;
+                case PAD_TRIGGER_Z: iData[54] = maps[m].nativeButton; break;
+                case PAD_TRIGGER_L: iData[55] = maps[m].nativeButton; break;
+                case PAD_TRIGGER_R: iData[56] = maps[m].nativeButton; break;
+            }
+        }
+    }
+    // Axis detection for LT/RT
+    PADAxisMapping* axisMaps = PADGetAxisMappings(0, &btnCount);
+    if (axisMaps) {
+        for (u32 m = 0; m < btnCount; m++) {
+            if (axisMaps[m].padAxis == PAD_AXIS_TRIGGER_L && iData[55] == -1) iData[55] = 0x1000 + axisMaps[m].nativeAxis.nativeAxis;
+            if (axisMaps[m].padAxis == PAD_AXIS_TRIGGER_R && iData[56] == -1) iData[56] = 0x1000 + axisMaps[m].nativeAxis.nativeAxis;
+        }
+    }
+
     Vec playerPos = dMapInfo_n::getMapPlayerPos();
     const char* sName = dComIfGp_getStartStageName();
     std::string friendlyName = sName ? sName : "Unknown Area";

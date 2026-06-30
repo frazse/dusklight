@@ -13,6 +13,7 @@ public class GameState {
     public final boolean showRestart;
 
     public final String buttonAText, buttonBText, buttonZText, buttonLText, buttonRText, buttonXText, buttonYText;
+    public final String labelA, labelB, labelX, labelY, labelZ, labelL, labelR;
     public final String dPadUpText, dPadDownText, dPadLeftText, dPadRightText;
     public final String stageName;
 
@@ -69,10 +70,43 @@ public class GameState {
         this.restartX = f[7]; this.restartY = f[8]; this.restartAngle = f[9];
         this.showRestart = i[46] != 0;
 
+        // Physical Label Resolution
+        this.labelA = getPhysicalName(i[50], "A");
+        this.labelB = getPhysicalName(i[51], "B");
+        this.labelX = getPhysicalName(i[52], "X");
+        this.labelY = getPhysicalName(i[53], "Y");
+        this.labelZ = getPhysicalName(i[54], "Z");
+        this.labelL = getPhysicalName(i[55], "L");
+        this.labelR = getPhysicalName(i[56], "R");
+
         this.stageName = stageName;
         this.mapLines = lines;
         this.mapIcons = icons;
         this.mapDoors = doors;
+    }
+
+    private String getPhysicalName(int id, String fallback) {
+        if (id == -1) return fallback;
+        if (id >= 0x1000) { // Axis/Trigger logic
+             int axis = id - 0x1000;
+             if (axis == 4) return "L2";
+             if (axis == 5) return "R2";
+             return fallback;
+        }
+        // Thor (Nintendo) Layout Button Mapping
+        switch(id) {
+            case 0: return "B";  // SOUTH (Bottom)
+            case 1: return "A";  // EAST (Right)
+            case 2: return "Y";  // WEST (Left)
+            case 3: return "X";  // NORTH (Top)
+            case 4: return "Back";
+            case 6: return "Start";
+            case 7: return "L3";
+            case 8: return "R3";
+            case 9: return "L1";
+            case 10: return "R1";
+            default: return fallback;
+        }
     }
 
     private String getActionLabel(int id, boolean isSwimming, boolean isRiding, int wolfForm) {

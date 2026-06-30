@@ -22,6 +22,7 @@ public class HudView extends View {
     private final Path mDrawPath = new Path();
     
     private int mMapZoomLevel = 0; 
+    private static final float[] ZOOM_FACTORS = {1.0f, 1.5f, 2.5f, 4.0f};
     private final float MAP_X = 20;
     private final float MAP_Y = 210;
     private final float MAP_SIZE = 720;
@@ -60,7 +61,7 @@ public class HudView extends View {
 
             if (logicalX >= MAP_X && logicalX <= MAP_X + MAP_SIZE &&
                 logicalY >= MAP_Y && logicalY <= MAP_Y + MAP_SIZE) {
-                mMapZoomLevel = (mMapZoomLevel + 1) % 4;
+                mMapZoomLevel = (mMapZoomLevel + 1) % ZOOM_FACTORS.length;
                 invalidate();
                 return true;
             }
@@ -165,7 +166,7 @@ public class HudView extends View {
         if (mState.mapMaxX <= mState.mapMinX || mState.mapMaxZ <= mState.mapMinZ) return;
         
         float baseScale = (MAP_SIZE * 0.92f) / Math.max(mState.mapMaxX - mState.mapMinX, mState.mapMaxZ - mState.mapMinZ);
-        float mS = (mMapZoomLevel > 0) ? baseScale * (float)Math.pow(2, mMapZoomLevel) : baseScale;
+        float mS = baseScale * ZOOM_FACTORS[mMapZoomLevel];
         float sCX = (mMapZoomLevel > 0) ? interX : (mState.mapMaxX + mState.mapMinX)/2f;
         float sCZ = (mMapZoomLevel > 0) ? interY : (mState.mapMaxZ + mState.mapMinZ)/2f;
         float cX = x + MAP_SIZE/2, cY = y + MAP_SIZE/2;
@@ -250,7 +251,7 @@ public class HudView extends View {
         canvas.restore();
         resetPaint(); mPaint.setTextAlign(Paint.Align.CENTER); mPaint.setTextSize(32); mPaint.setColor(Color.WHITE);
         String mapLabel = mState.stageName;
-        if (mMapZoomLevel > 0) mapLabel += " (" + (int)Math.pow(2, mMapZoomLevel) + "x)";
+        if (mMapZoomLevel > 0) mapLabel += " (" + ZOOM_FACTORS[mMapZoomLevel] + "x)";
         canvas.drawText(mapLabel, x + MAP_SIZE/2, y + MAP_SIZE + 40, mPaint);
     }
 
@@ -560,17 +561,17 @@ public class HudView extends View {
 
     private void drawContextButtons(Canvas canvas, float x, float startY) {
         resetPaint(); float spacing = 95;
-        drawActionButton(canvas, x, startY, "L", Color.rgb(200, 200, 200), mState.buttonLText, mState.buttonLText != null && !mState.buttonLText.isEmpty());
-        drawActionButton(canvas, x, startY + spacing, "R", Color.rgb(200, 200, 200), mState.buttonRText, mState.buttonRText != null && !mState.buttonRText.isEmpty());
-        drawActionButton(canvas, x, startY + spacing * 2, "Z", Color.argb(255, 100, 200, 255), mState.buttonZText, mState.buttonZText != null && !mState.buttonZText.isEmpty());
-        drawActionButton(canvas, x, startY + spacing * 3, "A", Color.rgb(0, 200, 50), mState.buttonAText, mState.buttonAText != null && !mState.buttonAText.isEmpty());
-        drawActionButton(canvas, x, startY + spacing * 4, "B", Color.RED, mState.buttonBText, mState.buttonBText != null && !mState.buttonBText.isEmpty());
+        drawActionButton(canvas, x, startY, mState.labelL, Color.rgb(200, 200, 200), mState.buttonLText, mState.buttonLText != null && !mState.buttonLText.isEmpty());
+        drawActionButton(canvas, x, startY + spacing, mState.labelR, Color.rgb(200, 200, 200), mState.buttonRText, mState.buttonRText != null && !mState.buttonRText.isEmpty());
+        drawActionButton(canvas, x, startY + spacing * 2, mState.labelZ, Color.argb(255, 100, 200, 255), mState.buttonZText, mState.buttonZText != null && !mState.buttonZText.isEmpty());
+        drawActionButton(canvas, x, startY + spacing * 3, mState.labelA, Color.rgb(0, 200, 50), mState.buttonAText, mState.buttonAText != null && !mState.buttonAText.isEmpty());
+        drawActionButton(canvas, x, startY + spacing * 4, mState.labelB, Color.RED, mState.buttonBText, mState.buttonBText != null && !mState.buttonBText.isEmpty());
         String yT = mState.buttonYText; boolean yA = (yT != null && !yT.isEmpty());
         if (!yA && (mState.transform != 1)) { yT = getItemName(mState.itemYResId); yA = (mState.itemYResId != 0xFF); if (mState.itemYCount > 0) yT += " (" + mState.itemYCount + ")"; }
-        drawActionButton(canvas, x, startY + spacing * 5, "Y", Color.rgb(255, 255, 0), yT, yA);
+        drawActionButton(canvas, x, startY + spacing * 5, mState.labelY, Color.rgb(255, 255, 0), yT, yA);
         String xT = mState.buttonXText; boolean xA = (xT != null && !xT.isEmpty());
         if (!xA && (mState.transform != 1)) { xT = getItemName(mState.itemXResId); xA = (mState.itemXResId != 0xFF); if (mState.itemXCount > 0) xT += " (" + mState.itemXCount + ")"; }
-        drawActionButton(canvas, x, startY + spacing * 6, "X", Color.rgb(255, 165, 0), xT, xA);
+        drawActionButton(canvas, x, startY + spacing * 6, mState.labelX, Color.rgb(255, 165, 0), xT, xA);
     }
 
     private void drawActionButton(Canvas canvas, float x, float y, String label, int color, String text, boolean active) {
