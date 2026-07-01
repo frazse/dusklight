@@ -155,6 +155,9 @@ public:
     void setItemNameString(u8, u8);
     void setItemNameStringNull();
 
+    u16 getCurrentAString() { return mCurrentAString; }
+    u16 getCurrentBString() { return mCurrentBString; }
+
     virtual void draw() { _draw(); }
     virtual ~dMenu_Collect2D_c();
 
@@ -299,6 +302,7 @@ public:
 
     virtual ~dMenu_Collect_c();
 
+    dMenu_Collect2D_c* getCollect2D() { return mpCollect2D; }
     u8 getSubWindowOpenCheck() { return mpCollect2D->getSubWindowOpenCheck(); }
     bool isKeyCheck() { return mpCollect2D->isKeyCheck(); }
     bool isOutCheck() { return mpCollect2D->isOutCheck(); }

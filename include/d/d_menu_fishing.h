@@ -34,6 +34,10 @@ public:
     void screenSetDoIcon();
     void setAButtonString(u16);
     void setBButtonString(u16);
+
+    u16 getAButtonString() { return mCurrentAString; }
+    u16 getBButtonString() { return mCurrentBString; }
+
     u8 getFigure(int);
     void setFishParam(int, u16, u8);
     void setHIO(bool);
@@ -72,6 +76,9 @@ private:
     /* 0x1F8 */ s16 mFishListScreenFrames;
     /* 0x1FA */ u8 mStatus;
     /* 0x1FB */ u8 mProcess;
+
+    u16 mCurrentAString;
+    u16 mCurrentBString;
 };
 
 #endif /* D_MENU_D_MENU_FISHING_H */

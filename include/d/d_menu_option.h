@@ -75,9 +75,15 @@ public:
     void setHIO(bool);
     void cursorAnime(f32);
     void setZButtonString(u16);
+
+    u16 getZButtonString() { return mCurrentZString; }
     void changeTVCheck();
     void setAButtonString(u16);
     void setBButtonString(u16);
+
+    u16 getAButtonString() { return field_0x3dc; }
+    u16 getBButtonString() { return field_0x3de; }
+
     bool isRumbleSupported();
     bool dpdMenuMove();
 #if TARGET_PC
@@ -222,6 +228,8 @@ private:
     /* 0x403 */ u8 field_0x403;
     /* 0x404 */ u8 field_0x404[4];
     /* 0x408 */ u8 field_0x408[4];
+
+    u16 mCurrentZString;
 };
 
 #endif /* D_MENU_D_MENU_OPTION_H */

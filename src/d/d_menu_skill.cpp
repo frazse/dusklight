@@ -647,6 +647,7 @@ void dMenu_Skill_c::setPageText() {
 }
 
 void dMenu_Skill_c::setAButtonString(u16 i_stringID) {
+    mCurrentAString = i_stringID;
     if (i_stringID == 0) {
         for (int i = 0; i < 5; i++) {
             SAFE_STRCPY(mpAButtonString[i]->getStringPtr(), "");
@@ -659,6 +660,7 @@ void dMenu_Skill_c::setAButtonString(u16 i_stringID) {
 }
 
 void dMenu_Skill_c::setBButtonString(u16 i_stringID) {
+    mCurrentBString = i_stringID;
     if (i_stringID == 0) {
         for (int i = 0; i < 5; i++) {
             SAFE_STRCPY(mpBButtonString[i]->getStringPtr(), "");

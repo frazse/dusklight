@@ -2785,6 +2785,7 @@ void dMenu_Fmap2DTop_c::setAreaNameString(u32 param_0) {
 }
 
 void dMenu_Fmap2DTop_c::setZButtonString(u32 param_0, u8 i_alpha) {
+    mCurrentZString = param_0;
     if (param_0 == 0x529 && ((daMidna_c*)daPy_py_c::getMidnaActor())->checkPortalObjRide()) {
         param_0 = 0x533;
     }
@@ -2829,6 +2830,7 @@ void dMenu_Fmap2DTop_c::setZButtonString(u32 param_0, u8 i_alpha) {
 }
 
 void dMenu_Fmap2DTop_c::setBButtonString(u32 param_0, u8 i_alpha) {
+    mCurrentBString = param_0;
 #if VERSION == VERSION_GCN_JPN
     static const u64 cont_bt[5] = {MULTI_CHAR('cont_bt1'), MULTI_CHAR('cont_bt2'), MULTI_CHAR('cont_bt3'), MULTI_CHAR('cont_bt4'), MULTI_CHAR('cont_bt')};
 #define setBButtonString_font_bt cont_bt
@@ -2855,6 +2857,7 @@ void dMenu_Fmap2DTop_c::setBButtonString(u32 param_0, u8 i_alpha) {
 }
 
 void dMenu_Fmap2DTop_c::setAButtonString(u32 param_0, u8 i_alpha) {
+    mCurrentAString = param_0;
 #if VERSION == VERSION_GCN_JPN
     static const u64 cont_at[5] = {MULTI_CHAR('cont_at'), MULTI_CHAR('cont_at1'), MULTI_CHAR('cont_at2'), MULTI_CHAR('cont_at3'), MULTI_CHAR('cont_at4')};
 #define setAButtonString_font_at cont_at

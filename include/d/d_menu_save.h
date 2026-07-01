@@ -272,6 +272,9 @@ public:
 
     void _draw2();
 
+    u16 getAButtonString() { return (mHeaderTxtType == 0) ? 0x40C : 0; }
+    u16 getBButtonString() { return 0x3F9; }
+
     virtual ~dMenu_save_c() {}
 
     u8 getSaveStatus() { return mSaveStatus; }

@@ -385,6 +385,7 @@ void dMenu_DmapBg_c::buttonIconScreenInit() {
 }
 
 void dMenu_DmapBg_c::setAButtonString(u32 i_msgNo) {
+    mCurrentAString = i_msgNo;
     static u64 const cont_at[5] = {
         #if VERSION == VERSION_GCN_JPN
         MULTI_CHAR('cont_at'), MULTI_CHAR('cont_at1'), MULTI_CHAR('cont_at2'), MULTI_CHAR('cont_at3'), MULTI_CHAR('cont_at4')
@@ -402,6 +403,7 @@ void dMenu_DmapBg_c::setAButtonString(u32 i_msgNo) {
 }
 
 void dMenu_DmapBg_c::setBButtonString(u32 i_msgNo) {
+    mCurrentBString = i_msgNo;
     static u64 const cont_bt[5] = {
         #if VERSION == VERSION_GCN_JPN
         MULTI_CHAR('cont_bt'), MULTI_CHAR('cont_bt1'), MULTI_CHAR('cont_bt2'), MULTI_CHAR('cont_bt3'), MULTI_CHAR('cont_bt4')
@@ -425,6 +427,7 @@ static f32 player_py;
 dMenu_Dmap_c* dMenu_Dmap_c::myclass;
 
 void dMenu_DmapBg_c::setCButtonString(u32 i_msgNo) {
+    mCurrentCString = i_msgNo;
     static u64 const c_tag[2] = {
         #if VERSION == VERSION_GCN_JPN
         MULTI_CHAR('c_text_s'), MULTI_CHAR('c_text')

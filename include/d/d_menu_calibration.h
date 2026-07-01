@@ -36,6 +36,10 @@ public:
     void setCalibrationValue();
     void setAButtonString(u16);
     void setBButtonString(u16);
+
+    u16 getAButtonString() { return mCurrentAString; }
+    u16 getBButtonString() { return mCurrentBString; }
+
     void setStepString(u16);
     void setExplainString(u16);
     void setHIO(bool);
@@ -85,6 +89,9 @@ public:
     /* 0x0FF */ u8 field_0xff;
     /* 0x100 */ u8 mProcess;
     /* 0x101 */ u8 field_0x101;
+
+    u16 mCurrentAString;
+    u16 mCurrentBString;
 };
 
 #endif /* D_MENU_D_MENU_CALIBRATION_H */

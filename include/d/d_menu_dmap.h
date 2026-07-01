@@ -73,6 +73,11 @@ public:
     void buttonIconScreenInit();
     void setAButtonString(u32);
     void setBButtonString(u32);
+
+    u32 getAButtonString() { return mCurrentAString; }
+    u32 getBButtonString() { return mCurrentBString; }
+    u32 getCButtonString() { return mCurrentCString; }
+
     void setCButtonString(u32);
     void setJButtonString(u32);
     void createExplain();
@@ -184,6 +189,10 @@ public:
     /* 0xDD9 */ u8 field_0xdd9;
     /* 0xDDA */ u8 field_0xdda;
 
+    u32 mCurrentAString;
+    u32 mCurrentBString;
+    u32 mCurrentCString;
+
 #if TARGET_PC
     J2DTextBox* mpPoeCountPane;
     J2DPicture* mpPoeCountIcon;
@@ -252,6 +261,8 @@ public:
     s8 getFloorAll() { return (mFloorAll - mBottomFloor) + 1; }
     s8 getFloorPos(s8 param_0) { return param_0 - mBottomFloor; }
     u16 getCMessageNum() { return mCMessageNum; }
+
+    dMenu_DmapBg_c* getDrawBg() { return mpDrawBg; }
 
     static dMenu_Dmap_c* myclass;
 

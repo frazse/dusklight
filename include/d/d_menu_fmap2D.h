@@ -325,6 +325,11 @@ public:
     void setZButtonString(u32, u8);
     void setBButtonString(u32, u8);
     void setAButtonString(u32, u8);
+
+    u32 getAButtonString() { return mCurrentAString; }
+    u32 getBButtonString() { return mCurrentBString; }
+    u32 getZButtonString() { return mCurrentZString; }
+
     void setCrossLRString(u32);
     void set3DStickString(u32);
     void createExplain(JKRExpHeap*, STControl*);
@@ -421,6 +426,10 @@ public:
     /* 0xC2 */ u8 mAlphaButtonZ;
     /* 0xC3 */ u8 mAlphaAnalogStick;
     /* 0xC4 */ u8 mAlphaDpad;
+
+    u32 mCurrentAString;
+    u32 mCurrentBString;
+    u32 mCurrentZString;
 
 #if TARGET_PC
     J2DTextBox* mpPoeCountPane;

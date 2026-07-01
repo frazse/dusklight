@@ -81,6 +81,7 @@ public:
     virtual void draw() { _draw(); }
     virtual ~dMenu_Ring_c();
 
+    u8 getDoStatus() { return mDoStatus; }
     void drawFlag0() { mDrawFlag = 0; }
     void setStatus(u8 i_status) { mStatus = i_status; }
 

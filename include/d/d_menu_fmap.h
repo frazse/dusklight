@@ -233,6 +233,8 @@ public:
     bool isLightVesselGet();
     cXyz* getPlayerPos2D();
 
+    dMenu_Fmap2DTop_c* getDraw2DTop() { return mpDraw2DTop; }
+
     virtual ~dMenu_Fmap_c();
 
     enum process_e {

@@ -193,6 +193,18 @@ public:
     bool isShowFlag() { return (mShowFlag & 1) != 0; }
     bool isFadeNowCheck() { return mDoGph_gInf_c::getFader()->getStatus() == 1; }
 
+    dMenu_Collect_c* getMenuCollect() { return mpMenuCollect; }
+    dMenu_Dmap_c* getMenuDmap() { return mpMenuDmap; }
+    dMenu_Fmap_c* getMenuFmap() { return mpMenuFmap; }
+
+    dMenu_Option_c* getMenuOption() { return mpMenuOption; }
+    dMenu_save_c* getMenuSave() { return mpMenuSave; }
+    dMenu_Letter_c* getMenuLetter() { return mpMenuLetter; }
+    dMenu_Fishing_c* getMenuFishing() { return mpMenuFishing; }
+    dMenu_Skill_c* getMenuSkill() { return mpMenuSkill; }
+    dMenu_Insect_c* getMenuInsect() { return mpMenuInsect; }
+    dMenu_Ring_c* getMenuRing() { return mpMenuRing; }
+
 private:
     /* 0x0FC */ int field_0xfc;
     /* 0x100 */ JKRExpHeap* mpHeap;

@@ -45,6 +45,10 @@ public:
     void setPageText();
     void setAButtonString(u16);
     void setBButtonString(u16);
+
+    u16 getAButtonString() { return mCurrentAString; }
+    u16 getBButtonString() { return mCurrentBString; }
+
     void setNameString(u16);
     u8 getSkillNum();
     void setHIO(bool);
@@ -100,6 +104,9 @@ private:
     /* 0x209 */ u8 field_0x209; // Initialized but never used
     /* 0x20A */ u8 field_0x20a; // Initialized but never used
     /* 0x20B */ u8 mTotalSkillNum;
+
+    u16 mCurrentAString;
+    u16 mCurrentBString;
 };  // Size: 0x20C
 
 #endif /* D_MENU_D_MENU_SKILL_H */

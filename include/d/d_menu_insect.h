@@ -49,6 +49,10 @@ public:
     u8 dpdMove();
     void setAButtonString(u16);
     void setBButtonString(u16);
+
+    u16 getAButtonString() { return mCurrentAString; }
+    u16 getBButtonString() { return mCurrentBString; }
+
     void setHIO(bool);
 
 #if TARGET_PC
@@ -97,6 +101,9 @@ private:
     /* 0xFA */ u8 field_0xfa;
     /* 0xFB */ u8 field_0xfb;
     /* 0xFC */ u8 field_0xfc;
+
+    u16 mCurrentAString;
+    u16 mCurrentBString;
 };
 
 #endif /* D_MENU_D_MENU_INSECT_H */

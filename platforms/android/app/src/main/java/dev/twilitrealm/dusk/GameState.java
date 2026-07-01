@@ -16,6 +16,7 @@ public class GameState {
 
     public final String buttonAText, buttonBText, buttonZText, buttonLText, buttonRText, buttonXText, buttonYText;
     public final String labelA, labelB, labelX, labelY, labelZ, labelL, labelR;
+    public final int idA, idB, idX, idY, idZ, idL, idR, windowStatus, mapStatus, visMask;
     public final String dPadUpText, dPadDownText, dPadLeftText, dPadRightText;
     public final String stageName;
 
@@ -52,23 +53,37 @@ public class GameState {
         this.isSwimming = (stateFlags & 2) != 0;
         this.isRiding = (stateFlags & 4) != 0;
 
-        int vis = i[39];
-        this.buttonAText = ((vis & 1) != 0) ? getActionLabel(i[28], isSwimming, isRiding, transform) : "";
-        this.buttonBText = ((vis & 2) != 0) ? getActionLabel(i[29], isSwimming, isRiding, transform) : "";
+        this.idA = i[28]; this.idB = i[29]; this.idZ = i[30];
+        this.idR = i[32]; this.idX = i[33]; this.idY = i[34];
+        this.idL = i[59];
         
-        String zText = getActionLabel(i[30], isSwimming, isRiding, transform);
-        if (zText.isEmpty()) zText = "Midna";
-        this.buttonZText = ((vis & 4) != 0) ? zText : "";
+        this.windowStatus = i[57];
+        this.mapStatus = i[58];
+        this.visMask = i[39];
 
-        this.buttonLText = targeting ? "Target" : "";
-        this.buttonRText = ((vis & 8) != 0) ? getActionLabel(i[32], isSwimming, isRiding, transform) : "";
-        this.buttonXText = ((vis & 16) != 0) ? getActionLabel(i[33], isSwimming, isRiding, transform) : "";
-        this.buttonYText = ((vis & 32) != 0) ? getActionLabel(i[34], isSwimming, isRiding, transform) : "";
+        // Visibility Override Logic:
+        // - In play (windowStatus==0), respect the visMask (avoids ghost prompts)
+        // - In menus, force buttons on if they have a non-zero ID
+        boolean inMenu = (windowStatus > 0 || mapStatus > 0);
 
-        this.dPadUpText    = getActionLabel(i[35], isSwimming, isRiding, transform);
-        this.dPadDownText  = getActionLabel(i[36], isSwimming, isRiding, transform);
-        this.dPadLeftText  = getActionLabel(i[37], isSwimming, isRiding, transform);
-        this.dPadRightText = getActionLabel(i[38], isSwimming, isRiding, transform);
+        this.buttonAText = (inMenu || (visMask & 1) != 0) ? getActionLabel(idA, isSwimming, isRiding, transform, false) : "";
+        this.buttonBText = (inMenu || (visMask & 2) != 0) ? getActionLabel(idB, isSwimming, isRiding, transform, false) : "";
+        
+        String zLabel = getActionLabel(idZ, isSwimming, isRiding, transform, true);
+        if (zLabel.isEmpty() && !inMenu && windowStatus == 0) {
+            zLabel = (transform == 1) ? "Sense" : "Midna";
+        }
+        this.buttonZText = (inMenu || (visMask & 4) != 0 || !zLabel.isEmpty()) ? zLabel : "";
+
+        this.buttonLText = (inMenu || (visMask & 64) != 0) ? getActionLabel(idL, isSwimming, isRiding, transform, false) : (targeting ? "Target" : "");
+        this.buttonRText = (inMenu || (visMask & 8) != 0) ? getActionLabel(idR, isSwimming, isRiding, transform, false) : "";
+        this.buttonXText = (inMenu || (visMask & 16) != 0) ? getActionLabel(idX, isSwimming, isRiding, transform, false) : "";
+        this.buttonYText = (inMenu || (visMask & 32) != 0) ? getActionLabel(idY, isSwimming, isRiding, transform, false) : "";
+
+        this.dPadUpText    = getActionLabel(i[35], isSwimming, isRiding, transform, false);
+        this.dPadDownText  = getActionLabel(i[36], isSwimming, isRiding, transform, false);
+        this.dPadLeftText  = getActionLabel(i[37], isSwimming, isRiding, transform, false);
+        this.dPadRightText = getActionLabel(i[38], isSwimming, isRiding, transform, false);
 
         this.mapX = f[0]; this.mapY = f[1]; this.mapAngle = f[2];
         this.mapMinX = f[3]; this.mapMinZ = f[4]; this.mapMaxX = f[5]; this.mapMaxZ = f[6];
@@ -115,9 +130,9 @@ public class GameState {
         }
     }
 
-    private String getActionLabel(int id, boolean isSwimming, boolean isRiding, int wolfForm) {
+    private String getActionLabel(int id, boolean isSwimming, boolean isRiding, int wolfForm, boolean isZ) {
         if (id == 0) return "";
-        if (wolfForm == 0 && (id == 0x05 || id == 0x0D || id == 0x1F || id == 0x45 || id == 0x46 || id == 0x4E)) return "";
+        
         switch (id) {
             case 0x01: return "Action";
             case 0x02: return "Peek";
@@ -127,7 +142,7 @@ public class GameState {
             case 0x06: return "Open";
             case 0x07: return "Enter";
             case 0x08: return "Check";
-            case 0x09: // Generic Dash/Roll
+            case 0x09: // Dash/Roll/Hurry
                 if (isSwimming) return "Dash";
                 if (isRiding) return "Hurry";
                 if (wolfForm == 1) return "Dash";
@@ -146,18 +161,17 @@ public class GameState {
             case 0x15: return "Grab";
             case 0x16: return "Get Off";
             case 0x17: return "Get On";
-            case 0x18: return "Row";
+            case 0x18: return "Paddle";
             case 0x19: return "Jump";
             case 0x1A: return "Read";
             case 0x1B: return "Look";
             case 0x1C: return "Speak";
             case 0x1D: return "Lift";
             case 0x1E: return "Swing";
-            case 0x1F: return "Dig";
-            case 0x20: return "Jump";
+            case 0x1F: return "Pick Up";
             case 0x22: return "Confirm";
             case 0x23: return "Next";
-            case 0x24: return "Info";
+            case 0x24: return isZ ? "Midna" : "Info";
             case 0x26: return "Attack";
             case 0x28: return "Whoop";
             case 0x29: return "Zoom";
@@ -170,7 +184,7 @@ public class GameState {
             case 0x30: return "Finish";
             case 0x31: return "Set Free";
             case 0x32: return "Dismount";
-            case 0x33: return "Let Go";
+            case 0x33: return "Drop Down";
             case 0x35: return "Take";
             case 0x36: return "Hurry";
             case 0x37: return "Pull Down";
@@ -182,14 +196,18 @@ public class GameState {
             case 0x3F: return "Push";
             case 0x40: return "Resist";
             case 0x41: return "Dive";
+            case 0x42: return "Put Together";
             case 0x43: return "Skip";
             case 0x44: return "Slap";
             case 0x45: return "Sniff";
             case 0x46: return "Bite";
             case 0x47: return "Roll";
+            case 0x48: return "Fasten";
+            case 0x49: return "Get Down";
+            case 0x4A: return "Hawkeye Off";
             case 0x4C: return "Swim";
             case 0x4D: return "Can't Skip";
-            case 0x4E: return "Sense";
+            case 0x4E: return "Midna";
             case 0x51: return "Land";
             case 0x52: return "Hook";
             case 0x53: return "Change Locks";
@@ -200,13 +218,15 @@ public class GameState {
             case 0x58: return "Spin";
             case 0x5A: return "Spin Attack";
             case 0x5B: return "Reel Fast";
-            case 0x5C: return "Rise"; // Fixed typo (was Raise)
+            case 0x5C: return "Rise";
             case 0x5D: return "Release";
             case 0x5F: return "Map";
             case 0x60: return "Items";
             case 0x61: return "Insert";
             case 0x62: return "Draw";
             case 0x63: return "Strike";
+            case 0x64: return "Action";
+            case 0x67: return "Flip";
             case 0x68: return "Change View";
             case 0x6B: return "Chance";
             case 0x6C: return "Scoop";
@@ -223,14 +243,31 @@ public class GameState {
             case 0x77: return "Helm Splitter";
             case 0x78: return "Move";
             case 0x79: return "Roll";
+            case 0x7A: return "Hold On";
             case 0x7C: return "Help";
             case 0x7D: return "Zoom In";
             case 0x7E: return "Zoom Out";
+            case 0x7F: return "Move Closer";
             case 0x80: return "Check";
             case 0x81: return "Talk";
             case 0x82: return "Open";
             case 0x83: return "Read";
             case 0x85: return "Examine";
+
+            // Menu Message IDs (Authoritative Mirroring)
+            case 0x3EE: return "Open";
+            case 0x436: return "Equip";
+            case 0x40C: return "Confirm";
+            case 0x3F9: return "Back";
+            case 0x408: return "Next";
+            case 0x368: return "Details";
+            case 0x4D6: return "Page";
+            case 0x4D7: return "Left";
+            case 0x4D8: return "Right";
+            case 0x529: return "Warp";
+            case 0x522: return "Zoom Out";
+            case 0x527: return "Zoom In";
+
             default: return "ID: 0x" + Integer.toHexString(id).toUpperCase();
         }
     }

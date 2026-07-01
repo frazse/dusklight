@@ -52,6 +52,10 @@ public:
     void copyDMYMenu();
     void setAButtonString(u16);
     void setBButtonString(u16);
+
+    u16 getAButtonString() { return mCurrentAString; }
+    u16 getBButtonString() { return mCurrentBString; }
+
     u8 getLetterNum();
     void setHIO(bool);
 
@@ -126,6 +130,9 @@ private:
     /* 0x3E2 */ u8 field_0x3e2;
     /* 0x3E3 */ u8 field_0x3e3;
     /* 0x3E4 */ u8 field_0x3e4;
+
+    u16 mCurrentAString;
+    u16 mCurrentBString;
 };
 
 #endif /* D_MENU_D_MENU_LETTER_H */

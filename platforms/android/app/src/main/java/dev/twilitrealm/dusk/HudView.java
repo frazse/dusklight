@@ -12,6 +12,7 @@ import android.view.View;
 
 public class HudView extends View {
     private static final String TAG = "HudView";
+    private static final boolean DEBUG_IDS = false;
     private GameState mState;
     private GameState mPrevState;
     private long mLastUpdateTime;
@@ -765,8 +766,15 @@ public class HudView extends View {
 
     private void drawActionButton(Canvas canvas, float x, float y, String label, int color, String text, boolean active) {
         resetPaint(); mPaint.setTextAlign(Paint.Align.CENTER); mPaint.setTextSize(42);
-        int circleColor = color; boolean isMidna = active && "Midna".equals(text); boolean isPulse = isMidna && mState.midnaCalling;
-        if (isMidna) circleColor = isPulse ? Color.rgb(255, 200, 30) : Color.rgb(180, 50, 255);
+        int circleColor = color; 
+        boolean isMidna = active && "Midna".equals(text);
+        boolean isMidnaContext = active && ("Z".equals(label) || "Z".equals(mState.labelZ)) && ("Check".equals(text) || "Warp".equals(text) || "Select Warp".equals(text));
+        boolean isPulse = (isMidna || isMidnaContext) && mState.midnaCalling;
+        
+        if (isMidna || isMidnaContext) {
+            circleColor = isPulse ? Color.rgb(255, 200, 30) : Color.parseColor("#5A429B");
+        }
+
         mPaint.setColor(active ? circleColor : Color.argb(60, 100, 100, 100));
         float r = isPulse ? 42 : 38; canvas.drawCircle(x, y, r, mPaint);
         mPaint.setColor(active ? Color.BLACK : Color.argb(100, 200, 200, 200));
@@ -805,5 +813,10 @@ public class HudView extends View {
         resetPaint(); mPaint.setTextAlign(Paint.Align.RIGHT); mPaint.setTextSize(38);
         mPaint.setColor(mState.transform == 1 ? Color.CYAN : Color.WHITE);
         canvas.drawText("FORM: " + (mState.transform == 1 ? "WOLF" : "HUMAN"), x, y, mPaint);
+        
+        if (DEBUG_IDS) {
+            mPaint.setTextSize(24); mPaint.setColor(Color.YELLOW);
+            canvas.drawText("W:" + mState.windowStatus + " M:" + mState.mapStatus + " V:" + mState.visMask, x, y - 40, mPaint);
+        }
     }
 }

@@ -100,6 +100,12 @@ public:
     bool isShowFlag(int i_no) { return field_0x1e6 & (1 << i_no); }
     void onShowFlag(int i_no) { field_0x1e6 |= (1 << i_no); }
 
+    u8 getDoStatus() { return mDoStatus; }
+    u8 getAStatus() { return mAStatus; }
+    u8 getRStatus() { return mRStatus; }
+    u8 getZStatus() { return mZStatus; }
+    u8 getItemStatus(int i_no) { return mItemStatus[i_no]; }
+
 private:
     /* 0x0FC */ int field_0xfc;
     /* 0x100 */ JKRExpHeap* mpHeap;

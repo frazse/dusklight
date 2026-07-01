@@ -2150,6 +2150,7 @@ void dMenu_Option_c::cursorAnime(f32 i_cursorValue) {
 }
 
 void dMenu_Option_c::setZButtonString(u16 i_stringID) {
+    mCurrentZString = i_stringID;
 #if TARGET_PC
     dusk::ui::set_control_override(dusk::ui::Control::Z,
         i_stringID != 0 ? dusk::ui::ControlOverride::Action : dusk::ui::ControlOverride::Default);

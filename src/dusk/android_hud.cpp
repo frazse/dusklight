@@ -4,7 +4,20 @@
 #include "d/d_com_inf_game.h"
 #include "d/d_map_path_dmap.h"
 #include "d/d_meter2_info.h"
+#include "d/d_meter2_draw.h"
 #include "d/d_meter2.h"
+#include "d/d_menu_dmap.h"
+#include "d/d_menu_fmap.h"
+#include "d/d_menu_fmap2D.h"
+#include "d/d_menu_collect.h"
+#include "d/d_menu_window.h"
+#include "d/d_menu_option.h"
+#include "d/d_menu_save.h"
+#include "d/d_menu_ring.h"
+#include "d/d_menu_letter.h"
+#include "d/d_menu_fishing.h"
+#include "d/d_menu_skill.h"
+#include "d/d_menu_insect.h"
 #include "d/d_tresure.h"
 #include "d/actor/d_a_alink.h"
 #include "dusk/map_loader_definitions.h"
@@ -31,39 +44,27 @@ bool clear_pending_exception(JNIEnv* env) {
 
 jmethodID s_onGameStateUpdate = nullptr;
 std::atomic<bool> s_secondScreenActive{false};
-constexpr int kHudUpdateInterval = 6;
+constexpr int kHudUpdateInterval = 1;
 int s_frameCounter = 0;
 
 bool should_draw_icon(int type, const dTres_c::data_s* data, int stayNo, s8 sFloor) {
     if (data == nullptr) return false;
-
-    // GLOBAL FILTER: If it's already collected or completed, never draw it.
     if (data->mNo != 0xFF && dComIfGs_isTbox(data->mNo)) return false;
     if (data->mSwBit != 0xFF && dComIfGs_isSwitch(data->mSwBit, data->mRoomNo)) return false;
-
     auto* stage = dComIfGp_getStage();
     if (stage == nullptr) return false;
     StageType stype = (StageType)dStage_stagInfo_GetSTType(stage->getStagInfo());
     bool is_d = (stype == ST_DUNGEON);
-
-    // FLOOR FILTER: Only draw icons on the current floor
     s8 iconFloor = dMapInfo_c::calcFloorNo(data->mPos.y, true, data->mRoomNo);
     if (iconFloor != sFloor) return false;
-
-    if (is_d) {
-        // In dungeons, the Compass reveals all remaining icons on this floor.
-        return dComIfGs_isDungeonItemCompass();
-    } else {
-        // Field logic: Only show Tears of Light (Type 4) and ONLY if the area is still in Twilight.
-        if (type == 4) {
-            int darkArea = dComIfGp_getStartStageDarkArea();
-            if (darkArea == 0) return false;
-            // If we have all the drops for this area, hide the icons.
-            if (dComIfGs_getLightDropNum(darkArea) >= dComIfGp_getNeedLightDropNum()) return false;
-            return true;
-        }
-        return false;
+    if (is_d) return dComIfGs_isDungeonItemCompass();
+    if (type == 4) {
+        int darkArea = dComIfGp_getStartStageDarkArea();
+        if (darkArea == 0) return false;
+        if (dComIfGs_getLightDropNum(darkArea) >= dComIfGp_getNeedLightDropNum()) return false;
+        return true;
     }
+    return false;
 }
 } // namespace
 
@@ -72,6 +73,10 @@ bool hud_is_second_screen_active() { return s_secondScreenActive.load(std::memor
 void hud_update() {
     if (++s_frameCounter < kHudUpdateInterval) return;
     s_frameCounter = 0;
+
+    dMeter2_c* meter = dMeter2Info_getMeterClass();
+    if (!meter) return;
+
     int stayNo = dComIfGp_roomControl_getStayNo();
     if (stayNo < 0) return;
     auto* env = static_cast<JNIEnv*>(SDL_GetAndroidJNIEnv());
@@ -87,244 +92,227 @@ void hud_update() {
     s_secondScreenActive.store(true, std::memory_order_relaxed);
 
     int iData[60] = {0};
+
+    // 1. Diagnostics (W:57, M:58)
+    int winStatus = dMeter2Info_getWindowStatus();
+    int mapStatus = dMeter2Info_getMapStatus();
+    iData[57] = winStatus;
+    iData[58] = mapStatus;
+
+    // 2. Base IDs
+    iData[28] = meter->getDoStatus(); // A
+    iData[29] = meter->getAStatus();  // B
+    iData[30] = meter->getZStatus();
+    iData[32] = meter->getRStatus();
+    iData[33] = meter->getItemStatus(1); // X
+    iData[34] = meter->getItemStatus(3); // Y
+    iData[59] = 0; // L Prompt
+
+    // 3. AUTHORITATIVE MENU OVERRIDES (Truth Mirror)
+    dMw_c* mw = dMeter2Info_getMenuWindowClass();
+    if (mw) {
+        if (winStatus == 3) { // Pause Menu (Collection)
+            dMenu_Collect_c* collect = mw->getMenuCollect();
+            if (collect) {
+                u8 sub = collect->getSubWindowOpenCheck();
+                if (sub == 1) { // Save Submenu
+                    dMenu_save_c* s = mw->getMenuSave();
+                    if (s) { iData[28] = (int)s->getAButtonString(); iData[29] = (int)s->getBButtonString(); }
+                } else if (sub == 2) { // Option Submenu
+                    dMenu_Option_c* o = mw->getMenuOption();
+                    if (o) { iData[28] = (int)o->getAButtonString(); iData[29] = (int)o->getBButtonString(); iData[30] = (int)o->getZButtonString(); }
+                } else {
+                    dMenu_Collect2D_c* collect2d = collect->getCollect2D();
+                    if (collect2d) { iData[28] = (int)collect2d->getCurrentAString(); iData[29] = (int)collect2d->getCurrentBString(); }
+                }
+            }
+        } else if (winStatus == 4) { // Field Map
+            dMenu_Fmap_c* fmap = mw->getMenuFmap();
+            if (fmap) {
+                dMenu_Fmap2DTop_c* top = fmap->getDraw2DTop();
+                if (top) { iData[28] = (int)top->getAButtonString(); iData[29] = (int)top->getBButtonString(); iData[30] = (int)top->getZButtonString(); }
+            }
+        } else if (winStatus == 5) { // Dungeon Map
+            dMenu_Dmap_c* dmap = mw->getMenuDmap();
+            if (dmap) {
+                dMenu_DmapBg_c* bg = dmap->getDrawBg();
+                if (bg) { iData[28] = (int)bg->getAButtonString(); iData[29] = (int)bg->getBButtonString(); iData[32] = (int)bg->getCButtonString(); iData[59] = (int)bg->getCButtonString(); }
+            }
+        } else if (winStatus == 10) { // Submenus (Standalone Save, Options, Letters, etc)
+            dMenu_save_c* save = mw->getMenuSave();
+            if (save) { iData[28] = (int)save->getAButtonString(); iData[29] = (int)save->getBButtonString(); }
+
+            dMenu_Option_c* opt = mw->getMenuOption();
+            if (opt && iData[28] == 0) { iData[28] = (int)opt->getAButtonString(); iData[29] = (int)opt->getBButtonString(); iData[30] = (int)opt->getZButtonString(); }
+
+            dMenu_Letter_c* l = mw->getMenuLetter();
+            if (l && iData[28] == 0) { iData[28] = (int)l->getAButtonString(); iData[29] = (int)l->getBButtonString(); iData[32] = 0x4D8; iData[59] = 0x4D7; }
+
+            dMenu_Fishing_c* f = mw->getMenuFishing();
+            if (f && iData[28] == 0) { iData[28] = (int)f->getAButtonString(); iData[29] = (int)f->getBButtonString(); }
+
+            dMenu_Skill_c* sk = mw->getMenuSkill();
+            if (sk && iData[28] == 0) { iData[28] = (int)sk->getAButtonString(); iData[29] = (int)sk->getBButtonString(); }
+
+            dMenu_Insect_c* ns = mw->getMenuInsect();
+            if (ns && iData[28] == 0) { iData[28] = (int)ns->getAButtonString(); iData[29] = (int)ns->getBButtonString(); }
+        } else if (winStatus == 1 || winStatus == 2) { // Item Wheel
+            dMenu_Ring_c* ring = mw->getMenuRing();
+            if (ring) iData[28] = (int)ring->getDoStatus();
+        }
+    }
+
+    // 4. Force Visibility
+    int vis = 0;
+    if (iData[28] > 0) vis |= 1; // A
+    if (iData[29] > 0) vis |= 2; // B
+    if (iData[30] > 0 || winStatus == 0) vis |= 4; // Z (Always visible during gameplay)
+    if (iData[32] > 0) vis |= 8; // R
+    if (iData[33] > 0) vis |= 16; // X
+    if (iData[34] > 0) vis |= 32; // Y
+    if (iData[59] > 0) vis |= 64; // L
+    iData[39] = vis;
+
+    // 5. Basic Stats
     iData[0] = dComIfGs_getLife(); iData[1] = dComIfGs_getMaxLife();
     iData[2] = dComIfGs_getMagic(); iData[3] = dComIfGs_getMaxMagic();
     iData[4] = dComIfGs_getOil(); iData[5] = dComIfGs_getMaxOil();
     iData[6] = dComIfGp_getNowOxygen(); iData[7] = dComIfGp_getMaxOxygen();
-    iData[8] = dComIfGs_getRupee(); iData[9] = dComIfGs_getKeyNum();
+    iData[8] = dComIfGs_getRupee();
+    iData[9] = dComIfGs_getKeyNum();
     iData[10] = dComIfGs_getArrowNum(); iData[11] = dComIfGs_getBombNum(0);
-    iData[12] = dComIfGs_getTransformStatus(); iData[13] = stayNo;
+    iData[12] = (int)dComIfGs_getTransformStatus();
+    iData[13] = stayNo;
     iData[14] = dComIfGs_getLightDropNum(dComIfGp_getStartStageDarkArea());
     iData[15] = dComIfGp_getNeedLightDropNum();
-    dMeter2_c* meter = dMeter2Info_getMeterClass();
-    iData[16] = (meter && meter->isShowLightDrop()) ? 1 : 0;
+    iData[16] = meter->isShowLightDrop() ? 1 : 0;
+    iData[27] = (dComIfGp_isZSetFlag(2) || dComIfGp_isZSetFlag(4)) ? 1 : 0;
     iData[17] = dComIfGp_getSelectItem(0); iData[18] = dComIfGp_getSelectItem(1);
 
-    // Explicit Ammo Sync for Consumables
     auto get_ammo = [](u8 item, u8 slotNum) {
-        if (item == 0x43) return (int)dComIfGs_getArrowNum(); // Bow
-        if (item == 0x4B) return (int)dComIfGs_getPachinkoNum(); // Slingshot
-        if (item >= 0x70 && item <= 0x72) return (int)dComIfGs_getBombNum(item - 0x70); // Bombs
+        if (item == 0x43) return (int)dComIfGs_getArrowNum();
+        if (item == 0x4B) return (int)dComIfGs_getPachinkoNum();
+        if (item >= 0x70 && item <= 0x72) return (int)dComIfGs_getBombNum(item - 0x70);
         return (int)dComIfGp_getSelectItemNum(slotNum);
     };
-
     iData[19] = get_ammo(iData[17], 0);
     iData[20] = get_ammo(iData[18], 1);
     iData[21] = dComIfGp_getSelectItem(2); iData[22] = dComIfGp_getSelectItemNum(2);
     iData[23] = dComIfGp_getSelectItem(3); iData[24] = dComIfGp_getSelectItemNum(3);
     iData[25] = dComIfGp_getSelectItem(4); iData[26] = dComIfGp_getSelectItemNum(4);
-    iData[27] = (dComIfGp_isZSetFlag(2) || dComIfGp_isZSetFlag(4)) ? 1 : 0;
-    iData[40] = dComIfGp_getSelectItem(5); iData[41] = dComIfGp_getSelectItemNum(5);
     iData[42] = dMeter2Info_getHorseLifeCount();
     iData[43] = dComIfGp_getOxygenShowFlag() ? 1 : 0;
-    iData[45] = dComIfGs_getSelectEquipClothes();
-
-    // Dungeon Progress Tracking (Global Save Hooks for instant update)
+    iData[44] = dComIfGs_getSelectEquipClothes();
+    iData[46] = (dMapInfo_c::calcFloorNo(dMapInfo_n::getMapRestartPos().y, true, dComIfGs_getRestartRoomNo()) == (dMapInfo_c::getNowStayFloorNoDecisionFlg() ? dMapInfo_c::getNowStayFloorNo() : dMapInfo_c::calcFloorNo(dMapInfo_n::getMapPlayerPos().y, true, stayNo))) ? 1 : 0;
+    iData[47] = dStage_stagInfo_GetSTType(dComIfGp_getStage()->getStagInfo()) == ST_DUNGEON;
     iData[48] = dComIfGs_isDungeonItemMap() ? 1 : 0;
     iData[49] = dComIfGs_isDungeonItemCompass() ? 1 : 0;
-    iData[58] = dComIfGs_isDungeonItemBossKey() ? 1 : 0;
+    iData[41] = dComIfGs_isDungeonItemBossKey() ? 1 : 0;
 
     dAttention_c* attn = dComIfGp_getAttention();
     daPy_py_c* player = dComIfGp_getLinkPlayer();
     int stateFlags = 0;
-    if (attn && attn->GetLockonCount() > 0) stateFlags |= 1; // Targeting
+    if (attn && attn->GetLockonCount() > 0) stateFlags |= 1;
     if (player) {
-        if (player->checkWaterInMove() || player->checkSwimUp() || iData[43]) stateFlags |= 2; // Swimming
-        if (player->checkHorseRide()) stateFlags |= 4; // Riding
-        if (player->current.pos.y < player->getGroundY() - 20.0f) stateFlags |= 8; // Submerged
-        if (iData[45] == 0x40) stateFlags |= 16; // Zora Armor
+        if (player->checkWaterInMove() || player->checkSwimUp() || iData[43]) stateFlags |= 2;
+        if (player->checkHorseRide()) stateFlags |= 4;
+        if (player->current.pos.y < player->getGroundY() - 20.0f) stateFlags |= 8;
+        if (iData[44] == 0x40) stateFlags |= 16;
     }
     iData[31] = stateFlags;
 
-    iData[28] = dComIfGp_getDoStatusForce() ? dComIfGp_getDoStatusForce() : dComIfGp_getDoStatus();
-    iData[29] = dComIfGp_getAStatusForce() ? dComIfGp_getAStatusForce() : dComIfGp_getAStatus();
-    iData[30] = dComIfGp_getZStatus(); iData[32] = dComIfGp_getRStatus();
-    iData[33] = dComIfGp_getXStatus(); iData[34] = dComIfGp_getYStatus();
-    iData[39] = dMeter2Info_isUseButton(0xFFFF) ? 0xFFFF : 0;
-
-    // --- Odin 2 / Thor Physical Mapping ---
-    // Initialize to -1 (Invalid)
-    for (int k = 50; k <= 57; k++) iData[k] = -1;
-    // --- Odin 2 / Thor Physical Mapping ---
-    // Initialize to -1 (Invalid)
-    for (int k = 50; k <= 57; k++) iData[k] = -1;
-
-    u32 btnCount = 0;
-    PADButtonMapping* maps = PADGetButtonMappings(0, &btnCount);
-    if (maps) {
-        for (u32 m = 0; m < btnCount; m++) {
-            switch (maps[m].padButton) {
-                case PAD_BUTTON_A:  iData[50] = maps[m].nativeButton; break;
-                case PAD_BUTTON_B:  iData[51] = maps[m].nativeButton; break;
-                case PAD_BUTTON_X:  iData[52] = maps[m].nativeButton; break;
-                case PAD_BUTTON_Y:  iData[53] = maps[m].nativeButton; break;
-                case PAD_TRIGGER_Z: iData[54] = maps[m].nativeButton; break;
-                case PAD_TRIGGER_L: iData[55] = maps[m].nativeButton; break;
-                case PAD_TRIGGER_R: iData[56] = maps[m].nativeButton; break;
+    for (int k = 50; k <= 56; k++) iData[k] = -1;
+    u32 bCount = 0;
+    PADButtonMapping* pbm = PADGetButtonMappings(0, &bCount);
+    if (pbm) {
+        for (u32 j = 0; j < bCount; j++) {
+            switch (pbm[j].padButton) {
+                case PAD_BUTTON_A: iData[50] = pbm[j].nativeButton; break;
+                case PAD_BUTTON_B: iData[51] = pbm[j].nativeButton; break;
+                case PAD_BUTTON_X: iData[52] = pbm[j].nativeButton; break;
+                case PAD_BUTTON_Y: iData[53] = pbm[j].nativeButton; break;
+                case PAD_TRIGGER_Z: iData[54] = pbm[j].nativeButton; break;
+                case PAD_TRIGGER_L: iData[55] = pbm[j].nativeButton; break;
+                case PAD_TRIGGER_R: iData[56] = pbm[j].nativeButton; break;
             }
         }
     }
-    // Axis detection for LT/RT
-    PADAxisMapping* axisMaps = PADGetAxisMappings(0, &btnCount);
-    if (axisMaps) {
-        for (u32 m = 0; m < btnCount; m++) {
-            if (axisMaps[m].padAxis == PAD_AXIS_TRIGGER_L && iData[55] == -1) iData[55] = 0x1000 + axisMaps[m].nativeAxis.nativeAxis;
-            if (axisMaps[m].padAxis == PAD_AXIS_TRIGGER_R && iData[56] == -1) iData[56] = 0x1000 + axisMaps[m].nativeAxis.nativeAxis;
-        }
-    }
 
-    Vec playerPos = dMapInfo_n::getMapPlayerPos();
+    // 6. Map Geometry
+    Vec pPos = dMapInfo_n::getMapPlayerPos();
     const char* sName = dComIfGp_getStartStageName();
-    std::string friendlyName = sName ? sName : "Unknown Area";
+    std::string fName = sName ? sName : "Unknown";
     if (sName) {
         for (const auto& reg : gameRegions) {
-            for (const auto& m : reg.maps) {
-                if (strcmp(m.mapFile, sName) == 0) {
-                    if (m.mapRooms.empty()) { friendlyName = m.mapName; goto found_name; }
-                    for (const auto& r : m.mapRooms) {
-                        if (r.roomNo == stayNo) { friendlyName = m.mapName; goto found_name; }
-                    }
-                }
+            for (const auto& ma : reg.maps) {
+                if (strcmp(ma.mapFile, sName) == 0) { fName = ma.mapName; goto f_ok; }
             }
         }
     }
-    found_name:;
-
-    auto* stage = dComIfGp_getStage();
-    StageType stype = (StageType)dStage_stagInfo_GetSTType(stage->getStagInfo());
-    bool is_d = (stype == ST_DUNGEON);
-    s8 sFloor = dMapInfo_c::getNowStayFloorNoDecisionFlg() ? dMapInfo_c::getNowStayFloorNo() : dMapInfo_c::calcFloorNo(playerPos.y, true, stayNo);
-
-    // Classification & Context Markers
-    bool isFieldStage = sName && sName[0] == 'F';
-    bool isRoomStage = sName && sName[0] == 'R';
-    iData[47] = (sName && (sName[0] == 'D' || (is_d && !isFieldStage))) ? 1 : 0; // isDungeon
-
-    // Restart Marker (Entrance)
-    Vec restartPos = dMapInfo_n::getMapRestartPos();
-    s8 restartFloor = dMapInfo_c::calcFloorNo(restartPos.y, true, dComIfGs_getRestartRoomNo());
-    iData[46] = (restartFloor == sFloor) ? 1 : 0;
-
-    float restartAngle = (float)dMapInfo_n::getMapRestartAngleY() * (180.0f / 32768.0f);
-
+    f_ok:;
+    s8 floor = dMapInfo_c::getNowStayFloorNoDecisionFlg() ? dMapInfo_c::getNowStayFloorNo() : dMapInfo_c::calcFloorNo(pPos.y, true, stayNo);
     float roomMinX, roomMinZ, roomMaxX, roomMaxZ;
     dMapInfo_n::getRoomMinMaxXZ(stayNo, &roomMinX, &roomMinZ, &roomMaxX, &roomMaxZ);
-
-    float fData[14] = {
-        playerPos.x, playerPos.z, (float)dMapInfo_n::getMapPlayerAngleY() * (180.0f / 32768.0f),
-        0, 0, 0, 0, // minX, minZ, maxX, maxZ (all visible, set below)
-        restartPos.x, restartPos.z, restartAngle,
-        roomMinX, roomMinZ, roomMaxX, roomMaxZ
-    };
-
-    float minX = 1e10f, minZ = 1e10f, maxX = -1e10f, maxZ = -1e10f;
-    std::vector<float> finalLines, icons, doors;
-
+    float fData[14] = { pPos.x, pPos.z, (float)dMapInfo_n::getMapPlayerAngleY() * (180.0f / 32768.0f), 0,0,0,0, dMapInfo_n::getMapRestartPos().x, dMapInfo_n::getMapRestartPos().z, (float)dMapInfo_n::getMapRestartAngleY() * (180.0f / 32768.0f), roomMinX, roomMinZ, roomMaxX, roomMaxZ };
+    std::vector<float> lines, icons, doors;
+    float miX=1e10f, miZ=1e10f, maX=-1e10f, maZ=-1e10f;
     if (dMpath_c::mLayerList) for (int r = 0; r < 64; r++) {
-        // PRECISION FOG-OF-WAR:
-        // - Prefix 'R' (Interiors): ONLY render the current room link is standing in.
-        // - Others: Render only rooms Link has visited (respects fog-of-war).
-        bool showRoom = (r == stayNo);
-        if (!showRoom) {
-            if (isRoomStage) showRoom = false;
-            else showRoom = dComIfGs_isVisitedRoom(r) || (iData[47] && iData[48]);
-        }
-        if (!showRoom) continue;
-
+        if (r != stayNo && !dComIfGs_isVisitedRoom(r) && !iData[48]) continue;
         for (int l = 0; l < 2; l++) {
-            dDrawPath_c::room_class* room = dMpath_c::getRoomPointer(l, r);
-            if (!room || !room->mpFloatData) continue;
-            for (int f = 0; f < room->mFloorNum; f++) {
-                // FLOOR FILTERING: Enabled for Dungeons/Interiors.
-                // Disabled for Fields (prefix 'F') to ensure path connectivity.
-                if (!isFieldStage && room->mpFloor[f].mFloorNo != sFloor) continue;
-
-                for (int g = 0; g < room->mpFloor[f].mGroupNum; g++) {
-                    auto& group = room->mpFloor[f].mpGroup[g];
-                    dDrawPath_c::line_class* lines = group.mpLine;
-                    for (int ln = 0; ln < group.mLineNum; ln++) {
-                        for (int i = 0; i < lines[ln].mDataNum; i++) {
-                            u16 idx = lines[ln].mpData[i];
-                            // ALIGNMENT FIX: Geography data is already global.
-                            float px = room->mpFloatData[idx*2];
-                            float pz = room->mpFloatData[idx*2+1];
-                            finalLines.push_back(px); finalLines.push_back(pz);
-                            minX = std::min(minX, px); maxX = std::max(maxX, px);
-                            minZ = std::min(minZ, pz); maxZ = std::max(maxZ, pz);
+            auto* rm = dMpath_c::getRoomPointer(l, r);
+            if (!rm || !rm->mpFloatData) continue;
+            for (int f = 0; f < rm->mFloorNum; f++) {
+                if (sName[0] != 'F' && rm->mpFloor[f].mFloorNo != floor) continue;
+                for (int g = 0; g < rm->mpFloor[f].mGroupNum; g++) {
+                    auto& grp = rm->mpFloor[f].mpGroup[g];
+                    for (int ln = 0; ln < grp.mLineNum; ln++) {
+                        for (int i = 0; i < grp.mpLine[ln].mDataNum; i++) {
+                            float px = rm->mpFloatData[grp.mpLine[ln].mpData[i]*2], pz = rm->mpFloatData[grp.mpLine[ln].mpData[i]*2+1];
+                            lines.push_back(px); lines.push_back(pz);
+                            miX=std::min(miX,px); maX=std::max(maX,px); miZ=std::min(miZ,pz); maZ=std::max(maZ,pz);
                         }
-                        finalLines.push_back(std::numeric_limits<float>::quiet_NaN());
-                        finalLines.push_back((float)lines[ln].field_0x0);
-                        finalLines.push_back((float)lines[ln].field_0x1);
-                        finalLines.push_back(0.0f);
+                        lines.push_back(std::numeric_limits<float>::quiet_NaN()); lines.push_back((float)grp.mpLine[ln].field_0x0); lines.push_back((float)grp.mpLine[ln].field_0x1); lines.push_back(0);
                     }
-                    dDrawPath_c::poly_class* polys = group.mpPoly;
-                    for (int pn = 0; pn < group.mPolyNum; pn++) {
-                        for (int i = 0; i < polys[pn].mDataNum; i++) {
-                            u16 idx = polys[pn].mpData[i];
-                            float px = room->mpFloatData[idx*2];
-                            float pz = room->mpFloatData[idx*2+1];
-                            finalLines.push_back(px); finalLines.push_back(pz);
+                    for (int pn = 0; pn < grp.mPolyNum; pn++) {
+                        for (int i = 0; i < grp.mpPoly[pn].mDataNum; i++) {
+                            float px = rm->mpFloatData[grp.mpPoly[pn].mpData[i]*2], pz = rm->mpFloatData[grp.mpPoly[pn].mpData[i]*2+1];
+                            lines.push_back(px); lines.push_back(pz);
                         }
-                        finalLines.push_back(std::numeric_limits<float>::quiet_NaN());
-                        finalLines.push_back((float)polys[pn].field_0x0);
-                        finalLines.push_back(1001.0f);
-                        finalLines.push_back(0.0f);
+                        lines.push_back(std::numeric_limits<float>::quiet_NaN()); lines.push_back((float)grp.mpPoly[pn].field_0x0); lines.push_back(1001.0f); lines.push_back(0);
                     }
                 }
             }
         }
     }
-    fData[3] = minX; fData[4] = minZ; fData[5] = maxX; fData[6] = maxZ;
-
-    // Collect Map Icons (Chests, Bosses, etc.)
+    fData[3]=miX; fData[4]=miZ; fData[5]=maX; fData[6]=maZ;
     for (int g = 0; g < 17; g++) {
-        for (auto* data = dTres_c::getFirstData(g); data != nullptr; data = dTres_c::getNextData(data)) {
-            if (should_draw_icon(data->mType, data, stayNo, sFloor)) {
-                float iconType = (float)g;
-                // If it's a field map and we are drawing a Tear of Light, force type 4 for correct HUD color
-                if (!is_d && data->mType == 4) iconType = 4.0f;
-
-                icons.push_back(iconType);
-                icons.push_back(data->mPos.x);
-                icons.push_back(data->mPos.z);
-                icons.push_back((float)data->mRoomNo);
+        for (auto* d = dTres_c::getFirstData(g); d; d = dTres_c::getNextData(d)) {
+            if (should_draw_icon(d->mType, d, stayNo, floor)) {
+                icons.push_back((float)g); icons.push_back(d->mPos.x); icons.push_back(d->mPos.z); icons.push_back((float)d->mRoomNo);
             }
         }
     }
-
-    // Collect Doors
-    auto add_doors = [&](dStage_KeepDoorInfo* info) {
-        if (!info) return;
-        for (int i = 0; i < info->mNum; i++) {
-            stage_tgsc_data_class& door = info->mDrTgData[i];
-            int roomNo = (door.base.parameters >> 24) & 0x3F;
-
-            // FLOOR FILTERING for Doors
-            s8 doorFloor = dMapInfo_c::calcFloorNo(door.base.position.y, true, roomNo);
-            if (doorFloor != sFloor) continue;
-
-            bool showDoor = (roomNo == stayNo) || dComIfGs_isVisitedRoom(roomNo) || (iData[47] && iData[48]);
-            if (!showDoor) continue;
-
-            doors.push_back(door.base.position.x);
-            doors.push_back(door.base.position.z);
-            doors.push_back((float)door.base.angle.y * (180.0f / 32768.0f));
-            doors.push_back(0.0f); // Type placeholder
+    auto ad = [&](dStage_KeepDoorInfo* in) {
+        if (!in) return;
+        for (int i = 0; i < in->mNum; i++) {
+            auto& dr = in->mDrTgData[i]; int r = (dr.base.parameters >> 24) & 0x3F;
+            if (dMapInfo_c::calcFloorNo(dr.base.position.y, true, r) != floor) continue;
+            if (r == stayNo || dComIfGs_isVisitedRoom(r) || iData[48]) {
+                doors.push_back(dr.base.position.x); doors.push_back(dr.base.position.z); doors.push_back((float)dr.base.angle.y * (180.0f / 32768.0f)); doors.push_back(0);
+            }
         }
     };
-    add_doors(dStage_GetKeepDoorInfo());
-    add_doors(dStage_GetRoomKeepDoorInfo());
+    ad(dStage_GetKeepDoorInfo()); ad(dStage_GetRoomKeepDoorInfo());
 
-    jstring jStage = env->NewStringUTF(friendlyName.c_str());
+    // 7. JNI Authoritative Mirror
+    jstring jS = env->NewStringUTF(fName.c_str());
     jintArray jInts = env->NewIntArray(60); env->SetIntArrayRegion(jInts, 0, 60, iData);
-    jfloatArray jFloats = env->NewFloatArray(14); env->SetFloatArrayRegion(jFloats, 0, 14, fData);
-    jfloatArray jL = env->NewFloatArray(finalLines.size()); env->SetFloatArrayRegion(jL, 0, finalLines.size(), finalLines.data());
+    jfloatArray jF = env->NewFloatArray(14); env->SetFloatArrayRegion(jF, 0, 14, fData);
+    jfloatArray jL = env->NewFloatArray(lines.size()); env->SetFloatArrayRegion(jL, 0, lines.size(), lines.data());
     jfloatArray jI = env->NewFloatArray(icons.size()); env->SetFloatArrayRegion(jI, 0, icons.size(), icons.data());
     jfloatArray jD = env->NewFloatArray(doors.size()); env->SetFloatArrayRegion(jD, 0, doors.size(), doors.data());
-    env->CallVoidMethod(activity, s_onGameStateUpdate, jInts, jFloats, jStage, jL, jI, jD);
-    env->DeleteLocalRef(jInts); env->DeleteLocalRef(jFloats); env->DeleteLocalRef(jStage);
-    env->DeleteLocalRef(jL); env->DeleteLocalRef(jI); env->DeleteLocalRef(jD);
-    env->DeleteLocalRef(activity);
+    env->CallVoidMethod(activity, s_onGameStateUpdate, jInts, jF, jS, jL, jI, jD);
+    env->DeleteLocalRef(jInts); env->DeleteLocalRef(jF); env->DeleteLocalRef(jS); env->DeleteLocalRef(jL); env->DeleteLocalRef(jI); env->DeleteLocalRef(jD); env->DeleteLocalRef(activity);
 }
 } // namespace dusk::android
 #else
