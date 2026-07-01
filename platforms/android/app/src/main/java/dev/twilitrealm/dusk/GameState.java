@@ -46,7 +46,7 @@ public class GameState {
         this.isDungeon = i[47] != 0;
         this.hasMap = i[48] != 0;
         this.hasCompass = i[49] != 0;
-        this.hasBossKey = i[58] != 0;
+        this.hasBossKey = i[41] != 0;
 
         int stateFlags = i[31];
         boolean targeting = (stateFlags & 1) != 0;

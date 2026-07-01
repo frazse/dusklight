@@ -118,7 +118,7 @@ public class HudView extends View {
         drawItems(canvas, 1280, 20);
 
         if (mState.isDungeon) {
-            drawDungeonIcons(canvas, 1280 - 60, 110);
+            drawDungeonIcons(canvas, 1280 - 60, 150);
         }
 
         drawRupeeCounter(canvas, 20, 1060);
@@ -165,7 +165,7 @@ public class HudView extends View {
         resetPaint();
         float iconSize = 64, spacing = 80;
         
-        // Vertical list below the small key icon
+        // Vertical list restored to Map -> Compass -> Boss Key
         drawZeldaMap(canvas, x, y, iconSize, mState.hasMap);
         drawZeldaCompass(canvas, x, y + spacing, iconSize, mState.hasCompass);
         drawZeldaBossKey(canvas, x, y + (spacing * 2), iconSize, mState.hasBossKey);
@@ -178,32 +178,60 @@ public class HudView extends View {
         canvas.scale(scale, scale);
         canvas.translate(-24, -24);
 
-        int c1 = collected ? Color.parseColor("#25150A") : Color.argb(60, 40, 40, 40);
-        int c2 = collected ? Color.parseColor("#665A55") : Color.argb(60, 60, 60, 60);
-        int c3 = collected ? Color.parseColor("#605F5E") : Color.argb(60, 50, 50, 50);
+        if (!collected) {
+            resetPaint();
+            mPaint.setColor(Color.argb(60, 100, 100, 100));
+            // Unified silhouette derived from the provided SVG code (Single-Pass drawing)
+            Path p = new Path();
+            p.moveTo(35, 0); 
+            p.cubicTo(35.33f, 0.99f, 35.66f, 1.98f, 36, 3);
+            p.cubicTo(35.67f, 3.66f, 35.34f, 4.32f, 35, 5); 
+            p.cubicTo(36.485f, 5.495f, 36.485f, 5.495f, 38, 6);
+            p.cubicTo(39.192f, 17.032f, 39.192f, 17.032f, 38, 22); 
+            p.cubicTo(35.779f, 24.31f, 33.577f, 25.396f, 30.75f, 26.882f);
+            p.cubicTo(25.761f, 30.723f, 23.973f, 36.653f, 21.593f, 42.332f); 
+            p.cubicTo(20, 46, 20, 46, 18, 48);
+            p.cubicTo(15.722f, 48.046f, 15.722f, 48.046f, 13.062f, 47.75f); 
+            p.cubicTo(12.187f, 47.662f, 11.312f, 47.574f, 10.41f, 47.484f);
+            p.cubicTo(8, 47, 8, 47, 5, 45); 
+            p.cubicTo(4, 43.25f, 4, 43.25f, 4, 41);
+            p.cubicTo(5.22f, 39.581f, 6.447f, 38.166f, 7.718f, 36.792f); 
+            p.cubicTo(10.008f, 33.588f, 10.429f, 29.831f, 11, 26);
+            p.cubicTo(13.333f, 26, 15.666f, 26, 18, 26); 
+            p.cubicTo(17.86f, 25.128f, 17.721f, 24.257f, 17.578f, 23.359f);
+            p.cubicTo(17.057f, 17.636f, 16.811f, 13.035f, 20.496f, 8.398f); 
+            p.cubicTo(21.531f, 7.28f, 22.596f, 6.188f, 23.687f, 5.125f);
+            p.cubicTo(24.216f, 4.607f, 24.746f, 4.09f, 25.291f, 3.557f); 
+            p.cubicTo(28.512f, 0.68f, 30.654f, -0.661f, 35, 0); 
+            p.close();
+            canvas.drawPath(p, mPaint);
+        } else {
+            // Detailed drawing with separate handle and teeth colors
+            Path p1 = new Path();
+            p1.moveTo(35, 0); p1.cubicTo(35.33f, 0.99f, 35.66f, 1.98f, 36, 3);
+            p1.cubicTo(35.67f, 3.66f, 35.34f, 4.32f, 35, 5); p1.cubicTo(36.485f, 5.495f, 36.485f, 5.495f, 38, 6);
+            p1.cubicTo(39.192f, 17.032f, 39.192f, 17.032f, 38, 22); p1.cubicTo(35.779f, 24.31f, 33.577f, 25.396f, 30.75f, 26.882f);
+            p1.cubicTo(25.761f, 30.723f, 23.973f, 36.653f, 21.593f, 42.332f); p1.cubicTo(20, 46, 20, 46, 18, 48);
+            p1.cubicTo(15.722f, 48.046f, 15.722f, 48.046f, 13.062f, 47.75f); p1.cubicTo(12.187f, 47.662f, 11.312f, 47.574f, 10.41f, 47.484f);
+            p1.cubicTo(8, 47, 8, 47, 5, 45); p1.cubicTo(4, 43.25f, 4, 43.25f, 4, 41);
+            p1.cubicTo(5.22f, 39.581f, 6.447f, 38.166f, 7.718f, 36.792f); p1.cubicTo(10.008f, 33.588f, 10.429f, 29.831f, 11, 26);
+            p1.cubicTo(13.333f, 26, 15.666f, 26, 18, 26); p1.cubicTo(17.86f, 25.128f, 17.721f, 24.257f, 17.578f, 23.359f);
+            p1.cubicTo(17.057f, 17.636f, 16.811f, 13.035f, 20.496f, 8.398f); p1.cubicTo(21.531f, 7.28f, 22.596f, 6.188f, 23.687f, 5.125f);
+            p1.cubicTo(24.216f, 4.607f, 24.746f, 4.09f, 25.291f, 3.557f); p1.cubicTo(28.512f, 0.68f, 30.654f, -0.661f, 35, 0); p1.close();
 
-        // Sub-path 1 (35,0)
-        Path p1 = new Path();
-        p1.moveTo(35, 0); p1.cubicTo(35.33f, 0.99f, 35.66f, 1.98f, 36, 3);
-        p1.cubicTo(35.67f, 3.66f, 35.34f, 4.32f, 35, 5); p1.cubicTo(36.485f, 5.495f, 36.485f, 5.495f, 38, 6);
-        p1.cubicTo(39.192f, 17.032f, 39.192f, 17.032f, 38, 22); p1.cubicTo(35.779f, 24.31f, 33.577f, 25.396f, 30.75f, 26.882f);
-        p1.cubicTo(25.761f, 30.723f, 23.973f, 36.653f, 21.593f, 42.332f); p1.cubicTo(20, 46, 20, 46, 18, 48);
-        p1.cubicTo(15.722f, 48.046f, 15.722f, 48.046f, 13.062f, 47.75f); p1.cubicTo(12.187f, 47.662f, 11.312f, 47.574f, 10.41f, 47.484f);
-        p1.cubicTo(8, 47, 8, 47, 5, 45); p1.cubicTo(4, 43.25f, 4, 43.25f, 4, 41);
-        p1.cubicTo(5.22f, 39.581f, 6.447f, 38.166f, 7.718f, 36.792f); p1.cubicTo(10.008f, 33.588f, 10.429f, 29.831f, 11, 26);
-        p1.cubicTo(13.333f, 26, 15.666f, 26, 18, 26); p1.cubicTo(17.86f, 25.128f, 17.721f, 24.257f, 17.578f, 23.359f);
-        p1.cubicTo(17.057f, 17.636f, 16.811f, 13.035f, 20.496f, 8.398f); p1.cubicTo(21.531f, 7.28f, 22.596f, 6.188f, 23.687f, 5.125f);
-        p1.cubicTo(24.216f, 4.607f, 24.746f, 4.09f, 25.291f, 3.557f); p1.cubicTo(28.512f, 0.68f, 30.654f, -0.661f, 35, 0); p1.close();
-        resetPaint(); mPaint.setColor(c1); canvas.drawPath(p1, mPaint);
+            Path p3 = new Path();
+            p3.moveTo(22, 27); p3.lineTo(24, 27); p3.lineTo(24, 29); p3.lineTo(27, 29);
+            p3.lineTo(22, 48); p3.lineTo(13, 47.6f); p3.lineTo(10.3f, 47.4f); p3.lineTo(6, 45);
+            p3.lineTo(8, 44); p3.lineTo(8, 42); p3.lineTo(10, 42); p3.lineTo(10, 40); p3.lineTo(14, 41);
+            p3.lineTo(14, 40); p3.lineTo(12, 39); p3.lineTo(12, 37); p3.lineTo(16, 36); p3.lineTo(13, 36);
+            p3.lineTo(14, 30); p3.lineTo(19, 32); p3.lineTo(20, 31); p3.lineTo(22, 27); p3.close();
 
-        // Teeth area (22, 27)
-        Path p3 = new Path();
-        p3.moveTo(22, 27); p3.lineTo(24, 27); p3.lineTo(24, 29); p3.lineTo(27, 29);
-        p3.lineTo(22, 48); p3.lineTo(13, 47.6f); p3.lineTo(10.3f, 47.4f); p3.lineTo(6, 45);
-        p3.lineTo(8, 44); p3.lineTo(8, 42); p3.lineTo(10, 42); p3.lineTo(10, 40); p3.lineTo(14, 41);
-        p3.lineTo(14, 40); p3.lineTo(12, 39); p3.lineTo(12, 37); p3.lineTo(16, 36); p3.lineTo(13, 36);
-        p3.lineTo(14, 30); p3.lineTo(19, 32); p3.lineTo(20, 31); p3.lineTo(22, 27); p3.close();
-        mPaint.setColor(c3); canvas.drawPath(p3, mPaint);
+            resetPaint();
+            mPaint.setColor(Color.parseColor("#25150A"));
+            canvas.drawPath(p1, mPaint);
+            mPaint.setColor(Color.parseColor("#605F5E"));
+            canvas.drawPath(p3, mPaint);
+        }
 
         canvas.restore();
     }
@@ -215,9 +243,6 @@ public class HudView extends View {
         canvas.scale(scale, scale);
         canvas.translate(-24, -24);
 
-        int c1 = collected ? Color.parseColor("#604F37") : Color.argb(60, 50, 50, 50);
-        int c2 = collected ? Color.parseColor("#392518") : Color.argb(60, 40, 40, 40);
-
         Path p1 = new Path();
         p1.moveTo(42, 7); p1.cubicTo(42.8f, 7.68f, 43.6f, 8.36f, 44.43f, 9.06f);
         p1.cubicTo(47.78f, 13.21f, 47.21f, 18.82f, 47.25f, 23.93f); p1.cubicTo(47.27f, 24.62f, 47.29f, 25.31f, 47.31f, 26.02f);
@@ -225,12 +250,21 @@ public class HudView extends View {
         p1.cubicTo(39.46f, 42.32f, 38.81f, 42.89f, 38.13f, 43.48f); p1.cubicTo(31.67f, 48.07f, 24.63f, 47.67f, 17, 47);
         p1.cubicTo(11.1f, 45.53f, 7.54f, 42.08f, 4.18f, 37.12f); p1.cubicTo(0.44f, 30.43f, 0.06f, 22.49f, 1, 15);
         p1.cubicTo(3.13f, 8.52f, 7.76f, 5.27f, 13.59f, 2.12f); p1.cubicTo(23.48f, -2.5f, 34.29f, -0.35f, 42, 7); p1.close();
-        resetPaint(); mPaint.setColor(c1); canvas.drawPath(p1, mPaint);
 
-        Path p2 = new Path();
-        p2.moveTo(34, 1); p2.lineTo(42, 7); p2.lineTo(47.25f, 23.93f); p2.lineTo(42.13f, 40.04f);
-        p2.lineTo(38.13f, 43.48f); p2.lineTo(24, 47.25f); p2.lineTo(12, 47.26f); p2.lineTo(34, 1); p2.close();
-        mPaint.setColor(c2); canvas.drawPath(p2, mPaint);
+        if (!collected) {
+            resetPaint();
+            mPaint.setColor(Color.argb(60, 100, 100, 100));
+            canvas.drawPath(p1, mPaint);
+        } else {
+            resetPaint();
+            mPaint.setColor(Color.parseColor("#604F37"));
+            canvas.drawPath(p1, mPaint);
+            Path p2 = new Path();
+            p2.moveTo(34, 1); p2.lineTo(42, 7); p2.lineTo(47.25f, 23.93f); p2.lineTo(42.13f, 40.04f);
+            p2.lineTo(38.13f, 43.48f); p2.lineTo(24, 47.25f); p2.lineTo(12, 47.26f); p2.lineTo(34, 1); p2.close();
+            mPaint.setColor(Color.parseColor("#392518"));
+            canvas.drawPath(p2, mPaint);
+        }
 
         canvas.restore();
     }
@@ -242,20 +276,26 @@ public class HudView extends View {
         canvas.scale(scale, scale);
         canvas.translate(-28, -23.5f);
 
-        int c1 = collected ? Color.parseColor("#60544A") : Color.argb(60, 60, 60, 60);
-        int c2 = collected ? Color.parseColor("#736C56") : Color.argb(60, 80, 80, 80);
-
         Path p1 = new Path();
         p1.moveTo(11.43f, 3.25f); p1.cubicTo(12.92f, 3.68f, 14.41f, 4.13f, 15.9f, 4.6f);
         p1.cubicTo(18.32f, 5.06f, 19.64f, 4.72f, 22, 4.06f); p1.cubicTo(27.48f, 2.85f, 32.84f, 2.77f, 38.43f, 2.75f);
         p1.lineTo(51, 5); p1.lineTo(50, 20); p1.lineTo(56, 20); p1.lineTo(56, 24); p1.lineTo(48, 29);
         p1.lineTo(48, 44); p1.lineTo(11.43f, 40.75f); p1.lineTo(0, 38); p1.lineTo(3.3f, 16); p1.lineTo(11.43f, 3.25f); p1.close();
-        resetPaint(); mPaint.setColor(c1); canvas.drawPath(p1, mPaint);
 
-        Path p2 = new Path();
-        p2.moveTo(38, 8); p2.cubicTo(40.96f, 11.12f, 41.38f, 13.31f, 41.31f, 17.56f);
-        p2.lineTo(39, 35); p2.lineTo(21.8f, 37); p2.lineTo(10.8f, 33.7f); p2.lineTo(14, 13); p2.lineTo(38, 8); p2.close();
-        mPaint.setColor(c2); canvas.drawPath(p2, mPaint);
+        if (!collected) {
+            resetPaint();
+            mPaint.setColor(Color.argb(60, 100, 100, 100));
+            canvas.drawPath(p1, mPaint);
+        } else {
+            resetPaint();
+            mPaint.setColor(Color.parseColor("#60544A"));
+            canvas.drawPath(p1, mPaint);
+            Path p2 = new Path();
+            p2.moveTo(38, 8); p2.cubicTo(40.96f, 11.12f, 41.38f, 13.31f, 41.31f, 17.56f);
+            p2.lineTo(39, 35); p2.lineTo(21.8f, 37); p2.lineTo(10.8f, 33.7f); p2.lineTo(14, 13); p2.lineTo(38, 8); p2.close();
+            mPaint.setColor(Color.parseColor("#736C56"));
+            canvas.drawPath(p2, mPaint);
+        }
 
         canvas.restore();
     }
@@ -652,6 +692,7 @@ public class HudView extends View {
         path.lineTo(560.90f, 133.76f);
         path.cubicTo(560.88f, 132.86f, 559.99f, 131.51f, 559.17f, 131.16f);
         path.lineTo(532.00f, 119.08f);
+        path.cubicTo(532.00f, 119.08f, 532.00f, 119.08f, 532.00f, 119.08f);
         path.cubicTo(529.35f, 106.93f, 525.20f, 95.38f, 518.45f, 84.83f);
         path.lineTo(518.53f, 81.62f);
         path.lineTo(530.90f, 57.09f);
