@@ -782,7 +782,7 @@ public class HudView extends View {
         // 1. Shoulders/Triggers
         drawActionButton(canvas, x, startY, mState.labelL, Color.rgb(200, 200, 200), mState.buttonLText, mState.buttonLText != null && !mState.buttonLText.isEmpty());
         drawActionButton(canvas, x, startY + spacing, mState.labelR, Color.rgb(200, 200, 200), mState.buttonRText, mState.buttonRText != null && !mState.buttonRText.isEmpty());
-        drawActionButton(canvas, x, startY + spacing * 2, mState.labelZ, Color.argb(255, 100, 200, 255), mState.buttonZText, mState.buttonZText != null && !mState.buttonZText.isEmpty());
+        drawActionButton(canvas, x, startY + spacing * 2, mState.labelZ, Color.parseColor("#5A429B"), mState.buttonZText, mState.buttonZText != null && !mState.buttonZText.isEmpty());
         
         // 2. A (Action)
         drawActionButton(canvas, x, startY + spacing * 3, mState.labelA, Color.rgb(0, 200, 50), mState.buttonAText, mState.buttonAText != null && !mState.buttonAText.isEmpty());

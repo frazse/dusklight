@@ -257,7 +257,10 @@ void hud_update() {
     std::vector<float> lines, icons, doors;
     float miX=1e10f, miZ=1e10f, maX=-1e10f, maZ=-1e10f;
     if (dMpath_c::mLayerList) for (int r = 0; r < 64; r++) {
-        if (r != stayNo && !dComIfGs_isVisitedRoom(r) && !iData[48]) continue;
+        // Strict filtering for Interior Rooms (R_): only draw stayNo
+        if (sName && sName[0] == 'R' && r != stayNo) continue;
+        // Standard filtering for Overworld (F_) and Dungeons: draw visited
+        if ((!sName || sName[0] != 'R') && r != stayNo && !dComIfGs_isVisitedRoom(r) && !iData[48]) continue;
         for (int l = 0; l < 2; l++) {
             auto* rm = dMpath_c::getRoomPointer(l, r);
             if (!rm || !rm->mpFloatData) continue;
