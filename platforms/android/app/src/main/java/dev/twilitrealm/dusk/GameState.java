@@ -91,14 +91,14 @@ public class GameState {
         this.roomMinX = f[10]; this.roomMinZ = f[11]; this.roomMaxX = f[12]; this.roomMaxZ = f[13];
         this.showRestart = i[46] != 0;
 
-        // Physical Label Resolution
+        // Physical Label Resolution - Reflecting Dusklight Bindings (Odin 2 Defaults)
         this.labelA = getPhysicalName(i[50], "A");
         this.labelB = getPhysicalName(i[51], "B");
         this.labelX = getPhysicalName(i[52], "X");
         this.labelY = getPhysicalName(i[53], "Y");
         this.labelZ = getPhysicalName(i[54], "Z");
-        this.labelL = getPhysicalName(i[55], "L");
-        this.labelR = getPhysicalName(i[56], "R");
+        this.labelL = getPhysicalName(i[55], "L2");
+        this.labelR = getPhysicalName(i[56], "R2");
 
         this.stageName = stageName;
         this.mapLines = lines;
@@ -126,6 +126,8 @@ public class GameState {
             case 8: return "R3";
             case 9: return "L1";
             case 10: return "R1";
+            case 104: return "L2";
+            case 105: return "R2";
             default: return fallback;
         }
     }
@@ -169,10 +171,14 @@ public class GameState {
             case 0x1D: return "Lift";
             case 0x1E: return "Swing";
             case 0x1F: return "Pick Up";
+            case 0x20: return "Dive";
+            case 0x21: return "Land";
             case 0x22: return "Confirm";
             case 0x23: return "Next";
             case 0x24: return isZ ? "Midna" : "Info";
+            case 0x25: return "Look";
             case 0x26: return "Attack";
+            case 0x27: return "Speak";
             case 0x28: return "Whoop";
             case 0x29: return "Zoom";
             case 0x2A: return "Quit";
@@ -185,10 +191,12 @@ public class GameState {
             case 0x31: return "Set Free";
             case 0x32: return "Dismount";
             case 0x33: return "Drop Down";
+            case 0x34: return "Grab";
             case 0x35: return "Take";
             case 0x36: return "Hurry";
             case 0x37: return "Pull Down";
             case 0x38: return "Pet";
+            case 0x39: return "Pick Up";
             case 0x3A: return "Shield Attack";
             case 0x3B: return "Listen";
             case 0x3C: return "Drink";
@@ -205,9 +213,12 @@ public class GameState {
             case 0x48: return "Fasten";
             case 0x49: return "Get Down";
             case 0x4A: return "Hawkeye Off";
+            case 0x4B: return "Target";
             case 0x4C: return "Swim";
             case 0x4D: return "Can't Skip";
             case 0x4E: return "Midna";
+            case 0x4F: return "Warp";
+            case 0x50: return "Check";
             case 0x51: return "Land";
             case 0x52: return "Hook";
             case 0x53: return "Change Locks";
@@ -216,6 +227,7 @@ public class GameState {
             case 0x56: return "Reel";
             case 0x57: return "Extract";
             case 0x58: return "Spin";
+            case 0x59: return "Spin Attack";
             case 0x5A: return "Spin Attack";
             case 0x5B: return "Reel Fast";
             case 0x5C: return "Rise";
@@ -226,8 +238,12 @@ public class GameState {
             case 0x62: return "Draw";
             case 0x63: return "Strike";
             case 0x64: return "Action";
+            case 0x65: return "Point";
+            case 0x66: return "Point";
             case 0x67: return "Flip";
             case 0x68: return "Change View";
+            case 0x69: return "Change View";
+            case 0x6A: return "Change View";
             case 0x6B: return "Chance";
             case 0x6C: return "Scoop";
             case 0x6D: return "Survey";
@@ -252,15 +268,19 @@ public class GameState {
             case 0x81: return "Talk";
             case 0x82: return "Open";
             case 0x83: return "Read";
+            case 0x84: return "Horse Call";
             case 0x85: return "Examine";
 
             // Menu Message IDs (Authoritative Mirroring)
             case 0x3EE: return "Open";
             case 0x436: return "Equip";
+            case 0x41E: return "Equip";
             case 0x40C: return "Confirm";
             case 0x3F9: return "Back";
             case 0x408: return "Next";
+            case 0x421: return "Next";
             case 0x368: return "Details";
+            case 0x47B: return "Details";
             case 0x4D6: return "Page";
             case 0x4D7: return "Left";
             case 0x4D8: return "Right";
