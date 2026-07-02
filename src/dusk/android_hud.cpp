@@ -71,6 +71,25 @@ bool is_room_visible(int r, const char* sName, int stayNo, bool hasMapItem) {
     return r == stayNo || dComIfGs_isVisitedRoom(r) || hasMapItem;
 }
 
+// A room can contain multiple overlapping geometry groups representing different
+// game states for the same physical space (e.g. water level before/after a switch,
+// a wall before/after being blown open). Each group carries mSwbit + a polarity flag
+// (field_0x1): polarity 0 draws when the switch is OFF, nonzero draws when it's ON.
+// Without this check every state's geometry draws simultaneously and overlaps.
+// Matches renderingFmap_c::isSwitch, d_menu_fmap_map.cpp:55.
+bool should_draw_geometry_group(const dDrawPath_c::group_class& grp, int roomNo) {
+    if (grp.mSwbit == 0xFF) return true;
+    // Matches renderingFmap_c::isSwitchSpecialOff - a hardcoded override for one
+    // specific room/switch combination in retail.
+    const char* stageName = dComIfGp_getStartStageName();
+    bool specialOff = stageName && strcmp(stageName, "F_SP121") == 0 && grp.mSwbit == 0xb2;
+    if (grp.field_0x1 == 0) {
+        return specialOff || !dComIfGs_isSwitch(grp.mSwbit, roomNo);
+    } else {
+        return !specialOff && dComIfGs_isSwitch(grp.mSwbit, roomNo);
+    }
+}
+
 bool should_draw_icon(int typeGroupNo, const dTres_c::data_s* data, int stayNo, s8 sFloor, const char* sName) {
     if (data == nullptr) return false;
 
@@ -328,6 +347,7 @@ void hud_update() {
                 if (sName[0] != 'F' && rm->mpFloor[f].mFloorNo != floor) continue;
                 for (int g = 0; g < rm->mpFloor[f].mGroupNum; g++) {
                     auto& grp = rm->mpFloor[f].mpGroup[g];
+                    if (!should_draw_geometry_group(grp, r)) continue;
                     for (int ln = 0; ln < grp.mLineNum; ln++) {
                         for (int i = 0; i < grp.mpLine[ln].mDataNum; i++) {
                             float px = rm->mpFloatData[grp.mpLine[ln].mpData[i]*2], pz = rm->mpFloatData[grp.mpLine[ln].mpData[i]*2+1];
