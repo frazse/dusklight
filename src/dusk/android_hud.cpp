@@ -47,24 +47,87 @@ std::atomic<bool> s_secondScreenActive{false};
 constexpr int kHudUpdateInterval = 1;
 int s_frameCounter = 0;
 
-bool should_draw_icon(int type, const dTres_c::data_s* data, int stayNo, s8 sFloor) {
+// swOn: does this icon's mSwBit, when set, REVEAL the icon (true, matches retail's
+// dMenuFmapIconDisp_c::isDrawDisp groups 1/5/6/8/13/14 and dungeon's isDrawIconSingle2),
+// or does it behave like a chest (collected == hidden, handled separately via isTbox)?
+bool switch_reveals(u8 swBit, int roomNo) {
+    return swBit == 0xFF || dComIfGs_isSwitch(swBit, roomNo);
+}
+
+// Point-of-interest groups (Golden Wolf, Batsumark/quest markers, and similar overworld
+// markers) aren't tied to a specific floor height the way dungeon compass icons are -
+// retail's fmap never floor-filters these, it only room/stage-filters them.
+bool group_is_floor_independent(int typeGroupNo) {
+    switch (typeGroupNo) {
+        case 1: case 5: case 6: case 8: case 13: case 14:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool is_room_visible(int r, const char* sName, int stayNo, bool hasMapItem) {
+    if (sName && sName[0] == 'R') return r == stayNo; // Interior: only current room
+    return r == stayNo || dComIfGs_isVisitedRoom(r) || hasMapItem;
+}
+
+bool should_draw_icon(int typeGroupNo, const dTres_c::data_s* data, int stayNo, s8 sFloor, const char* sName) {
     if (data == nullptr) return false;
-    if (data->mNo != 0xFF && dComIfGs_isTbox(data->mNo)) return false;
-    if (data->mSwBit != 0xFF && dComIfGs_isSwitch(data->mSwBit, data->mRoomNo)) return false;
+
     auto* stage = dComIfGp_getStage();
     if (stage == nullptr) return false;
     StageType stype = (StageType)dStage_stagInfo_GetSTType(stage->getStagInfo());
     bool is_d = (stype == ST_DUNGEON);
-    s8 iconFloor = dMapInfo_c::calcFloorNo(data->mPos.y, true, data->mRoomNo);
-    if (iconFloor != sFloor) return false;
-    if (is_d) return dComIfGs_isDungeonItemCompass();
-    if (type == 4) {
-        int darkArea = dComIfGp_getStartStageDarkArea();
-        if (darkArea == 0) return false;
-        if (dComIfGs_getLightDropNum(darkArea) >= dComIfGp_getNeedLightDropNum()) return false;
-        return true;
+
+    if (!group_is_floor_independent(typeGroupNo)) {
+        s8 iconFloor = dMapInfo_c::calcFloorNo(data->mPos.y, true, data->mRoomNo);
+        if (iconFloor != sFloor) return false;
     }
-    return false;
+
+    if (is_d) {
+        // Dungeon: compass is the master switch, then per-icon switch reveals it
+        // (matches renderingDmap_c::isDrawIconSingle2, d_menu_dmap_map.cpp:79).
+        if (!dComIfGs_isDungeonItemCompass()) return false;
+        if (data->mNo != 0xFF && dComIfGs_isTbox(data->mNo)) return false;
+        return switch_reveals(data->mSwBit, data->mRoomNo);
+    }
+
+    // Overworld: mirrors dMenuFmapIconDisp_c::isDrawDisp per type group.
+    switch (typeGroupNo) {
+        case 1: // Cave/dungeon entrance markers (drawEnterIcon, d_menu_fmap.cpp:2724).
+        case 8: // Unlike groups 4/5/6/10/13/14 below, retail gates these on bVar2
+                // (current room OR previously visited) - see isDrawDisp, d_map_path_fmap.cpp:538.
+            if (!is_room_visible(data->mRoomNo, sName, stayNo, dComIfGs_isDungeonItemMap())) return false;
+            return switch_reveals(data->mSwBit, data->mRoomNo);
+
+        case 13:
+        case 14:
+            return switch_reveals(data->mSwBit, data->mRoomNo);
+
+        case 5: // Batsumark / quest-location marker: uncollected AND switch-revealed
+            if (data->mNo != 0xFF && dComIfGs_isTbox(data->mNo)) return false;
+            return switch_reveals(data->mSwBit, data->mRoomNo);
+
+        case 6: // Golden Wolf: pure switch reveal, set by Wind Stones
+            return data->mSwBit != 0xFF && dComIfGs_isSwitch(data->mSwBit, data->mRoomNo);
+
+        case 4: { // Tears of Light - requires the Light Vessel for this dark area
+                  // (matches dMenu_Fmap_c::isLightVesselGet -> dComIfGp_isLightDropMapVisible,
+                  // which checks the per-area get-flag, not just "is there an active dark area")
+            if (!dComIfGp_isLightDropMapVisible()) return false;
+            int darkArea = dComIfGp_getStartStageDarkArea();
+            if (darkArea == 0) return false;
+            if (dComIfGs_getLightDropNum(darkArea) >= dComIfGp_getNeedLightDropNum()) return false;
+            if (data->mNo != 0xFF && dComIfGs_isTbox(data->mNo)) return false;
+            return true;
+        }
+
+        case 10: // chest already opened marker
+            return data->mNo != 0xFF && dComIfGs_isTbox(data->mNo);
+
+        default:
+            return false;
+    }
 }
 } // namespace
 
@@ -257,10 +320,7 @@ void hud_update() {
     std::vector<float> lines, icons, doors;
     float miX=1e10f, miZ=1e10f, maX=-1e10f, maZ=-1e10f;
     if (dMpath_c::mLayerList) for (int r = 0; r < 64; r++) {
-        // Strict filtering for Interior Rooms (R_): only draw stayNo
-        if (sName && sName[0] == 'R' && r != stayNo) continue;
-        // Standard filtering for Overworld (F_) and Dungeons: draw visited
-        if ((!sName || sName[0] != 'R') && r != stayNo && !dComIfGs_isVisitedRoom(r) && !iData[48]) continue;
+        if (!is_room_visible(r, sName, stayNo, iData[48])) continue;
         for (int l = 0; l < 2; l++) {
             auto* rm = dMpath_c::getRoomPointer(l, r);
             if (!rm || !rm->mpFloatData) continue;
@@ -290,7 +350,7 @@ void hud_update() {
     fData[3]=miX; fData[4]=miZ; fData[5]=maX; fData[6]=maZ;
     for (int g = 0; g < 17; g++) {
         for (auto* d = dTres_c::getFirstData(g); d; d = dTres_c::getNextData(d)) {
-            if (should_draw_icon(d->mType, d, stayNo, floor)) {
+            if (should_draw_icon(g, d, stayNo, floor, sName)) {
                 icons.push_back((float)g); icons.push_back(d->mPos.x); icons.push_back(d->mPos.z); icons.push_back((float)d->mRoomNo);
             }
         }
@@ -300,7 +360,7 @@ void hud_update() {
         for (int i = 0; i < in->mNum; i++) {
             auto& dr = in->mDrTgData[i]; int r = (dr.base.parameters >> 24) & 0x3F;
             if (dMapInfo_c::calcFloorNo(dr.base.position.y, true, r) != floor) continue;
-            if (r == stayNo || dComIfGs_isVisitedRoom(r) || iData[48]) {
+            if (is_room_visible(r, sName, stayNo, iData[48])) {
                 doors.push_back(dr.base.position.x); doors.push_back(dr.base.position.z); doors.push_back((float)dr.base.angle.y * (180.0f / 32768.0f)); doors.push_back(0);
             }
         }
