@@ -473,6 +473,13 @@ public class HudView extends View {
             mPaint.setColor(Color.YELLOW);
             mPaint.setStrokeWidth(2);
             canvas.drawCircle(x, y, 6, mPaint);
+        } else if (type == 5) { // Destination (Group 5 - Batsumark) -> Red Target Reticle
+            mPaint.setColor(Color.RED);
+            mPaint.setStyle(Paint.Style.STROKE);
+            mPaint.setStrokeWidth(3);
+            canvas.drawCircle(x, y, 12, mPaint); // Outer Ring
+            mPaint.setStyle(Paint.Style.FILL);
+            canvas.drawCircle(x, y, 5, mPaint);  // Inner Dot
         } else if ((type >= 1 && type <= 6) || type == 8) { // Special Objectives (Monkeys, Sols, etc)
             mPaint.setColor(Color.CYAN);
             canvas.drawCircle(x, y, 8, mPaint);
