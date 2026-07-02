@@ -244,15 +244,20 @@ void hud_update() {
         }
     }
 
-    // 4. Force Visibility
+    // 4. AUTHORITATIVE VISIBILITY (Mirror Retail HUD state)
     int vis = 0;
-    if (iData[28] > 0) vis |= 1; // A
-    if (iData[29] > 0) vis |= 2; // B
-    if (iData[30] > 0 || winStatus == 0) vis |= 4; // Z (Always visible during gameplay)
-    if (iData[32] > 0) vis |= 8; // R
-    if (iData[33] > 0) vis |= 16; // X
-    if (iData[34] > 0) vis |= 32; // Y
-    if (iData[59] > 0) vis |= 64; // L
+    if (dMeter2Info_isUseButton(0x1)) vis |= 1;  // A
+    if (dMeter2Info_isUseButton(0x2)) vis |= 2;  // B
+    if (dMeter2Info_isUseButton(0x800)) vis |= 4; // Z
+    if (dMeter2Info_isUseButton(0x40)) vis |= 8;  // R
+    if (dMeter2Info_isUseButton(0x4)) vis |= 16; // X
+    if (dMeter2Info_isUseButton(0x8)) vis |= 32; // Y
+    if (iData[59] > 0) vis |= 64; // L (Always show if non-zero ID for now)
+
+    // Force Z visibility during gameplay (Midna/Sense) unless explicitly hidden
+    if (winStatus == 0 && (vis & 4) == 0) {
+        if (!dComIfGs_isEventBit(0x0540)) vis |= 4;
+    }
     iData[39] = vis;
 
     // 5. Basic Stats
@@ -300,6 +305,7 @@ void hud_update() {
         if (player->checkHorseRide()) stateFlags |= 4;
         if (player->current.pos.y < player->getGroundY() - 20.0f) stateFlags |= 8;
         if (iData[44] == 0x40) stateFlags |= 16;
+        if (player->checkPlayerFly()) stateFlags |= 32;
     }
     iData[31] = stateFlags;
 

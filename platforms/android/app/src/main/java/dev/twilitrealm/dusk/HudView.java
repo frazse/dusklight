@@ -449,18 +449,36 @@ public class HudView extends View {
 
     private void drawMapIcon(Canvas canvas, float x, float y, int type) {
         resetPaint();
-        if (type == 7) { // Boss (Group 7)
-            mPaint.setColor(Color.rgb(220, 0, 255)); // Magenta/Purple
+        if (type == 3 || type == 7) { // Boss / Major Target -> Magenta Circle
+            mPaint.setColor(Color.rgb(220, 0, 255));
             canvas.drawCircle(x, y, 12, mPaint);
             mPaint.setStyle(Paint.Style.STROKE);
             mPaint.setColor(Color.WHITE);
             mPaint.setStrokeWidth(3);
             canvas.drawCircle(x, y, 12, mPaint);
-        } else if (type == 0) { // Treasure Chest (Group 0)
-            // Yellow background
+        } else if (type == 1 || type == 8) { // Entrance (Dungeon) -> Purple Stylized Star
+            // Reference image shows a darker purple fill with a lighter magenta border
+            mPaint.setColor(Color.rgb(100, 0, 180)); // Darker Purple Fill
+            mPaint.setStyle(Paint.Style.FILL);
+            float outer = 16, inner = 12; // Adjusted inner radius to make spikes shallower
+            mDrawPath.reset();
+            for (int i = 0; i < 16; i++) {
+                float r = (i % 2 == 0) ? outer : inner;
+                float angle = (float) (i * Math.PI / 8.0f);
+                float px = (float) (x + r * Math.cos(angle - Math.PI/2));
+                float py = (float) (y + r * Math.sin(angle - Math.PI/2));
+                if (i == 0) mDrawPath.moveTo(px, py); else mDrawPath.lineTo(px, py);
+            }
+            mDrawPath.close();
+            canvas.drawPath(mDrawPath, mPaint);
+            
+            mPaint.setColor(Color.rgb(220, 100, 255)); // Lighter Magenta Border
+            mPaint.setStyle(Paint.Style.STROKE);
+            mPaint.setStrokeWidth(2.5f);
+            canvas.drawPath(mDrawPath, mPaint);
+        } else if (type == 0 || type == 2 || type == 16) { // Treasure Chest / Keys -> Yellow
             mPaint.setColor(Color.YELLOW);
             canvas.drawRect(x-9, y-9, x+9, y+9, mPaint);
-            // Black border & Divider
             mPaint.setStyle(Paint.Style.STROKE);
             mPaint.setColor(Color.BLACK);
             mPaint.setStrokeWidth(2.5f);
@@ -480,7 +498,7 @@ public class HudView extends View {
             canvas.drawCircle(x, y, 12, mPaint); // Outer Ring
             mPaint.setStyle(Paint.Style.FILL);
             canvas.drawCircle(x, y, 5, mPaint);  // Inner Dot
-        } else if ((type >= 1 && type <= 6) || type == 8) { // Special Objectives (Monkeys, Sols, etc)
+        } else if (type == 6 || type == 11) { // Special Objectives (Golden Wolf, Story) -> Cyan
             mPaint.setColor(Color.CYAN);
             canvas.drawCircle(x, y, 8, mPaint);
             mPaint.setStyle(Paint.Style.STROKE);

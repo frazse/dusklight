@@ -4,7 +4,7 @@ public class GameState {
     public final int health, maxHealth, magic, maxMagic, oil, maxOil, oxygen, maxOxygen;
     public final int rupees, keys, arrows, bombs, transform, roomNo;
     public final int lightDrops, maxLightDrops, horseSpurs;
-    public final boolean showLightDrops, midnaCalling, isRiding, isSwimming, showOxygen, isDungeon;
+    public final boolean showLightDrops, midnaCalling, isRiding, isSwimming, showOxygen, isDungeon, isFlying;
     public final boolean hasMap, hasCompass, hasBossKey;
     
     public final float mapX, mapY, mapAngle;
@@ -52,6 +52,7 @@ public class GameState {
         boolean targeting = (stateFlags & 1) != 0;
         this.isSwimming = (stateFlags & 2) != 0;
         this.isRiding = (stateFlags & 4) != 0;
+        this.isFlying = (stateFlags & 32) != 0;
 
         this.idA = i[28]; this.idB = i[29]; this.idZ = i[30];
         this.idR = i[32]; this.idX = i[33]; this.idY = i[34];
@@ -66,28 +67,29 @@ public class GameState {
         // - In menus, force buttons on if they have a non-zero ID
         boolean inMenu = (windowStatus > 0 || mapStatus > 0);
 
-        this.buttonAText = (inMenu || (visMask & 1) != 0) ? getActionLabel(idA, isSwimming, isRiding, transform, false) : "";
-        this.buttonBText = (inMenu || (visMask & 2) != 0) ? getActionLabel(idB, isSwimming, isRiding, transform, false) : "";
+        this.buttonAText = (inMenu || (visMask & 1) != 0) ? getActionLabel(idA, isSwimming, isRiding, isFlying, transform, false) : "";
+        this.buttonBText = (inMenu || (visMask & 2) != 0) ? getActionLabel(idB, isSwimming, isRiding, isFlying, transform, false) : "";
         
-        String zLabel = getActionLabel(idZ, isSwimming, isRiding, transform, true);
+        String zLabel = getActionLabel(idZ, isSwimming, isRiding, isFlying, transform, true);
         if (zLabel.isEmpty() && !inMenu && windowStatus == 0) {
             zLabel = "Midna";
         }
         this.buttonZText = (inMenu || (visMask & 4) != 0 || !zLabel.isEmpty()) ? zLabel : "";
 
-        String lLabel = getActionLabel(idL, isSwimming, isRiding, transform, false);
+        String lLabel = getActionLabel(idL, isSwimming, isRiding, isFlying, transform, false);
         if (lLabel.isEmpty() && !inMenu && windowStatus == 0 && transform == 1) {
             lLabel = "Sense";
         }
         this.buttonLText = (inMenu || (visMask & 64) != 0 || !lLabel.isEmpty()) ? lLabel : (targeting ? "Target" : "");
-        this.buttonRText = (inMenu || (visMask & 8) != 0) ? getActionLabel(idR, isSwimming, isRiding, transform, false) : "";
-        this.buttonXText = (inMenu || (visMask & 16) != 0) ? getActionLabel(idX, isSwimming, isRiding, transform, false) : "";
-        this.buttonYText = (inMenu || (visMask & 32) != 0) ? getActionLabel(idY, isSwimming, isRiding, transform, false) : "";
 
-        this.dPadUpText    = getActionLabel(i[35], isSwimming, isRiding, transform, false);
-        this.dPadDownText  = getActionLabel(i[36], isSwimming, isRiding, transform, false);
-        this.dPadLeftText  = getActionLabel(i[37], isSwimming, isRiding, transform, false);
-        this.dPadRightText = getActionLabel(i[38], isSwimming, isRiding, transform, false);
+        this.buttonRText = (inMenu || (visMask & 8) != 0) ? getActionLabel(idR, isSwimming, isRiding, isFlying, transform, false) : "";
+        this.buttonXText = (inMenu || (visMask & 16) != 0) ? getActionLabel(idX, isSwimming, isRiding, isFlying, transform, false) : "";
+        this.buttonYText = (inMenu || (visMask & 32) != 0) ? getActionLabel(idY, isSwimming, isRiding, isFlying, transform, false) : "";
+
+        this.dPadUpText    = getActionLabel(i[35], isSwimming, isRiding, isFlying, transform, false);
+        this.dPadDownText  = getActionLabel(i[36], isSwimming, isRiding, isFlying, transform, false);
+        this.dPadLeftText  = getActionLabel(i[37], isSwimming, isRiding, isFlying, transform, false);
+        this.dPadRightText = getActionLabel(i[38], isSwimming, isRiding, isFlying, transform, false);
 
         this.mapX = f[0]; this.mapY = f[1]; this.mapAngle = f[2];
         this.mapMinX = f[3]; this.mapMinZ = f[4]; this.mapMaxX = f[5]; this.mapMaxZ = f[6];
@@ -136,7 +138,7 @@ public class GameState {
         }
     }
 
-    private String getActionLabel(int id, boolean isSwimming, boolean isRiding, int wolfForm, boolean isZ) {
+    private String getActionLabel(int id, boolean isSwimming, boolean isRiding, boolean isFlying, int wolfForm, boolean isZ) {
         if (id == 0) return "";
         
         switch (id) {
@@ -182,7 +184,7 @@ public class GameState {
             case 0x24: return isZ ? "Midna" : "Info";
             case 0x25: return "Look";
             case 0x26: return "Attack";
-            case 0x27: return "Speak";
+            case 0x27: return isFlying ? "" : "Speak";
             case 0x28: return "Whoop";
             case 0x29: return "Zoom";
             case 0x2A: return "Quit";
@@ -217,7 +219,7 @@ public class GameState {
             case 0x48: return "Fasten";
             case 0x49: return "Get Down";
             case 0x4A: return "Hawkeye Off";
-            case 0x4B: return "Target";
+            case 0x4B: return isFlying ? "Dash" : "Target";
             case 0x4C: return "Swim";
             case 0x4D: return "Can't Skip";
             case 0x4E: return isZ ? "Midna" : "Sense";
