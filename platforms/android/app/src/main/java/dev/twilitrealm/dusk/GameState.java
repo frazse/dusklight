@@ -71,11 +71,15 @@ public class GameState {
         
         String zLabel = getActionLabel(idZ, isSwimming, isRiding, transform, true);
         if (zLabel.isEmpty() && !inMenu && windowStatus == 0) {
-            zLabel = (transform == 1) ? "Sense" : "Midna";
+            zLabel = "Midna";
         }
         this.buttonZText = (inMenu || (visMask & 4) != 0 || !zLabel.isEmpty()) ? zLabel : "";
 
-        this.buttonLText = (inMenu || (visMask & 64) != 0) ? getActionLabel(idL, isSwimming, isRiding, transform, false) : (targeting ? "Target" : "");
+        String lLabel = getActionLabel(idL, isSwimming, isRiding, transform, false);
+        if (lLabel.isEmpty() && !inMenu && windowStatus == 0 && transform == 1) {
+            lLabel = "Sense";
+        }
+        this.buttonLText = (inMenu || (visMask & 64) != 0 || !lLabel.isEmpty()) ? lLabel : (targeting ? "Target" : "");
         this.buttonRText = (inMenu || (visMask & 8) != 0) ? getActionLabel(idR, isSwimming, isRiding, transform, false) : "";
         this.buttonXText = (inMenu || (visMask & 16) != 0) ? getActionLabel(idX, isSwimming, isRiding, transform, false) : "";
         this.buttonYText = (inMenu || (visMask & 32) != 0) ? getActionLabel(idY, isSwimming, isRiding, transform, false) : "";
@@ -216,7 +220,7 @@ public class GameState {
             case 0x4B: return "Target";
             case 0x4C: return "Swim";
             case 0x4D: return "Can't Skip";
-            case 0x4E: return "Midna";
+            case 0x4E: return isZ ? "Midna" : "Sense";
             case 0x4F: return "Warp";
             case 0x50: return "Check";
             case 0x51: return "Land";

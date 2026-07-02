@@ -792,15 +792,19 @@ public class HudView extends View {
 
         // 4. Y (Item Slot 1)
         String yT = mState.buttonYText; boolean yA = (yT != null && !yT.isEmpty());
-        if (!yA) yT = getItemName(mState.itemYResId);
-        if (mState.itemYCount > 0) yT += " (" + mState.itemYCount + ")";
+        if (!yA) {
+            yT = getItemName(mState.itemYResId);
+            if (mState.itemYCount > 0) yT += " (" + mState.itemYCount + ")";
+        }
         yA = yA || (mState.itemYResId != 0xFF);
         drawActionButton(canvas, x, startY + spacing * 5, mState.labelY, Color.rgb(200, 200, 200), yT, yA);
         
         // 5. X (Item Slot 2)
         String xT = mState.buttonXText; boolean xA = (xT != null && !xT.isEmpty());
-        if (!xA) xT = getItemName(mState.itemXResId);
-        if (mState.itemXCount > 0) xT += " (" + mState.itemXCount + ")";
+        if (!xA) {
+            xT = getItemName(mState.itemXResId);
+            if (mState.itemXCount > 0) xT += " (" + mState.itemXCount + ")";
+        }
         xA = xA || (mState.itemXResId != 0xFF);
         drawActionButton(canvas, x, startY + spacing * 6, mState.labelX, Color.rgb(200, 200, 200), xT, xA);
     }
