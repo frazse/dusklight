@@ -355,6 +355,7 @@ void hud_update() {
                     auto& grp = rm->mpFloor[f].mpGroup[g];
                     if (!should_draw_geometry_group(grp, r)) continue;
                     for (int ln = 0; ln < grp.mLineNum; ln++) {
+                        if (grp.mpLine[ln].field_0x0 & 0x40) continue; // Don't draw if bit 6 is set
                         for (int i = 0; i < grp.mpLine[ln].mDataNum; i++) {
                             float px = rm->mpFloatData[grp.mpLine[ln].mpData[i]*2], pz = rm->mpFloatData[grp.mpLine[ln].mpData[i]*2+1];
                             lines.push_back(px); lines.push_back(pz);
@@ -363,6 +364,7 @@ void hud_update() {
                         lines.push_back(std::numeric_limits<float>::quiet_NaN()); lines.push_back((float)grp.mpLine[ln].field_0x0); lines.push_back((float)grp.mpLine[ln].field_0x1); lines.push_back(0);
                     }
                     for (int pn = 0; pn < grp.mPolyNum; pn++) {
+                        if (grp.mpPoly[pn].field_0x0 & 0x40) continue; // Don't draw if bit 6 is set
                         for (int i = 0; i < grp.mpPoly[pn].mDataNum; i++) {
                             float px = rm->mpFloatData[grp.mpPoly[pn].mpData[i]*2], pz = rm->mpFloatData[grp.mpPoly[pn].mpData[i]*2+1];
                             lines.push_back(px); lines.push_back(pz);

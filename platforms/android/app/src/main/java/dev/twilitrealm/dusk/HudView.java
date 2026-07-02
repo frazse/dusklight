@@ -343,6 +343,8 @@ public class HudView extends View {
         int colorMint = Color.parseColor("#9FE173");
         int colorWater = Color.parseColor("#3984C5");
         int colorTerrain = Color.parseColor("#3E8E1F");
+        int colorHazard = Color.rgb(100, 0, 180); // Matches center of dungeon icon
+        int colorLava = Color.parseColor("#8E1F1F");   // Red for Lava/Heat
 
         if (mState.mapLines != null) {
             float[] strip = new float[32768];
@@ -353,11 +355,13 @@ public class HudView extends View {
                     int id0 = (int)mState.mapLines[i+1], id1 = (int)mState.mapLines[i+2];
                     if (id1 > 1000) {
                         int pId = id0 & 0x3F;
-                        if (pId != 3 && pId != 4 && pId != 6) {
+                        // Mirror retail palette selection (indices into l_dungeon_Color tables)
+                        if (pId != 3) { 
                             mPaint.setStyle(Paint.Style.FILL_AND_STROKE); mPaint.setStrokeWidth(0.8f);
-                            if (pId == 5) mPaint.setColor(colorWater);
-                            else if (pId == 1) mPaint.setColor(colorMint);
+                            if (pId == 2 || pId == 5) mPaint.setColor(colorWater);
+                            else if (pId == 6 || pId == 7) mPaint.setColor(colorHazard);
                             else mPaint.setColor(colorTerrain);
+
                             for (int j = 0; j < vCount - 2; j++) {
                                 mDrawPath.reset(); mDrawPath.moveTo(strip[j*2], strip[j*2+1]);
                                 mDrawPath.lineTo(strip[(j+1)*2], strip[(j+1)*2+1]);
@@ -379,18 +383,20 @@ public class HudView extends View {
                 float val = mState.mapLines[i];
                 if (Float.isNaN(val)) {
                     int id0 = (int)mState.mapLines[i+1], id1 = (int)mState.mapLines[i+2];
-                    if (id1 <= 1000) {
-                        if (id1 == 1 || id1 == 2) {
-                            mPaint.setStyle(Paint.Style.STROKE);
-                            mPaint.setStrokeWidth(id1 == 2 ? 4.0f : 2.5f);
-                            mPaint.setStrokeJoin(Paint.Join.ROUND); mPaint.setStrokeCap(Paint.Cap.ROUND);
-                            mPaint.setColor(colorMint); mDrawPath.reset();
-                            for (int j = 0; j < vCount; j++) {
-                                if (j == 0) mDrawPath.moveTo(strip[j*2], strip[j*2+1]);
-                                else mDrawPath.lineTo(strip[j*2], strip[j*2+1]);
-                            }
-                            canvas.drawPath(mDrawPath, mPaint);
+                    if (id1 == 1 || id1 == 2) {
+                        int pId = id0 & 0x3F;
+                        mPaint.setStyle(Paint.Style.STROKE);
+                        mPaint.setStrokeWidth(id1 == 2 ? 4.0f : 2.5f);
+                        mPaint.setStrokeJoin(Paint.Join.ROUND); mPaint.setStrokeCap(Paint.Cap.ROUND);
+                        
+                        mPaint.setColor(colorMint);
+                        
+                        mDrawPath.reset();
+                        for (int j = 0; j < vCount; j++) {
+                            if (j == 0) mDrawPath.moveTo(strip[j*2], strip[j*2+1]);
+                            else mDrawPath.lineTo(strip[j*2], strip[j*2+1]);
                         }
+                        canvas.drawPath(mDrawPath, mPaint);
                     }
                     vCount = 0; i += 4; continue;
                 }
