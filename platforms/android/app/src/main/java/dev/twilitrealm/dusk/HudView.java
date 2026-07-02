@@ -887,10 +887,47 @@ public class HudView extends View {
 
     private void drawStatusInfo(Canvas canvas, float x, float y) {
         resetPaint(); mPaint.setTextAlign(Paint.Align.RIGHT); mPaint.setTextSize(38);
-        mPaint.setColor(mState.transform == 1 ? Color.CYAN : Color.WHITE);
-        canvas.drawText("FORM: " + (mState.transform == 1 ? "WOLF" : "HUMAN"), x, y, mPaint);
+        mPaint.setColor(Color.WHITE);
         
+        String batteryText = mState.batteryLevel >= 0 ? mState.batteryLevel + "%" : "??%";
+        canvas.drawText(batteryText, x, y, mPaint);
+
+        // Center battery icon vertically on the text
+        Paint.FontMetrics fm = mPaint.getFontMetrics();
+        float textCenterY = y + (fm.ascent + fm.descent) / 2;
+        
+        float bw = 50, bh = 24;
+        float bx = x - mPaint.measureText(batteryText) - 65;
+        float by = textCenterY - bh / 2;
+        
+        mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(2.5f);
+        canvas.drawRect(bx, by, bx + bw, by + bh, mPaint); // Shell
+        canvas.drawRect(bx + bw, by + 6, bx + bw + 4, by + bh - 6, mPaint); // Tip
+        
+        if (mState.batteryLevel > 0) {
+            mPaint.setStyle(Paint.Style.FILL);
+            if (mState.isCharging) mPaint.setColor(Color.rgb(0, 200, 255)); // Light Blue if charging
+            else if (mState.batteryLevel <= 15) mPaint.setColor(Color.RED);
+            else if (mState.batteryLevel <= 30) mPaint.setColor(Color.YELLOW);
+            else mPaint.setColor(Color.GREEN);
+            float fillW = (bw - 6) * (mState.batteryLevel / 100f);
+            canvas.drawRect(bx + 3, by + 3, bx + 3 + fillW, by + bh - 3, mPaint);
+        }
+
+        if (mState.isCharging) {
+            // Draw a simple lightning bolt next to the percentage
+            resetPaint(); mPaint.setColor(Color.rgb(255, 230, 0));
+            float lx = bx - 30, ly = textCenterY;
+            mDrawPath.reset();
+            mDrawPath.moveTo(lx, ly - 15); mDrawPath.lineTo(lx - 12, ly + 2);
+            mDrawPath.lineTo(lx - 4, ly + 2); mDrawPath.lineTo(lx - 8, ly + 15);
+            mDrawPath.lineTo(lx + 8, ly - 2); mDrawPath.lineTo(lx + 0, ly - 2);
+            mDrawPath.close();
+            canvas.drawPath(mDrawPath, mPaint);
+        }
+
         if (DEBUG_IDS) {
+            resetPaint(); mPaint.setTextAlign(Paint.Align.RIGHT);
             mPaint.setTextSize(24); mPaint.setColor(Color.YELLOW);
             canvas.drawText("W:" + mState.windowStatus + " M:" + mState.mapStatus + " V:" + mState.visMask, x, y - 40, mPaint);
         }

@@ -3,8 +3,8 @@ package dev.twilitrealm.dusk;
 public class GameState {
     public final int health, maxHealth, magic, maxMagic, oil, maxOil, oxygen, maxOxygen;
     public final int rupees, keys, arrows, bombs, transform, roomNo;
-    public final int lightDrops, maxLightDrops, horseSpurs;
-    public final boolean showLightDrops, midnaCalling, isRiding, isSwimming, showOxygen, isDungeon, isFlying;
+    public final int lightDrops, maxLightDrops, horseSpurs, batteryLevel;
+    public final boolean showLightDrops, midnaCalling, isRiding, isSwimming, showOxygen, isDungeon, isFlying, isCharging;
     public final boolean hasMap, hasCompass, hasBossKey;
     
     public final float mapX, mapY, mapAngle;
@@ -23,7 +23,7 @@ public class GameState {
     public final int itemXResId, itemYResId, itemXCount, itemYCount;
     public final int itemDDownId, itemDDownCount, itemDLeftId, itemDLeftCount, itemDRightId, itemDRightCount;
 
-    public GameState(int[] i, float[] f, String stageName, float[] lines, float[] icons, float[] doors) {
+    public GameState(int[] i, float[] f, String stageName, float[] lines, float[] icons, float[] doors, int batteryLevel, boolean isCharging) {
         this.health = i[0];     this.maxHealth = i[1];
         this.magic  = i[2];     this.maxMagic  = i[3];
         this.oil    = i[4];     this.maxOil    = i[5];
@@ -41,6 +41,8 @@ public class GameState {
         this.itemDRightId = i[25];  this.itemDRightCount = i[26];
         
         this.horseSpurs = i[42];
+        this.batteryLevel = batteryLevel;
+        this.isCharging = isCharging;
         this.showOxygen = i[43] != 0;
         this.midnaCalling = i[27] != 0;
         this.isDungeon = i[47] != 0;

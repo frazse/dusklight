@@ -6,6 +6,7 @@ import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
@@ -41,6 +42,18 @@ public class DuskActivity extends SDLActivity {
     // -- Second screen ────────────────────────────────────────────────
     private DisplayManager mDisplayManager;
     private SecondScreenPresentation mSecondScreen;
+    private int mBatteryLevel = -1;
+    private boolean mIsCharging = false;
+
+    private final android.content.BroadcastReceiver mBatteryReceiver = new android.content.BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            mBatteryLevel = intent.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1);
+            int status = intent.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1);
+            mIsCharging = status == android.os.BatteryManager.BATTERY_STATUS_CHARGING ||
+                          status == android.os.BatteryManager.BATTERY_STATUS_FULL;
+        }
+    };
 
     private void initSecondScreen() {
         if (mDisplayManager == null) return;
@@ -89,7 +102,7 @@ public class DuskActivity extends SDLActivity {
                                   float[] lines, float[] icons, float[] doors)
     {
         if (mSecondScreen == null) return;
-        final GameState state = new GameState(i, f, stageName, lines, icons, doors);
+        final GameState state = new GameState(i, f, stageName, lines, icons, doors, mBatteryLevel, mIsCharging);
         runOnUiThread(() -> mSecondScreen.updateHud(state));
     }
     // ── End second screen ────────────────────────────────────────────
@@ -149,6 +162,15 @@ public class DuskActivity extends SDLActivity {
         super.onCreate(savedInstanceState);
         mDisplayManager = (DisplayManager) getSystemService(Context.DISPLAY_SERVICE);
         mDisplayManager.registerDisplayListener(mDisplayListener, null);
+        
+        Intent batteryIntent = registerReceiver(mBatteryReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        if (batteryIntent != null) {
+            mBatteryLevel = batteryIntent.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1);
+            int status = batteryIntent.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1);
+            mIsCharging = status == android.os.BatteryManager.BATTERY_STATUS_CHARGING ||
+                          status == android.os.BatteryManager.BATTERY_STATUS_FULL;
+        }
+
         initSecondScreen();
         hideSystemBars();
     }
@@ -170,6 +192,7 @@ public class DuskActivity extends SDLActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        unregisterReceiver(mBatteryReceiver);
         if (mDisplayManager != null) {
             mDisplayManager.unregisterDisplayListener(mDisplayListener);
         }
