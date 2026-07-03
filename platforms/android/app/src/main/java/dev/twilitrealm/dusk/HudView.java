@@ -886,50 +886,118 @@ public class HudView extends View {
     }
 
     private void drawStatusInfo(Canvas canvas, float x, float y) {
-        resetPaint(); mPaint.setTextAlign(Paint.Align.RIGHT); mPaint.setTextSize(38);
-        mPaint.setColor(Color.WHITE);
-        
-        String batteryText = mState.batteryLevel >= 0 ? mState.batteryLevel + "%" : "??%";
-        canvas.drawText(batteryText, x, y, mPaint);
+        resetPaint();
 
-        // Center battery icon vertically on the text
-        Paint.FontMetrics fm = mPaint.getFontMetrics();
-        float textCenterY = y + (fm.ascent + fm.descent) / 2;
-        
-        float bw = 50, bh = 24;
-        float bx = x - mPaint.measureText(batteryText) - 65;
-        float by = textCenterY - bh / 2;
-        
-        mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(2.5f);
-        canvas.drawRect(bx, by, bx + bw, by + bh, mPaint); // Shell
-        canvas.drawRect(bx + bw, by + 6, bx + bw + 4, by + bh - 6, mPaint); // Tip
-        
-        if (mState.batteryLevel > 0) {
-            mPaint.setStyle(Paint.Style.FILL);
-            if (mState.isCharging) mPaint.setColor(Color.rgb(0, 200, 255)); // Light Blue if charging
-            else if (mState.batteryLevel <= 15) mPaint.setColor(Color.RED);
-            else if (mState.batteryLevel <= 30) mPaint.setColor(Color.YELLOW);
-            else mPaint.setColor(Color.GREEN);
-            float fillW = (bw - 6) * (mState.batteryLevel / 100f);
-            canvas.drawRect(bx + 3, by + 3, bx + 3 + fillW, by + bh - 3, mPaint);
+        int level = mState.batteryLevel;
+        boolean charging = mState.isCharging;
+        String batteryText = level >= 0 ? String.valueOf(level) : "??";
+
+        // iOS-style battery cell proportions (Slightly larger)
+        float pillW = 96, pillH = 46;
+        float pillX = x - pillW - 40;
+        float pillY = y - pillH / 2 - 10;
+        float cornerRadius = 10f;
+        float strokeWidth = 3.5f;
+
+        // Fixed neutral outline/tip color - independent of battery state
+        int outlineColor = Color.argb(230, 255, 255, 255);
+
+        int statusColor;
+        if (charging) {
+            statusColor = Color.rgb(0, 160, 255);
+        } else if (level > 50) {
+            statusColor = Color.WHITE;
+        } else if (level >= 20) {
+            statusColor = Color.rgb(255, 193, 7);
+        } else {
+            statusColor = Color.rgb(232, 28, 28);
         }
 
-        if (mState.isCharging) {
-            // Draw a simple lightning bolt next to the percentage
-            resetPaint(); mPaint.setColor(Color.rgb(255, 230, 0));
-            float lx = bx - 30, ly = textCenterY;
+        RectF outlineRect = new RectF(pillX, pillY, pillX + pillW, pillY + pillH);
+
+        // 1. Outline (fixed color, stroked)
+        resetPaint();
+        mPaint.setStyle(Paint.Style.STROKE);
+        mPaint.setStrokeWidth(strokeWidth);
+        mPaint.setColor(outlineColor);
+        canvas.drawRoundRect(outlineRect, cornerRadius, cornerRadius, mPaint);
+
+        // 2. Tip/nub (fixed color)
+        mPaint.setStyle(Paint.Style.FILL);
+        float tipW = 6, tipH = 16;
+        canvas.drawRoundRect(new RectF(pillX + pillW, pillY + (pillH - tipH) / 2f,
+                pillX + pillW + tipW, pillY + (pillH + tipH) / 2f), 2.5f, 2.5f, mPaint);
+
+        // 3. Internal fill bar, proportional to level, colored by status
+        float pad = strokeWidth + 3.5f;
+        RectF innerRect = new RectF(pillX + pad, pillY + pad, pillX + pillW - pad, pillY + pillH - pad);
+        float innerRadius = Math.max(cornerRadius - pad, 1.5f);
+
+        if (level > 0) {
+            float fillW = innerRect.width() * (level / 100f);
+            mPaint.setColor(statusColor);
+            canvas.save();
             mDrawPath.reset();
-            mDrawPath.moveTo(lx, ly - 15); mDrawPath.lineTo(lx - 12, ly + 2);
-            mDrawPath.lineTo(lx - 4, ly + 2); mDrawPath.lineTo(lx - 8, ly + 15);
-            mDrawPath.lineTo(lx + 8, ly - 2); mDrawPath.lineTo(lx + 0, ly - 2);
+            mDrawPath.addRoundRect(innerRect, innerRadius, innerRadius, Path.Direction.CW);
+            canvas.clipPath(mDrawPath);
+            canvas.drawRect(innerRect.left, innerRect.top, innerRect.left + fillW, innerRect.bottom, mPaint);
+            canvas.restore();
+        }
+
+        // 4. Percentage text, centered INSIDE the icon - stroke-then-fill so it stays
+        // legible whether it's sitting over the colored fill or the unfilled track
+        resetPaint();
+        mPaint.setTextAlign(Paint.Align.CENTER);
+        mPaint.setTextSize(30);
+        mPaint.setTypeface(android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.BOLD));
+
+        Paint.FontMetrics fm = mPaint.getFontMetrics();
+        float textY = pillY + (pillH - fm.ascent - fm.descent) / 2;
+        float textX = pillX + pillW / 2f;
+
+        mPaint.setStyle(Paint.Style.STROKE);
+        mPaint.setStrokeWidth(4.5f);
+        mPaint.setColor(Color.argb(200, 0, 0, 0));
+        canvas.drawText(batteryText, textX, textY, mPaint);
+
+        mPaint.setStyle(Paint.Style.FILL);
+        mPaint.setColor(Color.WHITE);
+        canvas.drawText(batteryText, textX, textY, mPaint);
+
+        // 5. Bolt - bigger, centered over the nub, with outline for contrast against
+        // both the light nub and the colored fill
+        if (charging) {
+            resetPaint();
+            float bx = pillX + pillW + tipW / 2f;
+            float by = pillY + pillH / 2f;
+            float boltH = 22f;
+
+            mDrawPath.reset();
+            mDrawPath.moveTo(bx + 6, by - boltH);
+            mDrawPath.lineTo(bx - 10, by + 2);
+            mDrawPath.lineTo(bx - 3, by + 2);
+            mDrawPath.lineTo(bx - 6, by + boltH);
+            mDrawPath.lineTo(bx + 10, by - 2);
+            mDrawPath.lineTo(bx + 3, by - 2);
             mDrawPath.close();
+
+            // Dark outline pass first, for contrast against the light nub
+            mPaint.setStyle(Paint.Style.STROKE);
+            mPaint.setStrokeWidth(3.5f);
+            mPaint.setStrokeJoin(Paint.Join.ROUND);
+            mPaint.setColor(Color.argb(200, 0, 0, 0));
+            canvas.drawPath(mDrawPath, mPaint);
+
+            // Bright yellow fill on top - reads clearly against both the blue fill and background
+            mPaint.setStyle(Paint.Style.FILL);
+            mPaint.setColor(Color.rgb(255, 214, 0));
             canvas.drawPath(mDrawPath, mPaint);
         }
 
         if (DEBUG_IDS) {
             resetPaint(); mPaint.setTextAlign(Paint.Align.RIGHT);
             mPaint.setTextSize(24); mPaint.setColor(Color.YELLOW);
-            canvas.drawText("W:" + mState.windowStatus + " M:" + mState.mapStatus + " V:" + mState.visMask, x, y - 40, mPaint);
+            canvas.drawText("W:" + mState.windowStatus + " M:" + mState.mapStatus + " V:" + mState.visMask, x, y - 60, mPaint);
         }
     }
 }

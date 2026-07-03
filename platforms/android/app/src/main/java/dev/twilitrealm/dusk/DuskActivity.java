@@ -48,10 +48,19 @@ public class DuskActivity extends SDLActivity {
     private final android.content.BroadcastReceiver mBatteryReceiver = new android.content.BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            mBatteryLevel = intent.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1);
+            if (intent == null) return;
+            int level = intent.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1);
+            int scale = intent.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, -1);
+            if (level != -1 && scale > 0) {
+                mBatteryLevel = (int) ((level / (float) scale) * 100);
+            }
+            
             int status = intent.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1);
+            int plugged = intent.getIntExtra(android.os.BatteryManager.EXTRA_PLUGGED, -1);
             mIsCharging = status == android.os.BatteryManager.BATTERY_STATUS_CHARGING ||
-                          status == android.os.BatteryManager.BATTERY_STATUS_FULL;
+                          status == android.os.BatteryManager.BATTERY_STATUS_FULL ||
+                          plugged > 0;
+            Log.d(TAG, "Battery update: " + mBatteryLevel + "%, charging: " + mIsCharging + " (plugged: " + plugged + ")");
         }
     };
 
@@ -165,10 +174,16 @@ public class DuskActivity extends SDLActivity {
         
         Intent batteryIntent = registerReceiver(mBatteryReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
         if (batteryIntent != null) {
-            mBatteryLevel = batteryIntent.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1);
+            int level = batteryIntent.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1);
+            int scale = batteryIntent.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, -1);
+            if (level != -1 && scale > 0) {
+                mBatteryLevel = (int) ((level / (float) scale) * 100);
+            }
             int status = batteryIntent.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1);
+            int plugged = batteryIntent.getIntExtra(android.os.BatteryManager.EXTRA_PLUGGED, -1);
             mIsCharging = status == android.os.BatteryManager.BATTERY_STATUS_CHARGING ||
-                          status == android.os.BatteryManager.BATTERY_STATUS_FULL;
+                          status == android.os.BatteryManager.BATTERY_STATUS_FULL ||
+                          plugged > 0;
         }
 
         initSecondScreen();
