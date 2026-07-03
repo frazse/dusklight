@@ -2110,9 +2110,10 @@ void dMenu_Ring_c::drawNumber(int i_itemNum, int i_itemMaxNum, f32 i_posX, f32 i
 }
 
 u8 dMenu_Ring_c::getItem(int i_slot_no, u8 i_slot_no2) {
-    u8 item = dComIfGs_getItem(i_slot_no, 0);
-    dComIfGs_getItem(i_slot_no2, 0);
-    return item;
+    if (i_slot_no < MAX_ITEM_SLOTS) {
+        return mItemSlots[i_slot_no];
+    }
+    return 0xFF;
 }
 
 void dMenu_Ring_c::setDoStatus(u8 i_doStatus) {

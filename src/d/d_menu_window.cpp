@@ -14,6 +14,7 @@
 #include "d/d_menu_save.h"
 #include "d/d_menu_skill.h"
 #include "d/d_menu_window.h"
+#include "dusk/android_hud.hpp"
 
 #include "d/d_camera.h"
 #include "d/d_menu_window_HIO.h"
@@ -1676,8 +1677,6 @@ int dMw_c::_draw() {
                 dComIfGd_set2DOpa(mpMenuInsect);
             }
         } else if (dMeter2Info_getWindowStatus() == 2 && mpMenuRing != NULL) {
-            mpMenuRing->drawFlag0();
-            dComIfGd_set2DOpa(mpMenuRing);
             dComIfGd_set2DOpa(mpMenuRing);
         }
     }

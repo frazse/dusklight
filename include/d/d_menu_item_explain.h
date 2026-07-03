@@ -42,6 +42,8 @@ public:
     void setScale();
 
     u8 getStatus() { return mStatus; }
+    u32 getNameMsgID() { return field_0xcc; }
+    u32 getDescMsgID() { return field_0xc8; }
     void offForceButton() { mForceButton = 0; }
     u8 getForceButton() { return mForceButton; }
     u8 checkEndButton() { return mEndButton; }

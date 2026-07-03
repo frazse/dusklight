@@ -123,17 +123,21 @@ public class HudView extends View {
 
         drawRupeeCounter(canvas, 20, 1060);
         
-        if (mState.showLightDrops && mState.maxLightDrops > 0) {
-            float width = (mState.maxLightDrops - 1) * 45;
-            drawLightDropZigZag(canvas, 640 - (width / 2), 1055);
-        } else if (mState.isRiding) {
-            float width = (6 - 1) * 68 + 57;
-            drawHorseSpurs(canvas, 640 - (width / 2), 1060);
+        if (mState.ringStatus > 0) {
+            drawRingMenu(canvas, MAP_X + MAP_SIZE/2f, MAP_Y + MAP_SIZE/2f);
+        } else {
+            if (mState.showLightDrops && mState.maxLightDrops > 0) {
+                float width = (mState.maxLightDrops - 1) * 45;
+                drawLightDropZigZag(canvas, 640 - (width / 2), 1055);
+            } else if (mState.isRiding) {
+                float width = (6 - 1) * 68 + 57;
+                drawHorseSpurs(canvas, 640 - (width / 2), 1060);
+            }
+            
+            drawMiniMap(canvas, MAP_X, MAP_Y, interMapX, interMapY, interMapAngle);
         }
         
-        drawMiniMap(canvas, MAP_X, MAP_Y, interMapX, interMapY, interMapAngle);
         drawContextButtons(canvas, 820, 280);
-        
         drawStatusInfo(canvas, 1260, 1060);
 
         canvas.restore();
@@ -298,6 +302,129 @@ public class HudView extends View {
         }
 
         canvas.restore();
+    }
+
+    private void drawRingMenu(Canvas canvas, float cx, float cy) {
+        float radius = 280;
+        int total = Math.max(1, mState.ringItemsTotal);
+        resetPaint();
+        mPaint.setColor(Color.argb(160, 0, 0, 0));
+        canvas.drawCircle(cx, cy, radius + 70, mPaint);
+        
+        mPaint.setStyle(Paint.Style.STROKE);
+        mPaint.setStrokeWidth(5);
+        mPaint.setColor(Color.WHITE);
+        canvas.drawCircle(cx, cy, radius + 70, mPaint);
+
+        for (int s = 0; s < total; s++) {
+            int itemId = mState.ringItemIds[s];
+            if (itemId == 0xFF) continue;
+
+            double angle = (s * (360.0 / total) - 90.0) * (Math.PI / 180.0);
+            float x = (float) (cx + radius * Math.cos(angle));
+            float y = (float) (cy + radius * Math.sin(angle));
+
+            boolean isSelected = (s == mState.ringCurrentSlot);
+            
+            resetPaint();
+            if (isSelected) {
+                mPaint.setColor(Color.argb(220, 255, 255, 255));
+                canvas.drawCircle(x, y, 70, mPaint);
+            }
+
+            mPaint.setColor(Color.BLACK);
+            mPaint.setStyle(Paint.Style.STROKE);
+            mPaint.setStrokeWidth(isSelected ? 5 : 2);
+            canvas.drawCircle(x, y, 55, mPaint);
+
+            String name = (itemId == 0) ? "(Empty Slot)" : getItemName(itemId);
+            mPaint.setTextAlign(Paint.Align.CENTER);
+            mPaint.setTextSize(isSelected ? 36 : 24); 
+            mPaint.setColor(isSelected ? Color.WHITE : Color.rgb(180, 180, 180));
+            mPaint.setStyle(Paint.Style.FILL);
+            mPaint.setTypeface(android.graphics.Typeface.create("sans-serif-condensed", isSelected ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL));
+            
+            // For unselected slots, only draw if they aren't empty, or if we want to see holes
+            if (itemId != 0 || isSelected) {
+                canvas.drawText(name, x, y + 10, mPaint);
+                
+                // Draw ammo count if applicable
+                int count = mState.ringItemCounts[s];
+                if (count > 0 && itemId != 0x48) { // Don't show count for Lantern (0x48)
+                    resetPaint();
+                    mPaint.setTextAlign(Paint.Align.RIGHT);
+                    mPaint.setTextSize(isSelected ? 24 : 18);
+                    mPaint.setColor(Color.YELLOW);
+                    mPaint.setTypeface(android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.BOLD));
+                    canvas.drawText(String.valueOf(count), x + 45, y + 45, mPaint);
+                }
+
+                // Draw oil bar for Lantern
+                if (itemId == 0x48 && mState.maxOil > 0) {
+                    float barW = isSelected ? 60 : 40;
+                    float barH = isSelected ? 8 : 6;
+                    float bx = x - barW/2f;
+                    float by = y + (isSelected ? 25 : 18);
+                    
+                    resetPaint();
+                    mPaint.setColor(Color.argb(120, 50, 40, 0));
+                    canvas.drawRect(bx, by, bx + barW, by + barH, mPaint);
+                    
+                    mPaint.setColor(Color.rgb(255, 220, 0));
+                    float fillW = barW * ((float)mState.oil / mState.maxOil);
+                    canvas.drawRect(bx, by, bx + fillW, by + barH, mPaint);
+                    
+                    mPaint.setStyle(Paint.Style.STROKE);
+                    mPaint.setStrokeWidth(1.5f);
+                    mPaint.setColor(Color.WHITE);
+                    canvas.drawRect(bx, by, bx + barW, by + barH, mPaint);
+                }
+            }
+
+            if (isSelected) {
+                resetPaint();
+                mPaint.setTextAlign(Paint.Align.CENTER);
+                mPaint.setTextSize(92);
+                mPaint.setTypeface(android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.BOLD));
+                mPaint.setColor(Color.WHITE);
+                
+                if (mState.ringStatus == 3) { // Explain state (STATUS_EXPLAIN + 1)
+                    // Draw a simple info box in the center
+                    mPaint.setColor(Color.argb(240, 15, 15, 25));
+                    mPaint.setStyle(Paint.Style.FILL);
+                    canvas.drawRoundRect(cx - 300, cy - 180, cx + 300, cy + 180, 25, 25, mPaint);
+                    
+                    mPaint.setColor(Color.WHITE);
+                    mPaint.setStyle(Paint.Style.STROKE);
+                    mPaint.setStrokeWidth(4);
+                    canvas.drawRoundRect(cx - 300, cy - 180, cx + 300, cy + 180, 25, 25, mPaint);
+                    
+                    resetPaint();
+                    mPaint.setTextAlign(Paint.Align.CENTER);
+                    mPaint.setTextSize(58);
+                    mPaint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+                    mPaint.setColor(Color.rgb(255, 210, 80));
+                    String title = (mState.itemTitle != null && !mState.itemTitle.isEmpty()) ? mState.itemTitle : name;
+                    canvas.drawText(title, cx, cy - 80, mPaint);
+                    
+                    mPaint.setTextSize(28);
+                    mPaint.setColor(Color.WHITE);
+                    mPaint.setTypeface(android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.NORMAL));
+                    if (mState.itemDesc != null && !mState.itemDesc.isEmpty()) {
+                        String[] linesArr = mState.itemDesc.split("\n");
+                        float lineY = cy - 20;
+                        for (String line : linesArr) {
+                             canvas.drawText(line, cx, lineY, mPaint);
+                             lineY += 35;
+                        }
+                    } else {
+                        canvas.drawText("ITEM INFO", cx, cy + 60, mPaint);
+                    }
+                } else {
+                    canvas.drawText(name, cx, cy + 25, mPaint);
+                }
+            }
+        }
     }
 
     private void drawMiniMap(Canvas canvas, float x, float y, float interX, float interY, float interAngle) {
@@ -728,7 +855,8 @@ public class HudView extends View {
         path.lineTo(518.53f, 81.62f);
         path.lineTo(530.90f, 57.09f);
         path.lineTo(516.45f, 43.08f);
-        path.cubicTo(515.60f, 42.30f, 513.71f, 41.78f, 512.70f, 42.17f);
+        path.cubicTo(516.45f, 43.08f, 516.45f, 43.08f, 516.45f, 43.08f);
+        path.lineTo(512.70f, 42.17f);
         path.lineTo(487.26f, 52.11f);
         path.lineTo(462.97f, 39.19f);
         path.lineTo(454.82f, 12.11f);
@@ -868,20 +996,84 @@ public class HudView extends View {
 
     private String getItemName(int id) {
         switch(id) {
-            case 0x43: return "Hero's Bow"; case 0x53: return "Light Arrow"; case 0x4B: return "Slingshot";
-            case 0x40: return "Boomerang"; case 0x44: return "Hookshot"; case 0x47: return "Double Clawshots";
-            case 0x70: return "Bomb"; case 0x71: return "Water Bomb"; case 0x72: return "Bombling";
-            case 0x45: return "Iron Boots"; case 0x48: return "Lantern"; case 0x46: return "Dominion Rod";
-            case 0x41: return "Spinner"; case 0x42: return "Ball and Chain"; case 0x4A: return "Fishing Rod";
-            case 0x84: return "Horse Call"; case 0x80: return "Ooccoo"; case 0x3E: return "Hawkeye";
-            case 0x60: return "Empty Bottle"; case 0x61: return "Red Potion"; case 0x62: return "Green Potion";
-            case 0x63: return "Blue Potion"; case 0x64: return "Milk"; case 0x65: return "Half Milk";
-            case 0x6F: return "Lantern Oil"; case 0x67: return "Water"; case 0x6C: return "Fairy";
-            case 0x73: return "Fairy Drop"; case 0x74: return "Worm"; case 0x76: return "Bee Larva";
-            case 0x79: return "Blue Chu Jelly"; case 0x78: return "Red Chu Jelly"; case 0x7B: return "Yellow Chu Jelly";
-            case 0x7C: return "Purple Chu Jelly"; case 0x77: return "Rare Chu Jelly"; case 0x6B: return "Hot Spring Water";
-            case 0x6A: return "Nasty Soup"; case 0x7D: return "Good Soup"; case 0x7F: return "Superb Soup";
-            case 0xFF: return ""; default: return "Item 0x" + Integer.toHexString(id).toUpperCase();
+            // Standard Selectable Items (TP Item IDs)
+            case 0x3E: return "Hawkeye";
+            case 0x3F: case 0x40: return "Gale Boomerang";
+            case 0x41: return "Spinner";
+            case 0x42: return "Ball and Chain";
+            case 0x43: return "Hero's Bow";
+            case 0x44: return "Clawshot";
+            case 0x45: return "Iron Boots";
+            case 0x46: case 0x4C: return "Dominion Rod";
+            case 0x47: return "Double Clawshots";
+            case 0x48: return "Lantern";
+            case 0x49: return "Light Sword";
+            case 0x4A: return "Fishing Rod";
+            case 0x4B: return "Slingshot";
+            
+            case 0x4F: case 0x50: return "Bomb Bag";
+            case 0x59: return "Bomb Arrow";
+
+            // Equipment & Quest
+            case 0x01: case 0x28: return "Ordon Sword";
+            case 0x02: case 0x29: return "Master Sword";
+            case 0x03: case 0x2B: return "Ordon Shield";
+            case 0x04: case 0x2A: return "Wooden Shield";
+            case 0x05: case 0x2C: return "Hylian Shield";
+            case 0x0C: case 0x31: return "Zora Armor";
+            case 0x0D: case 0x32: return "Magic Armor";
+            case 0x14: case 0xA1: return "Shadow Crystal";
+            case 0x17: case 0x83: return "Ancient Sky Book";
+            
+            // Bottle Items
+            case 0x60: return "Empty Bottle";
+            case 0x61: return "Red Potion";
+            case 0x62: return "Green Potion";
+            case 0x63: return "Blue Potion";
+            case 0x64: return "Milk";
+            case 0x65: return "Half Milk";
+            case 0x66: case 0x68: case 0x6E: case 0x6F: return "Lantern Oil";
+            case 0x67: return "Water";
+            case 0x69: return "Red Chu Jelly";
+            case 0x6A: return "Nasty Soup";
+            case 0x6B: return "Hot Spring Water";
+            case 0x6C: return "Fairy";
+            
+            // Ammo & Consumables
+            case 0x70: return "Bomb";
+            case 0x71: return "Water Bomb";
+            case 0x72: return "Bombling";
+            case 0x73: return "Fairy Drop";
+            case 0x74: return "Worm";
+            case 0x76: return "Bee Larva";
+            case 0x77: return "Rare Chu Jelly";
+            case 0x78: return "Red Chu Jelly";
+            case 0x79: return "Blue Chu Jelly";
+            case 0x7A: return "Green Chu Jelly";
+            case 0x7B: case 0x9C: return "Yellow Chu Jelly";
+            case 0x7C: return "Purple Chu Jelly";
+            case 0x7D: return "Good Soup";
+            case 0x7E: return "Simple Soup";
+            case 0x7F: return "Superb Soup";
+            
+            // Quest Items
+            case 0x80: return "Ooccoo";
+            case 0x81: return "Ooccoo Jr.";
+            case 0x82: return "Gate Pass";
+            case 0x84: return "Horse Call";
+            case 0x86: return "Fishing Hole Card";
+            case 0x87: return "Ilia's Charm";
+            case 0x88: return "Wooden Statue";
+            case 0x89: return "Ilia's Memory";
+            case 0x8A: return "Invoice";
+            case 0x8B: return "Ashei's Sketch";
+            case 0x8C: return "Auru's Memo";
+            case 0x8D: return "Cannon Ball";
+            
+            case 0xBD: return "Mirror of Twilight";
+
+            case 0xFF: return "";
+            default: return "Item 0x" + Integer.toHexString(id).toUpperCase();
         }
     }
 

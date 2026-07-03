@@ -6,6 +6,8 @@ public class GameState {
     public final int lightDrops, maxLightDrops, horseSpurs, batteryLevel;
     public final boolean showLightDrops, midnaCalling, isRiding, isSwimming, showOxygen, isDungeon, isFlying, isCharging;
     public final boolean hasMap, hasCompass, hasBossKey;
+    public final int ringStatus, ringCurrentSlot, ringItemsTotal;
+    public final int[] ringItemIds, ringItemCounts;
     
     public final float mapX, mapY, mapAngle;
     public final float mapMinX, mapMinZ, mapMaxX, mapMaxZ;
@@ -18,12 +20,15 @@ public class GameState {
     public final String labelA, labelB, labelX, labelY, labelZ, labelL, labelR;
     public final int idA, idB, idX, idY, idZ, idL, idR, windowStatus, mapStatus, visMask;
     public final String dPadUpText, dPadDownText, dPadLeftText, dPadRightText;
-    public final String stageName;
+    public final String stageName, itemTitle, itemDesc;
 
     public final int itemXResId, itemYResId, itemXCount, itemYCount;
     public final int itemDDownId, itemDDownCount, itemDLeftId, itemDLeftCount, itemDRightId, itemDRightCount;
 
-    public GameState(int[] i, float[] f, String stageName, float[] lines, float[] icons, float[] doors, int batteryLevel, boolean isCharging) {
+    public GameState(int[] i, float[] f, String stageName, String itemTitle, String itemDesc, float[] lines, float[] icons, float[] doors, int batteryLevel, boolean isCharging) {
+        this.stageName = stageName;
+        this.itemTitle = itemTitle;
+        this.itemDesc = itemDesc;
         this.health = i[0];     this.maxHealth = i[1];
         this.magic  = i[2];     this.maxMagic  = i[3];
         this.oil    = i[4];     this.maxOil    = i[5];
@@ -49,6 +54,16 @@ public class GameState {
         this.hasMap = i[48] != 0;
         this.hasCompass = i[49] != 0;
         this.hasBossKey = i[41] != 0;
+
+        this.ringStatus = i[60];
+        this.ringCurrentSlot = i[61];
+        this.ringItemsTotal = i[62];
+        this.ringItemIds = new int[24];
+        this.ringItemCounts = new int[24];
+        for (int s = 0; s < 24; s++) {
+            this.ringItemIds[s] = i[63 + s];
+            this.ringItemCounts[s] = i[87 + s];
+        }
 
         int stateFlags = i[31];
         boolean targeting = (stateFlags & 1) != 0;
@@ -108,7 +123,6 @@ public class GameState {
         this.labelL = getPhysicalName(i[55], "L2");
         this.labelR = getPhysicalName(i[56], "R2");
 
-        this.stageName = stageName;
         this.mapLines = lines;
         this.mapIcons = icons;
         this.mapDoors = doors;
@@ -292,7 +306,8 @@ public class GameState {
             case 0x4D6: return "Page";
             case 0x4D7: return "Left";
             case 0x4D8: return "Right";
-            case 0x529: return "Warp";
+            case 0x529: return "Portals";
+            case 0x52A: return "Portals Off";
             case 0x522: return "Zoom Out";
             case 0x527: return "Zoom In";
 

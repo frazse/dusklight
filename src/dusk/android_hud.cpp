@@ -14,6 +14,7 @@
 #include "d/d_menu_option.h"
 #include "d/d_menu_save.h"
 #include "d/d_menu_ring.h"
+#include "d/d_menu_item_explain.h"
 #include "d/d_menu_letter.h"
 #include "d/d_menu_fishing.h"
 #include "d/d_menu_skill.h"
@@ -35,6 +36,68 @@
 
 namespace dusk::android {
 namespace {
+
+std::string clean_tp_string(const char* input) {
+    if (!input) return "";
+    std::string out;
+    const unsigned char* p = (const unsigned char*)input;
+    while (*p) {
+        if (*p == 0x1A) { // TP Tag escape: 1A [type] [size] [data...]
+            p++;
+            if (!*p) break;
+            int type = *p++;
+            if (!*p) break;
+            int size = *p++;
+
+            if (type == 0x07) { // Icon/Button group
+                int iconId = (size > 0) ? *p : -1;
+                switch (iconId) {
+                    case 0: out += "(A)"; break;
+                    case 1: out += "(B)"; break;
+                    case 2: out += "(C)"; break;
+                    case 3: out += "(L)"; break;
+                    case 4: out += "(R)"; break;
+                    case 5: out += "(X)"; break;
+                    case 6: out += "(Y)"; break;
+                    default: break;
+                }
+            } else if (type == 0x05) { // Color group
+                // Just skip color tags
+            }
+
+            p += size;
+            continue;
+        }
+
+        if (*p == 0x1B) { // Control escape
+             p++;
+             while (*p && *p != ']') p++; // Skip things like [CR]
+             if (*p == ']') p++;
+             continue;
+        }
+
+        if (*p == 0x0A || *p == 0x0D) {
+            out += '\n';
+            p++;
+            continue;
+        }
+
+        // Shift-JIS handling
+        if (*p < 0x80) {
+            out += (char)*p++;
+        } else if ((*p >= 0x81 && *p <= 0x9F) || (*p >= 0xE0 && *p <= 0xFC)) {
+            // Common TP symbols in Shift-JIS
+            unsigned short sjis = (*p << 8) | *(p + 1);
+            if (sjis == 0x819F) out += "- "; // Bullet point
+            else if (sjis == 0x8140) out += " "; // Ideographic space
+            else out += " "; // Placeholder for other SJIS
+            p += 2;
+        } else {
+            p++;
+        }
+    }
+    return out;
+}
 
 bool clear_pending_exception(JNIEnv* env) {
     if (env == nullptr || !env->ExceptionCheck()) return false;
@@ -167,19 +230,22 @@ void hud_update() {
     if (!activity || clear_pending_exception(env)) return;
     if (s_onGameStateUpdate == nullptr) {
         jclass cls = env->GetObjectClass(activity);
-        s_onGameStateUpdate = env->GetMethodID(cls, "onGameStateUpdate", "([I[FLjava/lang/String;[F[F[F)V");
+        s_onGameStateUpdate = env->GetMethodID(cls, "onGameStateUpdate", "([I[FLjava/lang/String;Ljava/lang/String;Ljava/lang/String;[F[F[F)V");
         env->DeleteLocalRef(cls);
         if (s_onGameStateUpdate == nullptr || clear_pending_exception(env)) return;
     }
     s_secondScreenActive.store(true, std::memory_order_relaxed);
 
-    int iData[60] = {0};
+    int iData[120] = {0};
 
     // 1. Diagnostics (W:57, M:58)
     int winStatus = dMeter2Info_getWindowStatus();
     int mapStatus = dMeter2Info_getMapStatus();
     iData[57] = winStatus;
     iData[58] = mapStatus;
+
+    std::string itemTitle = "";
+    std::string itemDesc = "";
 
     // 2. Base IDs
     iData[28] = meter->getDoStatus(); // A
@@ -240,7 +306,31 @@ void hud_update() {
             if (ns && iData[28] == 0) { iData[28] = (int)ns->getAButtonString(); iData[29] = (int)ns->getBButtonString(); }
         } else if (winStatus == 1 || winStatus == 2) { // Item Wheel
             dMenu_Ring_c* ring = mw->getMenuRing();
-            if (ring) iData[28] = (int)ring->getDoStatus();
+            if (ring) {
+                iData[28] = (int)ring->getDoStatus();
+                iData[60] = (int)ring->getStatus() + 1;
+                iData[61] = (int)ring->getCurrentSlot();
+                iData[62] = (int)ring->getItemsTotal();
+                for (int s = 0; s < 24; s++) {
+                    u8 slotIdx = ring->getItem(s, 0);
+                    if (slotIdx != 0xFF && slotIdx < 24) {
+                        iData[63 + s] = dComIfGs_getItem(slotIdx, true); // Authoritative Item ID
+                        iData[87 + s] = ring->getMenuRingItemNum(slotIdx);
+                    } else {
+                        iData[63 + s] = 0xFF;
+                        iData[87 + s] = 0;
+                    }
+                }
+
+                dMenu_ItemExplain_c* explain = ring->getItemExplain();
+                if (explain && explain->getStatus() != 0) {
+                    char titleBuf[256], descBuf[1024];
+                    dMeter2Info_getString(explain->getNameMsgID(), titleBuf, NULL);
+                    dMeter2Info_getString(explain->getDescMsgID(), descBuf, NULL);
+                    itemTitle = clean_tp_string(titleBuf);
+                    itemDesc = clean_tp_string(descBuf);
+                }
+            }
         }
     }
 
@@ -397,13 +487,15 @@ void hud_update() {
 
     // 7. JNI Authoritative Mirror
     jstring jS = env->NewStringUTF(fName.c_str());
-    jintArray jInts = env->NewIntArray(60); env->SetIntArrayRegion(jInts, 0, 60, iData);
+    jstring jT = env->NewStringUTF(itemTitle.c_str());
+    jstring jDe = env->NewStringUTF(itemDesc.c_str());
+    jintArray jInts = env->NewIntArray(120); env->SetIntArrayRegion(jInts, 0, 120, iData);
     jfloatArray jF = env->NewFloatArray(14); env->SetFloatArrayRegion(jF, 0, 14, fData);
     jfloatArray jL = env->NewFloatArray(lines.size()); env->SetFloatArrayRegion(jL, 0, lines.size(), lines.data());
     jfloatArray jI = env->NewFloatArray(icons.size()); env->SetFloatArrayRegion(jI, 0, icons.size(), icons.data());
     jfloatArray jD = env->NewFloatArray(doors.size()); env->SetFloatArrayRegion(jD, 0, doors.size(), doors.data());
-    env->CallVoidMethod(activity, s_onGameStateUpdate, jInts, jF, jS, jL, jI, jD);
-    env->DeleteLocalRef(jInts); env->DeleteLocalRef(jF); env->DeleteLocalRef(jS); env->DeleteLocalRef(jL); env->DeleteLocalRef(jI); env->DeleteLocalRef(jD); env->DeleteLocalRef(activity);
+    env->CallVoidMethod(activity, s_onGameStateUpdate, jInts, jF, jS, jT, jDe, jL, jI, jD);
+    env->DeleteLocalRef(jInts); env->DeleteLocalRef(jF); env->DeleteLocalRef(jS); env->DeleteLocalRef(jT); env->DeleteLocalRef(jDe); env->DeleteLocalRef(jL); env->DeleteLocalRef(jI); env->DeleteLocalRef(jD); env->DeleteLocalRef(activity);
 }
 } // namespace dusk::android
 #else

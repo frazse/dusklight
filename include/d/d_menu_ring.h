@@ -84,6 +84,11 @@ public:
     u8 getDoStatus() { return mDoStatus; }
     void drawFlag0() { mDrawFlag = 0; }
     void setStatus(u8 i_status) { mStatus = i_status; }
+    u8 getCurrentSlot() { return mCurrentSlot; }
+    u8 getStatus() { return mStatus; }
+    u8 getItemsTotal() { return mItemsTotal; }
+    u8 getMenuRingItemNum(u8 i_slotNo) { return getItemNum(i_slotNo); }
+    dMenu_ItemExplain_c* getItemExplain() { return mpItemExplain; }
 
 private:
     /* 0x004 */ JKRExpHeap* mpHeap;
