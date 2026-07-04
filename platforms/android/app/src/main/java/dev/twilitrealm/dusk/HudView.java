@@ -113,6 +113,14 @@ public class HudView extends View {
             boolean hasLantern = (mState.itemXResId == 0x48 || mState.itemYResId == 0x48 || 
                                  mState.itemDDownId == 0x48 || mState.itemDLeftId == 0x48 || 
                                  mState.itemDRightId == 0x48);
+            
+            // Show oil if lantern is in the active item wheel
+            if (!hasLantern && mState.ringStatus > 0) {
+                for (int id : mState.ringItemIds) {
+                    if (id == 0x48) { hasLantern = true; break; }
+                }
+            }
+
             if (hasLantern) drawOilBar(canvas, 780, 150);
         }
         drawItems(canvas, 1280, 20);

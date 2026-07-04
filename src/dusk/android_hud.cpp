@@ -4,6 +4,7 @@
 #include "d/d_com_inf_game.h"
 #include "d/d_map_path_dmap.h"
 #include "d/d_meter2_info.h"
+#include "d/d_msg_class.h"
 #include "d/d_meter2_draw.h"
 #include "d/d_meter2.h"
 #include "d/d_menu_dmap.h"
@@ -24,6 +25,7 @@
 #include "dusk/map_loader_definitions.h"
 #include "SSystem/SComponent/c_xyz.h"
 #include "dusk/endian.h"
+#include "item_long_desc.h"
 
 #include <SDL3/SDL_system.h>
 #include <jni.h>
@@ -38,60 +40,50 @@ namespace dusk::android {
 namespace {
 
 std::string clean_tp_string(const char* input) {
-    if (!input) return "";
+    if (!input || !*input) return "";
     std::string out;
     const unsigned char* p = (const unsigned char*)input;
     while (*p) {
-        if (*p == 0x1A) { // TP Tag escape: 1A [type] [size] [data...]
-            p++;
-            if (!*p) break;
-            int type = *p++;
-            if (!*p) break;
-            int size = *p++;
+        if (*p == 0x1A) { // TP Tag escape: 1A [size] [group] [type] [data...]
+            unsigned char size = p[1];
+            if (size < 4) { p += (size > 1) ? size : 1; continue; }
 
-            if (type == 0x07) { // Icon/Button group
-                int iconId = (size > 0) ? *p : -1;
-                switch (iconId) {
-                    case 0: out += "(A)"; break;
-                    case 1: out += "(B)"; break;
-                    case 2: out += "(C)"; break;
-                    case 3: out += "(L)"; break;
-                    case 4: out += "(R)"; break;
-                    case 5: out += "(X)"; break;
-                    case 6: out += "(Y)"; break;
-                    default: break;
+            unsigned char group = p[2];
+            unsigned char type = p[3];
+
+            if (group == 0x03) { // Wii Buttons
+                switch (type) {
+                    case 1: out += "(A)"; break;
+                    case 2: out += "(B)"; break;
+                    case 13: out += "(L)"; break;
+                    case 14: out += "(R)"; break;
+                    case 15: out += "(X)"; break;
+                    case 16: out += "(Y)"; break;
+                    case 20: out += "(Z)"; break;
+                    case 19: out += "(C)"; break;
                 }
-            } else if (type == 0x05) { // Color group
-                // Just skip color tags
+            } else if (group == 0x06) { // Icons/Symbols
+                 if (type == 0x0A || type == 0x0B) out += "- "; // Bullets
+            } else if (group == 0x00 && type == 0x07) { // Wait / Continue
+                 out += '\n';
             }
 
             p += size;
             continue;
         }
 
-        if (*p == 0x1B) { // Control escape
-             p++;
-             while (*p && *p != ']') p++; // Skip things like [CR]
+        if (*p == 0x1B) { // Control escape [..]
+             p++; while (*p && *p != ']') p++;
              if (*p == ']') p++;
              continue;
         }
 
-        if (*p == 0x0A || *p == 0x0D) {
-            out += '\n';
-            p++;
-            continue;
+        if (*p == 0x0A || *p == 0x0D || *p == 0x1E) { // Newline or Wait
+            out += '\n'; p++; continue;
         }
 
-        // Shift-JIS handling
-        if (*p < 0x80) {
+        if (*p >= 32 && *p < 127) {
             out += (char)*p++;
-        } else if ((*p >= 0x81 && *p <= 0x9F) || (*p >= 0xE0 && *p <= 0xFC)) {
-            // Common TP symbols in Shift-JIS
-            unsigned short sjis = (*p << 8) | *(p + 1);
-            if (sjis == 0x819F) out += "- "; // Bullet point
-            else if (sjis == 0x8140) out += " "; // Ideographic space
-            else out += " "; // Placeholder for other SJIS
-            p += 2;
         } else {
             p++;
         }
@@ -110,92 +102,39 @@ std::atomic<bool> s_secondScreenActive{false};
 constexpr int kHudUpdateInterval = 1;
 int s_frameCounter = 0;
 
-// swOn: does this icon's mSwBit, when set, REVEAL the icon (true, matches retail's
-// dMenuFmapIconDisp_c::isDrawDisp groups 1/5/6/8/13/14 and dungeon's isDrawIconSingle2),
-// or does it behave like a chest (collected == hidden, handled separately via isTbox)?
-bool switch_reveals(u8 swBit, int roomNo) {
-    return swBit == 0xFF || dComIfGs_isSwitch(swBit, roomNo);
-}
+bool switch_reveals(u8 swBit, int roomNo) { return swBit == 0xFF || dComIfGs_isSwitch(swBit, roomNo); }
+bool group_is_floor_independent(int typeGroupNo) { switch (typeGroupNo) { case 1: case 5: case 6: case 8: case 13: case 14: return true; default: return false; } }
+bool is_room_visible(int r, const char* sName, int stayNo, bool hasMapItem) { if (sName && sName[0] == 'R') return r == stayNo; return r == stayNo || dComIfGs_isVisitedRoom(r) || hasMapItem; }
 
-// Point-of-interest groups (Golden Wolf, Batsumark/quest markers, and similar overworld
-// markers) aren't tied to a specific floor height the way dungeon compass icons are -
-// retail's fmap never floor-filters these, it only room/stage-filters them.
-bool group_is_floor_independent(int typeGroupNo) {
-    switch (typeGroupNo) {
-        case 1: case 5: case 6: case 8: case 13: case 14:
-            return true;
-        default:
-            return false;
-    }
-}
-
-bool is_room_visible(int r, const char* sName, int stayNo, bool hasMapItem) {
-    if (sName && sName[0] == 'R') return r == stayNo; // Interior: only current room
-    return r == stayNo || dComIfGs_isVisitedRoom(r) || hasMapItem;
-}
-
-// A room can contain multiple overlapping geometry groups representing different
-// game states for the same physical space (e.g. water level before/after a switch,
-// a wall before/after being blown open). Each group carries mSwbit + a polarity flag
-// (field_0x1): polarity 0 draws when the switch is OFF, nonzero draws when it's ON.
-// Without this check every state's geometry draws simultaneously and overlaps.
-// Matches renderingFmap_c::isSwitch, d_menu_fmap_map.cpp:55.
 bool should_draw_geometry_group(const dDrawPath_c::group_class& grp, int roomNo) {
     if (grp.mSwbit == 0xFF) return true;
-    // Matches renderingFmap_c::isSwitchSpecialOff - a hardcoded override for one
-    // specific room/switch combination in retail.
     const char* stageName = dComIfGp_getStartStageName();
     bool specialOff = stageName && strcmp(stageName, "F_SP121") == 0 && grp.mSwbit == 0xb2;
-    if (grp.field_0x1 == 0) {
-        return specialOff || !dComIfGs_isSwitch(grp.mSwbit, roomNo);
-    } else {
-        return !specialOff && dComIfGs_isSwitch(grp.mSwbit, roomNo);
-    }
+    if (grp.field_0x1 == 0) return specialOff || !dComIfGs_isSwitch(grp.mSwbit, roomNo);
+    else return !specialOff && dComIfGs_isSwitch(grp.mSwbit, roomNo);
 }
 
 bool should_draw_icon(int typeGroupNo, const dTres_c::data_s* data, int stayNo, s8 sFloor, const char* sName) {
     if (data == nullptr) return false;
-
     auto* stage = dComIfGp_getStage();
     if (stage == nullptr) return false;
     StageType stype = (StageType)dStage_stagInfo_GetSTType(stage->getStagInfo());
     bool is_d = (stype == ST_DUNGEON);
-
     if (!group_is_floor_independent(typeGroupNo)) {
         s8 iconFloor = dMapInfo_c::calcFloorNo(data->mPos.y, true, data->mRoomNo);
         if (iconFloor != sFloor) return false;
     }
-
     if (is_d) {
-        // Dungeon: compass is the master switch, then per-icon switch reveals it
-        // (matches renderingDmap_c::isDrawIconSingle2, d_menu_dmap_map.cpp:79).
         if (!dComIfGs_isDungeonItemCompass()) return false;
         if (data->mNo != 0xFF && dComIfGs_isTbox(data->mNo)) return false;
         return switch_reveals(data->mSwBit, data->mRoomNo);
     }
-
-    // Overworld: mirrors dMenuFmapIconDisp_c::isDrawDisp per type group.
     switch (typeGroupNo) {
-        case 1: // Cave/dungeon entrance markers (drawEnterIcon, d_menu_fmap.cpp:2724).
-        case 8: // Unlike groups 4/5/6/10/13/14 below, retail gates these on bVar2
-                // (current room OR previously visited) - see isDrawDisp, d_map_path_fmap.cpp:538.
-            if (!is_room_visible(data->mRoomNo, sName, stayNo, dComIfGs_isDungeonItemMap())) return false;
-            return switch_reveals(data->mSwBit, data->mRoomNo);
-
-        case 13:
-        case 14:
-            return switch_reveals(data->mSwBit, data->mRoomNo);
-
-        case 5: // Batsumark / quest-location marker: uncollected AND switch-revealed
-            if (data->mNo != 0xFF && dComIfGs_isTbox(data->mNo)) return false;
-            return switch_reveals(data->mSwBit, data->mRoomNo);
-
-        case 6: // Golden Wolf: pure switch reveal, set by Wind Stones
-            return data->mSwBit != 0xFF && dComIfGs_isSwitch(data->mSwBit, data->mRoomNo);
-
-        case 4: { // Tears of Light - requires the Light Vessel for this dark area
-                  // (matches dMenu_Fmap_c::isLightVesselGet -> dComIfGp_isLightDropMapVisible,
-                  // which checks the per-area get-flag, not just "is there an active dark area")
+        case 1: case 8: if (!is_room_visible(data->mRoomNo, sName, stayNo, dComIfGs_isDungeonItemMap())) return false; return switch_reveals(data->mSwBit, data->mRoomNo);
+        case 13: case 14: return switch_reveals(data->mSwBit, data->mRoomNo);
+        case 5: if (data->mNo != 0xFF && dComIfGs_isTbox(data->mNo)) return false; return switch_reveals(data->mSwBit, data->mRoomNo);
+        case 6: return data->mSwBit != 0xFF && dComIfGs_isSwitch(data->mSwBit, data->mRoomNo);
+        case 4: {
             if (!dComIfGp_isLightDropMapVisible()) return false;
             int darkArea = dComIfGp_getStartStageDarkArea();
             if (darkArea == 0) return false;
@@ -203,12 +142,8 @@ bool should_draw_icon(int typeGroupNo, const dTres_c::data_s* data, int stayNo, 
             if (data->mNo != 0xFF && dComIfGs_isTbox(data->mNo)) return false;
             return true;
         }
-
-        case 10: // chest already opened marker
-            return data->mNo != 0xFF && dComIfGs_isTbox(data->mNo);
-
-        default:
-            return false;
+        case 10: return data->mNo != 0xFF && dComIfGs_isTbox(data->mNo);
+        default: return false;
     }
 }
 } // namespace
@@ -218,10 +153,8 @@ bool hud_is_second_screen_active() { return s_secondScreenActive.load(std::memor
 void hud_update() {
     if (++s_frameCounter < kHudUpdateInterval) return;
     s_frameCounter = 0;
-
     dMeter2_c* meter = dMeter2Info_getMeterClass();
     if (!meter) return;
-
     int stayNo = dComIfGp_roomControl_getStayNo();
     if (stayNo < 0) return;
     auto* env = static_cast<JNIEnv*>(SDL_GetAndroidJNIEnv());
@@ -235,76 +168,44 @@ void hud_update() {
         if (s_onGameStateUpdate == nullptr || clear_pending_exception(env)) return;
     }
     s_secondScreenActive.store(true, std::memory_order_relaxed);
-
     int iData[120] = {0};
-
-    // 1. Diagnostics (W:57, M:58)
     int winStatus = dMeter2Info_getWindowStatus();
     int mapStatus = dMeter2Info_getMapStatus();
-    iData[57] = winStatus;
-    iData[58] = mapStatus;
+    iData[57] = winStatus; iData[58] = mapStatus;
+    std::string itemTitle = ""; std::string itemDesc = "";
 
-    std::string itemTitle = "";
-    std::string itemDesc = "";
-
-    // 2. Base IDs
-    iData[28] = meter->getDoStatus(); // A
-    iData[29] = meter->getAStatus();  // B
+    // Default Button IDs (Wii Context IDs)
+    iData[28] = meter->getDoStatus();
+    iData[29] = meter->getAStatus();
     iData[30] = meter->getZStatus();
     iData[32] = meter->getRStatus();
-    iData[33] = meter->getItemStatus(1); // X
-    iData[34] = meter->getItemStatus(3); // Y
-    iData[59] = 0; // L Prompt
+    iData[33] = meter->getItemStatus(1); // Usually X
+    iData[34] = meter->getItemStatus(3); // Usually Y
 
-    // 3. AUTHORITATIVE MENU OVERRIDES (Truth Mirror)
     dMw_c* mw = dMeter2Info_getMenuWindowClass();
     if (mw) {
-        if (winStatus == 3) { // Pause Menu (Collection)
+        if (winStatus == 3) {
             dMenu_Collect_c* collect = mw->getMenuCollect();
             if (collect) {
                 u8 sub = collect->getSubWindowOpenCheck();
-                if (sub == 1) { // Save Submenu
-                    dMenu_save_c* s = mw->getMenuSave();
-                    if (s) { iData[28] = (int)s->getAButtonString(); iData[29] = (int)s->getBButtonString(); }
-                } else if (sub == 2) { // Option Submenu
-                    dMenu_Option_c* o = mw->getMenuOption();
-                    if (o) { iData[28] = (int)o->getAButtonString(); iData[29] = (int)o->getBButtonString(); iData[30] = (int)o->getZButtonString(); }
-                } else {
-                    dMenu_Collect2D_c* collect2d = collect->getCollect2D();
-                    if (collect2d) { iData[28] = (int)collect2d->getCurrentAString(); iData[29] = (int)collect2d->getCurrentBString(); }
-                }
+                if (sub == 1) { dMenu_save_c* s = mw->getMenuSave(); if (s) { iData[28] = (int)s->getAButtonString(); iData[29] = (int)s->getBButtonString(); } }
+                else if (sub == 2) { dMenu_Option_c* o = mw->getMenuOption(); if (o) { iData[28] = (int)o->getAButtonString(); iData[29] = (int)o->getBButtonString(); iData[30] = (int)o->getZButtonString(); } }
+                else { dMenu_Collect2D_c* collect2d = collect->getCollect2D(); if (collect2d) { iData[28] = (int)collect2d->getCurrentAString(); iData[29] = (int)collect2d->getCurrentBString(); } }
             }
-        } else if (winStatus == 4) { // Field Map
+        } else if (winStatus == 4) {
             dMenu_Fmap_c* fmap = mw->getMenuFmap();
-            if (fmap) {
-                dMenu_Fmap2DTop_c* top = fmap->getDraw2DTop();
-                if (top) { iData[28] = (int)top->getAButtonString(); iData[29] = (int)top->getBButtonString(); iData[30] = (int)top->getZButtonString(); }
-            }
-        } else if (winStatus == 5) { // Dungeon Map
+            if (fmap) { dMenu_Fmap2DTop_c* top = fmap->getDraw2DTop(); if (top) { iData[28] = (int)top->getAButtonString(); iData[29] = (int)top->getBButtonString(); iData[30] = (int)top->getZButtonString(); } }
+        } else if (winStatus == 5) {
             dMenu_Dmap_c* dmap = mw->getMenuDmap();
-            if (dmap) {
-                dMenu_DmapBg_c* bg = dmap->getDrawBg();
-                if (bg) { iData[28] = (int)bg->getAButtonString(); iData[29] = (int)bg->getBButtonString(); iData[32] = (int)bg->getCButtonString(); iData[59] = (int)bg->getCButtonString(); }
-            }
-        } else if (winStatus == 10) { // Submenus (Standalone Save, Options, Letters, etc)
-            dMenu_save_c* save = mw->getMenuSave();
-            if (save) { iData[28] = (int)save->getAButtonString(); iData[29] = (int)save->getBButtonString(); }
-
-            dMenu_Option_c* opt = mw->getMenuOption();
-            if (opt && iData[28] == 0) { iData[28] = (int)opt->getAButtonString(); iData[29] = (int)opt->getBButtonString(); iData[30] = (int)opt->getZButtonString(); }
-
-            dMenu_Letter_c* l = mw->getMenuLetter();
-            if (l && iData[28] == 0) { iData[28] = (int)l->getAButtonString(); iData[29] = (int)l->getBButtonString(); iData[32] = 0x4D8; iData[59] = 0x4D7; }
-
-            dMenu_Fishing_c* f = mw->getMenuFishing();
-            if (f && iData[28] == 0) { iData[28] = (int)f->getAButtonString(); iData[29] = (int)f->getBButtonString(); }
-
-            dMenu_Skill_c* sk = mw->getMenuSkill();
-            if (sk && iData[28] == 0) { iData[28] = (int)sk->getAButtonString(); iData[29] = (int)sk->getBButtonString(); }
-
-            dMenu_Insect_c* ns = mw->getMenuInsect();
-            if (ns && iData[28] == 0) { iData[28] = (int)ns->getAButtonString(); iData[29] = (int)ns->getBButtonString(); }
-        } else if (winStatus == 1 || winStatus == 2) { // Item Wheel
+            if (dmap) { dMenu_DmapBg_c* bg = dmap->getDrawBg(); if (bg) { iData[28] = (int)bg->getAButtonString(); iData[29] = (int)bg->getBButtonString(); iData[32] = (int)bg->getCButtonString(); iData[59] = (int)bg->getCButtonString(); } }
+        } else if (winStatus == 10) {
+            dMenu_save_c* save = mw->getMenuSave(); if (save) { iData[28] = (int)save->getAButtonString(); iData[29] = (int)save->getBButtonString(); }
+            dMenu_Option_c* opt = mw->getMenuOption(); if (opt && iData[28] == 0) { iData[28] = (int)opt->getAButtonString(); iData[29] = (int)opt->getBButtonString(); iData[30] = (int)opt->getZButtonString(); }
+            dMenu_Letter_c* l = mw->getMenuLetter(); if (l && iData[28] == 0) { iData[28] = (int)l->getAButtonString(); iData[29] = (int)l->getBButtonString(); iData[32] = 0x4D8; iData[59] = 0x4D7; }
+            dMenu_Fishing_c* f = mw->getMenuFishing(); if (f && iData[28] == 0) { iData[28] = (int)f->getAButtonString(); iData[29] = (int)f->getBButtonString(); }
+            dMenu_Skill_c* sk = mw->getMenuSkill(); if (sk && iData[28] == 0) { iData[28] = (int)sk->getAButtonString(); iData[29] = (int)sk->getBButtonString(); }
+            dMenu_Insect_c* ns = mw->getMenuInsect(); if (ns && iData[28] == 0) { iData[28] = (int)ns->getAButtonString(); iData[29] = (int)ns->getBButtonString(); }
+        } else if (winStatus == 1 || winStatus == 2) {
             dMenu_Ring_c* ring = mw->getMenuRing();
             if (ring) {
                 iData[28] = (int)ring->getDoStatus();
@@ -313,91 +214,61 @@ void hud_update() {
                 iData[62] = (int)ring->getItemsTotal();
                 for (int s = 0; s < 24; s++) {
                     u8 slotIdx = ring->getItem(s, 0);
-                    if (slotIdx != 0xFF && slotIdx < 24) {
-                        iData[63 + s] = dComIfGs_getItem(slotIdx, true); // Authoritative Item ID
-                        iData[87 + s] = ring->getMenuRingItemNum(slotIdx);
-                    } else {
-                        iData[63 + s] = 0xFF;
-                        iData[87 + s] = 0;
-                    }
+                    if (slotIdx != 0xFF && slotIdx < 24) { iData[63 + s] = dComIfGs_getItem(slotIdx, true); iData[87 + s] = ring->getMenuRingItemNum(slotIdx); }
+                    else { iData[63 + s] = 0xFF; iData[87 + s] = 0; }
                 }
-
                 dMenu_ItemExplain_c* explain = ring->getItemExplain();
                 if (explain && explain->getStatus() != 0) {
-                    char titleBuf[256], descBuf[1024];
-                    dMeter2Info_getString(explain->getNameMsgID(), titleBuf, NULL);
-                    dMeter2Info_getString(explain->getDescMsgID(), descBuf, NULL);
+                    char titleBuf[256] = {0}, descBuf[2048] = {0}, pageBuf[512] = {0};
+                    u8 slotIdx = ring->getItem(ring->getCurrentSlot(), 0);
+                    u8 currentItemNo = (slotIdx != 0xFF) ? dComIfGs_getItem(slotIdx, true) : 0xFF;
+
+                    uint32_t baseDescID = dusk_getItemLongDescMsgID(currentItemNo);
+                    if (baseDescID == 0xFFFF) baseDescID = explain->getDescMsgID();
+
+                    g_meter2_info.getString(explain->getNameMsgID(), titleBuf, NULL);
+                    g_meter2_info.getString(baseDescID, descBuf, NULL);
+
+                    // Safe Sequential Page Append
+                    for (int p = 1; p <= 4; p++) {
+                        JMSMesgEntry_c entry;
+                        pageBuf[0] = '\0';
+                        g_meter2_info.getString(baseDescID + p, pageBuf, &entry);
+                        if (pageBuf[0] != '\0' && entry.unk_0xc == 0x0C && entry.unk_0xd == currentItemNo) {
+                            strncat(descBuf, "\n", 2047 - strlen(descBuf));
+                            strncat(descBuf, pageBuf, 2047 - strlen(descBuf));
+                        } else break;
+                    }
+
                     itemTitle = clean_tp_string(titleBuf);
                     itemDesc = clean_tp_string(descBuf);
                 }
             }
         }
     }
-
-    // 4. AUTHORITATIVE VISIBILITY (Mirror Retail HUD state)
     int vis = 0;
-    if (dMeter2Info_isUseButton(0x1)) vis |= 1;  // A
-    if (dMeter2Info_isUseButton(0x2)) vis |= 2;  // B
-    if (dMeter2Info_isUseButton(0x800)) vis |= 4; // Z
-    if (dMeter2Info_isUseButton(0x40)) vis |= 8;  // R
-    if (dMeter2Info_isUseButton(0x4)) vis |= 16; // X
-    if (dMeter2Info_isUseButton(0x8)) vis |= 32; // Y
-    if (iData[59] > 0) vis |= 64; // L (Always show if non-zero ID for now)
+    if (dMeter2Info_isUseButton(0x1)) vis |= 1; if (dMeter2Info_isUseButton(0x2)) vis |= 2; if (dMeter2Info_isUseButton(0x800)) vis |= 4;
+    if (dMeter2Info_isUseButton(0x40)) vis |= 8; if (dMeter2Info_isUseButton(0x4)) vis |= 16; if (dMeter2Info_isUseButton(0x8)) vis |= 32;
+    if (iData[59] > 0) vis |= 64; if (winStatus == 0 && (vis & 4) == 0) { if (!dComIfGs_isEventBit(0x0540)) vis |= 4; }
+    iData[39] = vis; iData[0] = dComIfGs_getLife(); iData[1] = dComIfGs_getMaxLife(); iData[8] = dComIfGs_getRupee(); iData[9] = dComIfGs_getKeyNum();
+    iData[10] = dComIfGs_getArrowNum(); iData[11] = dComIfGs_getBombNum(0); iData[12] = (int)dComIfGs_getTransformStatus(); iData[13] = stayNo;
+    iData[17] = dComIfGp_getSelectItem(0); iData[18] = dComIfGp_getSelectItem(1); iData[47] = dStage_stagInfo_GetSTType(dComIfGp_getStage()->getStagInfo()) == ST_DUNGEON;
+    iData[48] = dComIfGs_isDungeonItemMap() ? 1 : 0; iData[49] = dComIfGs_isDungeonItemCompass() ? 1 : 0; iData[41] = dComIfGs_isDungeonItemBossKey() ? 1 : 0;
 
-    // Force Z visibility during gameplay (Midna/Sense) unless explicitly hidden
-    if (winStatus == 0 && (vis & 4) == 0) {
-        if (!dComIfGs_isEventBit(0x0540)) vis |= 4;
-    }
-    iData[39] = vis;
-
-    // 5. Basic Stats
-    iData[0] = dComIfGs_getLife(); iData[1] = dComIfGs_getMaxLife();
-    iData[2] = dComIfGs_getMagic(); iData[3] = dComIfGs_getMaxMagic();
+    // Stats for Meters
     iData[4] = dComIfGs_getOil(); iData[5] = dComIfGs_getMaxOil();
     iData[6] = dComIfGp_getNowOxygen(); iData[7] = dComIfGp_getMaxOxygen();
-    iData[8] = dComIfGs_getRupee();
-    iData[9] = dComIfGs_getKeyNum();
-    iData[10] = dComIfGs_getArrowNum(); iData[11] = dComIfGs_getBombNum(0);
-    iData[12] = (int)dComIfGs_getTransformStatus();
-    iData[13] = stayNo;
-    iData[14] = dComIfGs_getLightDropNum(dComIfGp_getStartStageDarkArea());
-    iData[15] = dComIfGp_getNeedLightDropNum();
-    iData[16] = meter->isShowLightDrop() ? 1 : 0;
-    iData[27] = (dComIfGp_isZSetFlag(2) || dComIfGp_isZSetFlag(4)) ? 1 : 0;
-    iData[17] = dComIfGp_getSelectItem(0); iData[18] = dComIfGp_getSelectItem(1);
+    iData[43] = dComIfGp_getOxygenShowFlag() ? 1 : 0;
 
-    auto get_ammo = [](u8 item, u8 slotNum) {
+    // Ammo counts for X/Y
+    auto get_ammo = [](u8 item) {
         if (item == 0x43) return (int)dComIfGs_getArrowNum();
         if (item == 0x4B) return (int)dComIfGs_getPachinkoNum();
         if (item >= 0x70 && item <= 0x72) return (int)dComIfGs_getBombNum(item - 0x70);
-        return (int)dComIfGp_getSelectItemNum(slotNum);
+        return -1;
     };
-    iData[19] = get_ammo(iData[17], 0);
-    iData[20] = get_ammo(iData[18], 1);
-    iData[21] = dComIfGp_getSelectItem(2); iData[22] = dComIfGp_getSelectItemNum(2);
-    iData[23] = dComIfGp_getSelectItem(3); iData[24] = dComIfGp_getSelectItemNum(3);
-    iData[25] = dComIfGp_getSelectItem(4); iData[26] = dComIfGp_getSelectItemNum(4);
-    iData[42] = dMeter2Info_getHorseLifeCount();
-    iData[43] = dComIfGp_getOxygenShowFlag() ? 1 : 0;
-    iData[44] = dComIfGs_getSelectEquipClothes();
-    iData[46] = (dMapInfo_c::calcFloorNo(dMapInfo_n::getMapRestartPos().y, true, dComIfGs_getRestartRoomNo()) == (dMapInfo_c::getNowStayFloorNoDecisionFlg() ? dMapInfo_c::getNowStayFloorNo() : dMapInfo_c::calcFloorNo(dMapInfo_n::getMapPlayerPos().y, true, stayNo))) ? 1 : 0;
-    iData[47] = dStage_stagInfo_GetSTType(dComIfGp_getStage()->getStagInfo()) == ST_DUNGEON;
-    iData[48] = dComIfGs_isDungeonItemMap() ? 1 : 0;
-    iData[49] = dComIfGs_isDungeonItemCompass() ? 1 : 0;
-    iData[41] = dComIfGs_isDungeonItemBossKey() ? 1 : 0;
-
-    dAttention_c* attn = dComIfGp_getAttention();
-    daPy_py_c* player = dComIfGp_getLinkPlayer();
-    int stateFlags = 0;
-    if (attn && attn->GetLockonCount() > 0) stateFlags |= 1;
-    if (player) {
-        if (player->checkWaterInMove() || player->checkSwimUp() || iData[43]) stateFlags |= 2;
-        if (player->checkHorseRide()) stateFlags |= 4;
-        if (player->current.pos.y < player->getGroundY() - 20.0f) stateFlags |= 8;
-        if (iData[44] == 0x40) stateFlags |= 16;
-        if (player->checkPlayerFly()) stateFlags |= 32;
-    }
-    iData[31] = stateFlags;
+    iData[19] = get_ammo(iData[17]); // X count
+    iData[20] = get_ammo(iData[18]); // Y count
 
     for (int k = 50; k <= 56; k++) iData[k] = -1;
     u32 bCount = 0;
@@ -415,50 +286,31 @@ void hud_update() {
             }
         }
     }
-
-    // 6. Map Geometry
-    Vec pPos = dMapInfo_n::getMapPlayerPos();
-    const char* sName = dComIfGp_getStartStageName();
-    std::string fName = sName ? sName : "Unknown";
-    if (sName) {
-        for (const auto& reg : gameRegions) {
-            for (const auto& ma : reg.maps) {
-                if (strcmp(ma.mapFile, sName) == 0) { fName = ma.mapName; goto f_ok; }
-            }
-        }
-    }
-    f_ok:;
-    s8 floor = dMapInfo_c::getNowStayFloorNoDecisionFlg() ? dMapInfo_c::getNowStayFloorNo() : dMapInfo_c::calcFloorNo(pPos.y, true, stayNo);
-    float roomMinX, roomMinZ, roomMaxX, roomMaxZ;
-    dMapInfo_n::getRoomMinMaxXZ(stayNo, &roomMinX, &roomMinZ, &roomMaxX, &roomMaxZ);
+    Vec pPos = dMapInfo_n::getMapPlayerPos(); const char* sName = dComIfGp_getStartStageName(); std::string fName = sName ? sName : "Unknown";
+    if (sName) { for (const auto& reg : gameRegions) { for (const auto& ma : reg.maps) { if (strcmp(ma.mapFile, sName) == 0) { fName = ma.mapName; goto f_ok; } } } }
+    f_ok:; s8 floor = dMapInfo_c::getNowStayFloorNoDecisionFlg() ? dMapInfo_c::getNowStayFloorNo() : dMapInfo_c::calcFloorNo(pPos.y, true, stayNo);
+    float roomMinX, roomMinZ, roomMaxX, roomMaxZ; dMapInfo_n::getRoomMinMaxXZ(stayNo, &roomMinX, &roomMinZ, &roomMaxX, &roomMaxZ);
     float fData[14] = { pPos.x, pPos.z, (float)dMapInfo_n::getMapPlayerAngleY() * (180.0f / 32768.0f), 0,0,0,0, dMapInfo_n::getMapRestartPos().x, dMapInfo_n::getMapRestartPos().z, (float)dMapInfo_n::getMapRestartAngleY() * (180.0f / 32768.0f), roomMinX, roomMinZ, roomMaxX, roomMaxZ };
-    std::vector<float> lines, icons, doors;
-    float miX=1e10f, miZ=1e10f, maX=-1e10f, maZ=-1e10f;
+    std::vector<float> lines, icons, doors; float miX=1e10f, miZ=1e10f, maX=-1e10f, maZ=-1e10f;
     if (dMpath_c::mLayerList) for (int r = 0; r < 64; r++) {
         if (!is_room_visible(r, sName, stayNo, iData[48])) continue;
         for (int l = 0; l < 2; l++) {
-            auto* rm = dMpath_c::getRoomPointer(l, r);
-            if (!rm || !rm->mpFloatData) continue;
+            auto* rm = dMpath_c::getRoomPointer(l, r); if (!rm || !rm->mpFloatData) continue;
             for (int f = 0; f < rm->mFloorNum; f++) {
                 if (sName[0] != 'F' && rm->mpFloor[f].mFloorNo != floor) continue;
                 for (int g = 0; g < rm->mpFloor[f].mGroupNum; g++) {
-                    auto& grp = rm->mpFloor[f].mpGroup[g];
-                    if (!should_draw_geometry_group(grp, r)) continue;
+                    auto& grp = rm->mpFloor[f].mpGroup[g]; if (!should_draw_geometry_group(grp, r)) continue;
                     for (int ln = 0; ln < grp.mLineNum; ln++) {
-                        if (grp.mpLine[ln].field_0x0 & 0x40) continue; // Don't draw if bit 6 is set
+                        if (grp.mpLine[ln].field_0x0 & 0x40) continue;
                         for (int i = 0; i < grp.mpLine[ln].mDataNum; i++) {
                             float px = rm->mpFloatData[grp.mpLine[ln].mpData[i]*2], pz = rm->mpFloatData[grp.mpLine[ln].mpData[i]*2+1];
-                            lines.push_back(px); lines.push_back(pz);
-                            miX=std::min(miX,px); maX=std::max(maX,px); miZ=std::min(miZ,pz); maZ=std::max(maZ,pz);
+                            lines.push_back(px); lines.push_back(pz); miX=std::min(miX,px); maX=std::max(maX,px); miZ=std::min(miZ,pz); maZ=std::max(maZ,pz);
                         }
                         lines.push_back(std::numeric_limits<float>::quiet_NaN()); lines.push_back((float)grp.mpLine[ln].field_0x0); lines.push_back((float)grp.mpLine[ln].field_0x1); lines.push_back(0);
                     }
                     for (int pn = 0; pn < grp.mPolyNum; pn++) {
-                        if (grp.mpPoly[pn].field_0x0 & 0x40) continue; // Don't draw if bit 6 is set
-                        for (int i = 0; i < grp.mpPoly[pn].mDataNum; i++) {
-                            float px = rm->mpFloatData[grp.mpPoly[pn].mpData[i]*2], pz = rm->mpFloatData[grp.mpPoly[pn].mpData[i]*2+1];
-                            lines.push_back(px); lines.push_back(pz);
-                        }
+                        if (grp.mpPoly[pn].field_0x0 & 0x40) continue;
+                        for (int i = 0; i < grp.mpPoly[pn].mDataNum; i++) { float px = rm->mpFloatData[grp.mpPoly[pn].mpData[i]*2], pz = rm->mpFloatData[grp.mpPoly[pn].mpData[i]*2+1]; lines.push_back(px); lines.push_back(pz); }
                         lines.push_back(std::numeric_limits<float>::quiet_NaN()); lines.push_back((float)grp.mpPoly[pn].field_0x0); lines.push_back(1001.0f); lines.push_back(0);
                     }
                 }
@@ -466,34 +318,13 @@ void hud_update() {
         }
     }
     fData[3]=miX; fData[4]=miZ; fData[5]=maX; fData[6]=maZ;
-    for (int g = 0; g < 17; g++) {
-        for (auto* d = dTres_c::getFirstData(g); d; d = dTres_c::getNextData(d)) {
-            if (should_draw_icon(g, d, stayNo, floor, sName)) {
-                icons.push_back((float)g); icons.push_back(d->mPos.x); icons.push_back(d->mPos.z); icons.push_back((float)d->mRoomNo);
-            }
-        }
-    }
-    auto ad = [&](dStage_KeepDoorInfo* in) {
-        if (!in) return;
-        for (int i = 0; i < in->mNum; i++) {
-            auto& dr = in->mDrTgData[i]; int r = (dr.base.parameters >> 24) & 0x3F;
-            if (dMapInfo_c::calcFloorNo(dr.base.position.y, true, r) != floor) continue;
-            if (is_room_visible(r, sName, stayNo, iData[48])) {
-                doors.push_back(dr.base.position.x); doors.push_back(dr.base.position.z); doors.push_back((float)dr.base.angle.y * (180.0f / 32768.0f)); doors.push_back(0);
-            }
-        }
-    };
+    for (int g = 0; g < 17; g++) { for (auto* d = dTres_c::getFirstData(g); d; d = dTres_c::getNextData(d)) { if (should_draw_icon(g, d, stayNo, floor, sName)) { icons.push_back((float)g); icons.push_back(d->mPos.x); icons.push_back(d->mPos.z); icons.push_back((float)d->mRoomNo); } } }
+    auto ad = [&](dStage_KeepDoorInfo* in) { if (!in) return; for (int i = 0; i < in->mNum; i++) { auto& dr = in->mDrTgData[i]; int r = (dr.base.parameters >> 24) & 0x3F; if (dMapInfo_c::calcFloorNo(dr.base.position.y, true, r) != floor) continue; if (is_room_visible(r, sName, stayNo, iData[48])) { doors.push_back(dr.base.position.x); doors.push_back(dr.base.position.z); doors.push_back((float)dr.base.angle.y * (180.0f / 32768.0f)); doors.push_back(0); } } };
     ad(dStage_GetKeepDoorInfo()); ad(dStage_GetRoomKeepDoorInfo());
-
-    // 7. JNI Authoritative Mirror
-    jstring jS = env->NewStringUTF(fName.c_str());
-    jstring jT = env->NewStringUTF(itemTitle.c_str());
-    jstring jDe = env->NewStringUTF(itemDesc.c_str());
-    jintArray jInts = env->NewIntArray(120); env->SetIntArrayRegion(jInts, 0, 120, iData);
-    jfloatArray jF = env->NewFloatArray(14); env->SetFloatArrayRegion(jF, 0, 14, fData);
+    jstring jS = env->NewStringUTF(fName.c_str()); jstring jT = env->NewStringUTF(itemTitle.c_str()); jstring jDe = env->NewStringUTF(itemDesc.c_str());
+    jintArray jInts = env->NewIntArray(120); env->SetIntArrayRegion(jInts, 0, 120, iData); jfloatArray jF = env->NewFloatArray(14); env->SetFloatArrayRegion(jF, 0, 14, fData);
     jfloatArray jL = env->NewFloatArray(lines.size()); env->SetFloatArrayRegion(jL, 0, lines.size(), lines.data());
-    jfloatArray jI = env->NewFloatArray(icons.size()); env->SetFloatArrayRegion(jI, 0, icons.size(), icons.data());
-    jfloatArray jD = env->NewFloatArray(doors.size()); env->SetFloatArrayRegion(jD, 0, doors.size(), doors.data());
+    jfloatArray jI = env->NewFloatArray(icons.size()); env->SetFloatArrayRegion(jI, 0, icons.size(), icons.data()); jfloatArray jD = env->NewFloatArray(doors.size()); env->SetFloatArrayRegion(jD, 0, doors.size(), doors.data());
     env->CallVoidMethod(activity, s_onGameStateUpdate, jInts, jF, jS, jT, jDe, jL, jI, jD);
     env->DeleteLocalRef(jInts); env->DeleteLocalRef(jF); env->DeleteLocalRef(jS); env->DeleteLocalRef(jT); env->DeleteLocalRef(jDe); env->DeleteLocalRef(jL); env->DeleteLocalRef(jI); env->DeleteLocalRef(jD); env->DeleteLocalRef(activity);
 }
