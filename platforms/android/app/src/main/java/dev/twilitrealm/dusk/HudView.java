@@ -419,7 +419,18 @@ public class HudView extends View {
                     mPaint.setColor(Color.WHITE);
                     mPaint.setTypeface(android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.NORMAL));
                     if (mState.itemDesc != null && !mState.itemDesc.isEmpty()) {
-                        String[] linesArr = mState.itemDesc.split("\n");
+                        String resolvedDesc = mState.itemDesc
+                            .replace("{{A}}", mState.labelA)
+                            .replace("{{B}}", mState.labelB)
+                            .replace("{{X}}", mState.labelX)
+                            .replace("{{Y}}", mState.labelY)
+                            .replace("{{Z}}", mState.labelZ)
+                            .replace("{{L}}", mState.labelL)
+                            .replace("{{R}}", mState.labelR)
+                            .replace("{{STICK}}", "Stick")
+                            .replace("{{XORY}}", mState.labelX);
+
+                        String[] linesArr = resolvedDesc.split("\n");
                         float lineY = cy - 20;
                         for (String line : linesArr) {
                              canvas.drawText(line, cx, lineY, mPaint);

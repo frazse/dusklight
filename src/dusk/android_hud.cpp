@@ -29,6 +29,7 @@
 #include <SDL3/SDL_system.h>
 #include <jni.h>
 #include <atomic>
+#include <android/log.h>
 #include <vector>
 #include <limits>
 #include <algorithm>
@@ -44,31 +45,33 @@ std::string clean_tp_string(const char* input) {
     const unsigned char* p = (const unsigned char*)input;
     int safety = 0;
     while (*p && safety++ < 2048) {
-        if (*p == 0x1A) { // TAG ESCAPE
+        if (*p == 0x1A) {
             unsigned char size = p[1];
-            if (size < 4) { p += (size > 1) ? size : 1; continue; }
-            unsigned char grp = p[2];
-            unsigned char type = p[3];
-            unsigned char data = p[4];
+            if (size < 5) { p += (size > 1) ? size : 1; continue; }
 
-            // HEURISTIC: Many Zelda games use grp 0 or 3 for UI symbols
-            if (type == 0x03) { // Symbols/Buttons
-                switch (data) {
-                    case 0: out += "(A)"; break;
-                    case 1: out += "(B)"; break;
-                    case 2: out += "(X)"; break;
-                    case 3: out += "(Y)"; break;
-                    case 4: out += "(Z)"; break;
-                    case 7: out += "(Stick)"; break;
-                    case 8: out += "(C-Stick)"; break;
-                    case 15: out += "(X)"; break;
-                    case 16: out += "(Y)"; break;
-                    default: out += "(?)"; break;
+            unsigned char group = p[2];
+            unsigned int number = (p[3] << 8) | p[4];
+
+            if (group == 0x03) { // Buttons
+                switch (number) {
+                    case 1:  out += "{{A}}"; break;
+                    case 2:  out += "{{B}}"; break;
+                    case 13: out += "{{L}}"; break;
+                    case 14: out += "{{R}}"; break;
+                    case 15: out += "{{X}}"; break;
+                    case 16: out += "{{Y}}"; break;
+                    case 19: out += "{{STICK}}"; break;
+                    case 20: out += "{{Z}}"; break;
+                    default: break;
                 }
-            } else if (grp == 0x01) { // Numbers
-                if (type == 0x01) out += "[Q]"; else if (type == 0x06) out += "[M]";
+            } else if (group == 0x00) {
+                if (number == 0x38) out += "{{ARROWCAP}}";
+            } else if (group == 0x06) {
+                if (number == 0x0A || number == 0x0B) out += "- ";
             }
-            p += size; continue;
+
+            p += size;
+            continue;
         }
         if (*p == 0x1B) { p++; while (*p && *p != ']') p++; if (*p == ']') p++; continue; }
         if (*p == 0x0A || *p == 0x0D || *p == 0x1E) { out += '\n'; p++; continue; }
