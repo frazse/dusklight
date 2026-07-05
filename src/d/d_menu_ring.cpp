@@ -624,6 +624,18 @@ void dMenu_Ring_c::_move() {
     mRingRadiusH = g_ringHIO.mRingRadiusH;
     mRingRadiusV = g_ringHIO.mRingRadiusV;
     mOldStatus = mStatus; // Save current status for check
+
+    // Logic for finishing item jumps (moved from drawSelectItem to always run)
+    for (int i = 0; i < 4; i++) {
+        if (field_0x674[i] != 0) {
+            if (field_0x674[i] < 10) {
+                field_0x674[i]++;
+            } else {
+                setSelectItemForce(i);
+            }
+        }
+    }
+
     mpItemExplain->move();
     (this->*stick_proc[mStatus])(); // run process based on status
 

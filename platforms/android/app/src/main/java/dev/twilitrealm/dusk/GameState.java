@@ -105,7 +105,7 @@ public class GameState {
         }
         this.buttonLText = (inMenu || (visMask & 64) != 0 || !lLabel.isEmpty()) ? lLabel : (targeting ? "Target" : "");
 
-        this.buttonRText = (inMenu || (visMask & 8) != 0) ? getActionLabel(idR, isSwimming, isRiding, isFlying, transform, false) : "";
+        this.buttonRText = (inMenu || (visMask & 8) != 0 || idR == 0x90 || idR == 0x91) ? getActionLabel(idR, isSwimming, isRiding, isFlying, transform, false) : "";
         this.buttonXText = (inMenu || (visMask & 16) != 0) ? getActionLabel(idX, isSwimming, isRiding, isFlying, transform, false) : "";
         this.buttonYText = (inMenu || (visMask & 32) != 0) ? getActionLabel(idY, isSwimming, isRiding, isFlying, transform, false) : "";
 
@@ -316,6 +316,8 @@ public class GameState {
             case 0x52A: return "Portals Off";
             case 0x522: return "Zoom Out";
             case 0x527: return "Zoom In";
+            case 0x90: return "Separate";
+            case 0x91: return "Combine";
 
             default: return "ID: 0x" + Integer.toHexString(id).toUpperCase();
         }

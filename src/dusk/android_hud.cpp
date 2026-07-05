@@ -286,6 +286,8 @@ void hud_update() {
         } else if (winStatus == 1 || winStatus == 2) {
             dMenu_Ring_c* ring = mw->getMenuRing();
             if (ring) {
+                if (ring->isMixItemOff()) iData[32] = 0x90; // "Combine"
+                else if (ring->isMixItemOn()) iData[32] = 0x91; // "Separate"
                 iData[28] = (int)ring->getDoStatus();
                 iData[60] = (int)ring->getStatus() + 1; iData[61] = (int)ring->getCurrentSlot(); iData[62] = (int)ring->getItemsTotal();
                 for (int s = 0; s < 24; s++) {
