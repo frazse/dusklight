@@ -52,7 +52,10 @@ std::string clean_tp_string(const char* input) {
             unsigned char group = p[2];
             unsigned int number = (p[3] << 8) | p[4];
 
-            if (group == 0x03) { // Buttons
+            __android_log_print(ANDROID_LOG_INFO, "DuskTag", "1A tag: size=%d group=%02X num=%04X bytes=%02X %02X %02X %02X %02X %02X",
+                size, group, number, p[0], p[1], p[2], p[3], p[4], (size > 5 ? p[5] : 0));
+
+            if (group == 0x03) { // Wii Buttons
                 switch (number) {
                     case 1:  out += "{{A}}"; break;
                     case 2:  out += "{{B}}"; break;
@@ -64,8 +67,38 @@ std::string clean_tp_string(const char* input) {
                     case 20: out += "{{Z}}"; break;
                     default: break;
                 }
-            } else if (group == 0x00) {
-                if (number == 0x38) out += "{{ARROWCAP}}";
+            } else if (group == 0x00) { // GC Buttons
+                switch (number) {
+                    case 0x0A: out += "{{A}}"; break;
+                    case 0x0B: out += "{{B}}"; break;
+                    case 0x0C: out += "{{STICK}}"; break;
+                    case 0x0D: out += "{{L}}"; break;
+                    case 0x0E: out += "{{R}}"; break;
+                    case 0x0F: out += "{{X}}"; break;
+                    case 0x10: out += "{{Y}}"; break;
+                    case 0x11: out += "{{Z}}"; break;
+                    case 0x13: out += "{{STICK}}"; break;
+                    case 0x24: out += "{{RETICLE}}"; break;
+                    case 0x2E: out += "{{XORY}}"; break;
+                    case 0x37: { // Bomb Capacity (within group 0x00)
+                        if (size >= 6) {
+                            unsigned char type = p[5];
+                            if (type == 0) out += "{{BOMBCAP0}}";
+                            else if (type == 1) out += "{{BOMBCAP1}}";
+                            else if (type == 2) out += "{{BOMBCAP2}}";
+                        }
+                        break;
+                    }
+                    case 0x38: out += "{{ARROWCAP}}"; break;
+                    default: break;
+                }
+            } else if (group == 0x07) { // GC Capacity Tags (Legacy/Wii?)
+                switch (number) {
+                    case 0x3700: out += "{{BOMBCAP0}}"; break;
+                    case 0x3701: out += "{{BOMBCAP1}}"; break;
+                    case 0x3702: out += "{{BOMBCAP2}}"; break;
+                    default: break;
+                }
             } else if (group == 0x06) {
                 if (number == 0x0A || number == 0x0B) out += "- ";
             }
@@ -272,6 +305,10 @@ void hud_update() {
     iData[17] = dComIfGp_getSelectItem(0); iData[18] = dComIfGp_getSelectItem(1);
     iData[47] = dStage_stagInfo_GetSTType(dComIfGp_getStage()->getStagInfo()) == ST_DUNGEON;
     iData[48] = dComIfGs_isDungeonItemMap() ? 1 : 0; iData[49] = dComIfGs_isDungeonItemCompass() ? 1 : 0;
+    iData[100] = dComIfGs_getArrowMax();
+    iData[101] = dComIfGs_getBombMax(0x70); // dItemNo_NORMAL_BOMB_e
+    iData[102] = dComIfGs_getBombMax(0x71); // dItemNo_WATER_BOMB_e
+    iData[103] = dComIfGs_getBombMax(0x72); // dItemNo_POKE_BOMB_e
 
     auto get_ammo = [](u8 item) { if (item == 0x43) return (int)dComIfGs_getArrowNum(); if (item == 0x4B) return (int)dComIfGs_getPachinkoNum(); if (item >= 0x70 && item <= 0x72) return (int)dComIfGs_getBombNum(item - 0x70); return -1; };
     iData[19] = get_ammo(iData[17]); iData[20] = get_ammo(iData[18]);

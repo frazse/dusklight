@@ -428,7 +428,12 @@ public class HudView extends View {
                             .replace("{{L}}", mState.labelL)
                             .replace("{{R}}", mState.labelR)
                             .replace("{{STICK}}", "Stick")
-                            .replace("{{XORY}}", mState.labelX);
+                            .replace("{{XORY}}", mState.labelX)
+                            .replace("{{RETICLE}}", "Reticle")
+                            .replace("{{ARROWCAP}}", String.valueOf(mState.arrowMax))
+                            .replace("{{BOMBCAP0}}", String.valueOf(mState.bombMax0))
+                            .replace("{{BOMBCAP1}}", String.valueOf(mState.bombMax1))
+                            .replace("{{BOMBCAP2}}", String.valueOf(mState.bombMax2));
 
                         String[] linesArr = resolvedDesc.split("\n");
                         float lineY = cy - 20;
