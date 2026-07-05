@@ -293,12 +293,19 @@ void hud_update() {
                 for (int s = 0; s < 24; s++) {
                     u8 slotIdx = ring->getItem(s, 0);
                     if (slotIdx != 0xFF && slotIdx < 24) {
-                        u8 item = dComIfGs_getItem(slotIdx, true);
-                        iData[63 + s] = item;
+                        u8 comboItem = dComIfGs_getItem(slotIdx, true);
+                        u8 baseItem = dComIfGs_getItem(slotIdx, false);
+
+                        if (comboItem == 0x59 && baseItem != 0x43) {
+                            iData[63 + s] = 0x59; // Combined Bomb slot -> show "Bow & Arrow Combo"
+                        } else {
+                            iData[63 + s] = baseItem; // Use base item (Bow) to keep wheel entry consistent
+                        }
+
                         int count = ring->getMenuRingItemNum(slotIdx);
-                        if (item == 0x59) { // Bomb Arrow
+                        if (comboItem == 0x59) { // But calculate ammo for the combo
                             int arrows = (int)dComIfGs_getArrowNum();
-                            count = std::min(arrows, count); // count here is the bomb count from ring
+                            count = std::min(arrows, count);
                         }
                         iData[87 + s] = count;
                     } else {
@@ -309,12 +316,27 @@ void hud_update() {
                 dMenu_ItemExplain_c* explain = ring->getItemExplain();
                 if (explain && explain->getStatus() != 0) {
                     u8 slotIdx = ring->getItem(ring->getCurrentSlot(), 0);
-                    u8 currentItemNo = (slotIdx != 0xFF) ? dComIfGs_getItem(slotIdx, true) : 0xFF;
-                    char titleBuf[256]; dMeter2Info_getString(explain->getNameMsgID(), titleBuf, NULL);
-                    itemTitle = clean_tp_string(titleBuf);
-                    u16 longID = find_item_long_desc_id(currentItemNo);
-                    u16 baseID = (longID != 0xFFFF) ? longID : explain->getDescMsgID();
-                    itemDesc = get_full_multi_line_desc(baseID, currentItemNo);
+                    u8 comboItem = dComIfGs_getItem(slotIdx, true);
+                    u8 baseItem = dComIfGs_getItem(slotIdx, false);
+
+                    if (comboItem == 0x59 && baseItem != 0x43) {
+                        // This is a Bomb slot combined with a Bow
+                        char titleBuf[256]; dMeter2Info_getString(0x4D2, titleBuf, NULL); // "Bow & Arrow Combo"
+                        itemTitle = clean_tp_string(titleBuf);
+
+                        // Use original Bomb description
+                        u16 longID = find_item_long_desc_id(baseItem);
+                        u16 baseID = (longID != 0xFFFF) ? longID : explain->getDescMsgID();
+                        itemDesc = get_full_multi_line_desc(baseID, baseItem);
+                    } else {
+                        // Normal item or the Bow slot itself
+                        char titleBuf[256]; dMeter2Info_getString(explain->getNameMsgID(), titleBuf, NULL);
+                        itemTitle = clean_tp_string(titleBuf);
+
+                        u16 longID = find_item_long_desc_id(baseItem);
+                        u16 baseID = (longID != 0xFFFF) ? longID : explain->getDescMsgID();
+                        itemDesc = get_full_multi_line_desc(baseID, baseItem);
+                    }
                 }
             }
         }

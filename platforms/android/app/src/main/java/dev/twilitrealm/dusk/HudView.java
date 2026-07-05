@@ -1079,7 +1079,7 @@ public class HudView extends View {
             case 0x4B: return "Slingshot";
             
             case 0x4F: case 0x50: return "Bomb Bag";
-            case 0x59: return "Bomb Arrow";
+            case 0x59: return "Bow & Arrow Combo";
 
             // Equipment & Quest
             case 0x01: case 0x28: return "Ordon Sword";
