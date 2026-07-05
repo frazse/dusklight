@@ -25,6 +25,7 @@
 #include "dusk/map_loader_definitions.h"
 #include "SSystem/SComponent/c_xyz.h"
 #include "dusk/endian.h"
+#include "item_long_desc.h"
 
 #include <SDL3/SDL_system.h>
 #include <jni.h>
@@ -42,104 +43,68 @@ std::string clean_tp_string(const char* input) {
     if (!input || !*input) return "";
     std::string out;
     const unsigned char* p = (const unsigned char*)input;
-    int safety = 0;
-    while (*p && safety++ < 2048) {
-        if (*p == 0x1A) { // TAG ESCAPE
+    while (*p) {
+        if (*p == 0x1A) { // TP Tag escape: 1A [size] [group] [type] [data...]
             unsigned char size = p[1];
             if (size < 4) { p += (size > 1) ? size : 1; continue; }
-            unsigned char grp = p[2];
-            unsigned char type = p[3];
-            unsigned char data = p[4];
 
-            // HEURISTIC: Many Zelda games use grp 0 or 3 for UI symbols
-            if (type == 0x03) { // Symbols/Buttons
-                switch (data) {
-                    case 0: out += "(A)"; break;
-                    case 1: out += "(B)"; break;
-                    case 2: out += "(X)"; break;
-                    case 3: out += "(Y)"; break;
-                    case 4: out += "(Z)"; break;
-                    case 7: out += "(Stick)"; break;
-                    case 8: out += "(C-Stick)"; break;
+            unsigned char group = p[2];
+            unsigned char type = p[3];
+
+            if (group == 0x03) { // Wii Buttons
+                switch (type) {
+                    case 1: out += "(A)"; break;
+                    case 2: out += "(B)"; break;
+                    case 13: out += "(L)"; break;
+                    case 14: out += "(R)"; break;
                     case 15: out += "(X)"; break;
                     case 16: out += "(Y)"; break;
-                    default: out += "(?)"; break;
+                    case 20: out += "(Z)"; break;
+                    case 19: out += "(C)"; break;
                 }
-            } else if (grp == 0x01) { // Numbers
-                if (type == 0x01) out += "[Q]"; else if (type == 0x06) out += "[M]";
+            } else if (group == 0x06) { // Icons/Symbols
+                 if (type == 0x0A || type == 0x0B) out += "- "; // Bullets
+            } else if (group == 0x00 && type == 0x07) { // Wait / Continue
+                 out += '\n';
             }
-            p += size; continue;
+
+            p += size;
+            continue;
         }
-        if (*p == 0x1B) { p++; while (*p && *p != ']') p++; if (*p == ']') p++; continue; }
-        if (*p == 0x0A || *p == 0x0D || *p == 0x1E) { out += '\n'; p++; continue; }
-        if (*p >= 32 && *p < 127) { out += (char)*p++; } else { p++; }
+
+        if (*p == 0x1B) { // Control escape [..]
+             p++; while (*p && *p != ']') p++;
+             if (*p == ']') p++;
+             continue;
+        }
+
+        if (*p == 0x0A || *p == 0x0D || *p == 0x1E) { // Newline or Wait
+            out += '\n'; p++; continue;
+        }
+
+        if (*p >= 32 && *p < 127) {
+            out += (char)*p++;
+        } else {
+            p++;
+        }
     }
     return out;
 }
 
-struct BMGParts { u8* entries; u16 count; u16 entrySize; const char* pool; };
-BMGParts get_bmg_parts() {
-    u8* msgRes = (u8*)JKRGetTypeResource('ROOT', "zel_00.bmg", dComIfGp_getMsgDtArchive(0));
-    if (!msgRes || memcmp(msgRes, "MESGbmg1", 8) != 0) return {nullptr, 0, 0, nullptr};
-    u32 nSections = be32(*(u32*)(msgRes + 12));
-    u8* section = msgRes + 32;
-    JMSMesgInfo_c* inf1 = nullptr; u8* dat1 = nullptr;
-    for (u32 i = 0; i < nSections; i++) {
-        u32 magic = be32(*(u32*)section);
-        if (magic == 0x494E4631) inf1 = (JMSMesgInfo_c*)section;
-        else if (magic == 0x44415431) dat1 = section;
-        section += be32(*(u32*)(section + 4));
-    }
-    if (!inf1 || !dat1) return {nullptr, 0, 0, nullptr};
-    return {(u8*)inf1 + 16, be16(*(u16*)((u8*)inf1 + 8)), be16(*(u16*)((u8*)inf1 + 10)), (const char*)(dat1 + 8)};
+bool clear_pending_exception(JNIEnv* env) {
+    if (env == nullptr || !env->ExceptionCheck()) return false;
+    env->ExceptionClear();
+    return true;
 }
 
-u16 find_item_long_desc_id(u8 itemNo) {
-    BMGParts bmg = get_bmg_parts();
-    if (!bmg.entries) return 0xFFFF;
-    u16 bestID = 0xFFFF;
-    for (u16 i = 0; i < bmg.count; i++) {
-        u8* entry = bmg.entries + (i * bmg.entrySize);
-        if (entry[9] == 0x0B && entry[10] == 0x04 && entry[12] == itemNo) {
-            u16 mid = be16(*(u16*)(entry + 4));
-            if (bestID == 0xFFFF || mid > bestID) bestID = mid;
-        }
-    }
-    return bestID;
-}
-
-std::string get_full_multi_line_desc(u16 baseMsgID, u8 itemNo) {
-    BMGParts bmg = get_bmg_parts();
-    if (!bmg.entries) return "";
-    std::string combined = "";
-    for (int p = 0; p < 8; p++) {
-        u16 targetID = baseMsgID + p;
-        bool found = false;
-        for (u16 i = 0; i < bmg.count; i++) {
-            u8* entry = bmg.entries + (i * bmg.entrySize);
-            if (be16(*(u16*)(entry + 4)) == targetID) {
-                if (entry[12] == itemNo || (p == 0)) {
-                    u32 off = be32(*(u32*)entry);
-                    std::string cleaned = clean_tp_string(bmg.pool + off);
-                    if (!cleaned.empty()) { if (!combined.empty()) combined += "\n"; combined += cleaned; }
-                    found = true;
-                }
-                break;
-            }
-        }
-        if (!found) break;
-    }
-    return combined;
-}
-
-bool clear_pending_exception(JNIEnv* env) { if (env == nullptr || !env->ExceptionCheck()) return false; env->ExceptionClear(); return true; }
 jmethodID s_onGameStateUpdate = nullptr;
 std::atomic<bool> s_secondScreenActive{false};
+constexpr int kHudUpdateInterval = 1;
 int s_frameCounter = 0;
 
-bool is_room_visible(int r, const char* sName, int stayNo, bool hasMapItem) { if (sName && sName[0] == 'R') return r == stayNo; return r == stayNo || dComIfGs_isVisitedRoom(r) || hasMapItem; }
 bool switch_reveals(u8 swBit, int roomNo) { return swBit == 0xFF || dComIfGs_isSwitch(swBit, roomNo); }
 bool group_is_floor_independent(int typeGroupNo) { switch (typeGroupNo) { case 1: case 5: case 6: case 8: case 13: case 14: return true; default: return false; } }
+bool is_room_visible(int r, const char* sName, int stayNo, bool hasMapItem) { if (sName && sName[0] == 'R') return r == stayNo; return r == stayNo || dComIfGs_isVisitedRoom(r) || hasMapItem; }
 
 bool should_draw_geometry_group(const dDrawPath_c::group_class& grp, int roomNo) {
     if (grp.mSwbit == 0xFF) return true;
@@ -151,7 +116,8 @@ bool should_draw_geometry_group(const dDrawPath_c::group_class& grp, int roomNo)
 
 bool should_draw_icon(int typeGroupNo, const dTres_c::data_s* data, int stayNo, s8 sFloor, const char* sName) {
     if (data == nullptr) return false;
-    auto* stage = dComIfGp_getStage(); if (!stage) return false;
+    auto* stage = dComIfGp_getStage();
+    if (stage == nullptr) return false;
     StageType stype = (StageType)dStage_stagInfo_GetSTType(stage->getStagInfo());
     bool is_d = (stype == ST_DUNGEON);
     if (!group_is_floor_independent(typeGroupNo)) {
@@ -185,7 +151,7 @@ bool should_draw_icon(int typeGroupNo, const dTres_c::data_s* data, int stayNo, 
 bool hud_is_second_screen_active() { return s_secondScreenActive.load(std::memory_order_relaxed); }
 
 void hud_update() {
-    if (++s_frameCounter < 1) return;
+    if (++s_frameCounter < kHudUpdateInterval) return;
     s_frameCounter = 0;
     dMeter2_c* meter = dMeter2Info_getMeterClass();
     if (!meter) return;
@@ -208,11 +174,13 @@ void hud_update() {
     iData[57] = winStatus; iData[58] = mapStatus;
     std::string itemTitle = ""; std::string itemDesc = "";
 
-    iData[4] = dComIfGs_getOil(); iData[5] = dComIfGs_getMaxOil();
-    iData[6] = dComIfGp_getNowOxygen(); iData[7] = dComIfGp_getMaxOxygen();
-
-    iData[28] = meter->getDoStatus(); iData[29] = meter->getAStatus(); iData[30] = meter->getZStatus();
-    iData[32] = meter->getRStatus(); iData[33] = meter->getItemStatus(1); iData[34] = meter->getItemStatus(3);
+    // Default Button IDs (Wii Context IDs)
+    iData[28] = meter->getDoStatus();
+    iData[29] = meter->getAStatus();
+    iData[30] = meter->getZStatus();
+    iData[32] = meter->getRStatus();
+    iData[33] = meter->getItemStatus(1); // Usually X
+    iData[34] = meter->getItemStatus(3); // Usually Y
 
     dMw_c* mw = dMeter2Info_getMenuWindowClass();
     if (mw) {
@@ -241,7 +209,9 @@ void hud_update() {
             dMenu_Ring_c* ring = mw->getMenuRing();
             if (ring) {
                 iData[28] = (int)ring->getDoStatus();
-                iData[60] = (int)ring->getStatus() + 1; iData[61] = (int)ring->getCurrentSlot(); iData[62] = (int)ring->getItemsTotal();
+                iData[60] = (int)ring->getStatus() + 1;
+                iData[61] = (int)ring->getCurrentSlot();
+                iData[62] = (int)ring->getItemsTotal();
                 for (int s = 0; s < 24; s++) {
                     u8 slotIdx = ring->getItem(s, 0);
                     if (slotIdx != 0xFF && slotIdx < 24) { iData[63 + s] = dComIfGs_getItem(slotIdx, true); iData[87 + s] = ring->getMenuRingItemNum(slotIdx); }
@@ -249,33 +219,73 @@ void hud_update() {
                 }
                 dMenu_ItemExplain_c* explain = ring->getItemExplain();
                 if (explain && explain->getStatus() != 0) {
+                    char titleBuf[256] = {0}, descBuf[2048] = {0}, pageBuf[512] = {0};
                     u8 slotIdx = ring->getItem(ring->getCurrentSlot(), 0);
                     u8 currentItemNo = (slotIdx != 0xFF) ? dComIfGs_getItem(slotIdx, true) : 0xFF;
-                    char titleBuf[256]; dMeter2Info_getString(explain->getNameMsgID(), titleBuf, NULL);
+
+                    uint32_t baseDescID = dusk_getItemLongDescMsgID(currentItemNo);
+                    if (baseDescID == 0xFFFF) baseDescID = explain->getDescMsgID();
+
+                    g_meter2_info.getString(explain->getNameMsgID(), titleBuf, NULL);
+                    g_meter2_info.getString(baseDescID, descBuf, NULL);
+
+                    // Safe Sequential Page Append
+                    for (int p = 1; p <= 4; p++) {
+                        JMSMesgEntry_c entry;
+                        pageBuf[0] = '\0';
+                        g_meter2_info.getString(baseDescID + p, pageBuf, &entry);
+                        if (pageBuf[0] != '\0' && entry.unk_0xc == 0x0C && entry.unk_0xd == currentItemNo) {
+                            strncat(descBuf, "\n", 2047 - strlen(descBuf));
+                            strncat(descBuf, pageBuf, 2047 - strlen(descBuf));
+                        } else break;
+                    }
+
                     itemTitle = clean_tp_string(titleBuf);
-                    u16 longID = find_item_long_desc_id(currentItemNo);
-                    u16 baseID = (longID != 0xFFFF) ? longID : explain->getDescMsgID();
-                    itemDesc = get_full_multi_line_desc(baseID, currentItemNo);
+                    itemDesc = clean_tp_string(descBuf);
                 }
             }
         }
     }
+    int vis = 0;
+    if (dMeter2Info_isUseButton(0x1)) vis |= 1; if (dMeter2Info_isUseButton(0x2)) vis |= 2; if (dMeter2Info_isUseButton(0x800)) vis |= 4;
+    if (dMeter2Info_isUseButton(0x40)) vis |= 8; if (dMeter2Info_isUseButton(0x4)) vis |= 16; if (dMeter2Info_isUseButton(0x8)) vis |= 32;
+    if (iData[59] > 0) vis |= 64; if (winStatus == 0 && (vis & 4) == 0) { if (!dComIfGs_isEventBit(0x0540)) vis |= 4; }
+    iData[39] = vis; iData[0] = dComIfGs_getLife(); iData[1] = dComIfGs_getMaxLife(); iData[8] = dComIfGs_getRupee(); iData[9] = dComIfGs_getKeyNum();
+    iData[10] = dComIfGs_getArrowNum(); iData[11] = dComIfGs_getBombNum(0); iData[12] = (int)dComIfGs_getTransformStatus(); iData[13] = stayNo;
+    iData[17] = dComIfGp_getSelectItem(0); iData[18] = dComIfGp_getSelectItem(1); iData[47] = dStage_stagInfo_GetSTType(dComIfGp_getStage()->getStagInfo()) == ST_DUNGEON;
+    iData[48] = dComIfGs_isDungeonItemMap() ? 1 : 0; iData[49] = dComIfGs_isDungeonItemCompass() ? 1 : 0; iData[41] = dComIfGs_isDungeonItemBossKey() ? 1 : 0;
 
-    iData[0] = dComIfGs_getLife(); iData[1] = dComIfGs_getMaxLife(); iData[8] = dComIfGs_getRupee();
-    iData[10] = dComIfGs_getArrowNum(); iData[11] = dComIfGs_getBombNum(0); iData[13] = stayNo;
-    iData[17] = dComIfGp_getSelectItem(0); iData[18] = dComIfGp_getSelectItem(1);
-    iData[47] = dStage_stagInfo_GetSTType(dComIfGp_getStage()->getStagInfo()) == ST_DUNGEON;
-    iData[48] = dComIfGs_isDungeonItemMap() ? 1 : 0; iData[49] = dComIfGs_isDungeonItemCompass() ? 1 : 0;
+    // Stats for Meters
+    iData[4] = dComIfGs_getOil(); iData[5] = dComIfGs_getMaxOil();
+    iData[6] = dComIfGp_getNowOxygen(); iData[7] = dComIfGp_getMaxOxygen();
+    iData[43] = dComIfGp_getOxygenShowFlag() ? 1 : 0;
 
-    auto get_ammo = [](u8 item) { if (item == 0x43) return (int)dComIfGs_getArrowNum(); if (item == 0x4B) return (int)dComIfGs_getPachinkoNum(); if (item >= 0x70 && item <= 0x72) return (int)dComIfGs_getBombNum(item - 0x70); return -1; };
-    iData[19] = get_ammo(iData[17]); iData[20] = get_ammo(iData[18]);
+    // Ammo counts for X/Y
+    auto get_ammo = [](u8 item) {
+        if (item == 0x43) return (int)dComIfGs_getArrowNum();
+        if (item == 0x4B) return (int)dComIfGs_getPachinkoNum();
+        if (item >= 0x70 && item <= 0x72) return (int)dComIfGs_getBombNum(item - 0x70);
+        return -1;
+    };
+    iData[19] = get_ammo(iData[17]); // X count
+    iData[20] = get_ammo(iData[18]); // Y count
 
     for (int k = 50; k <= 56; k++) iData[k] = -1;
-    u32 bCount = 0; PADButtonMapping* pbm = PADGetButtonMappings(0, &bCount);
-    if (pbm) for (u32 j = 0; j < bCount; j++) {
-        switch (pbm[j].padButton) { case PAD_BUTTON_A: iData[50] = pbm[j].nativeButton; break; case PAD_BUTTON_B: iData[51] = pbm[j].nativeButton; break; case PAD_BUTTON_X: iData[52] = pbm[j].nativeButton; break; case PAD_BUTTON_Y: iData[53] = pbm[j].nativeButton; break; case PAD_TRIGGER_Z: iData[54] = pbm[j].nativeButton; break; }
+    u32 bCount = 0;
+    PADButtonMapping* pbm = PADGetButtonMappings(0, &bCount);
+    if (pbm) {
+        for (u32 j = 0; j < bCount; j++) {
+            switch (pbm[j].padButton) {
+                case PAD_BUTTON_A: iData[50] = pbm[j].nativeButton; break;
+                case PAD_BUTTON_B: iData[51] = pbm[j].nativeButton; break;
+                case PAD_BUTTON_X: iData[52] = pbm[j].nativeButton; break;
+                case PAD_BUTTON_Y: iData[53] = pbm[j].nativeButton; break;
+                case PAD_TRIGGER_Z: iData[54] = pbm[j].nativeButton; break;
+                case PAD_TRIGGER_L: iData[55] = pbm[j].nativeButton; break;
+                case PAD_TRIGGER_R: iData[56] = pbm[j].nativeButton; break;
+            }
+        }
     }
-
     Vec pPos = dMapInfo_n::getMapPlayerPos(); const char* sName = dComIfGp_getStartStageName(); std::string fName = sName ? sName : "Unknown";
     if (sName) { for (const auto& reg : gameRegions) { for (const auto& ma : reg.maps) { if (strcmp(ma.mapFile, sName) == 0) { fName = ma.mapName; goto f_ok; } } } }
     f_ok:; s8 floor = dMapInfo_c::getNowStayFloorNoDecisionFlg() ? dMapInfo_c::getNowStayFloorNo() : dMapInfo_c::calcFloorNo(pPos.y, true, stayNo);
@@ -287,7 +297,7 @@ void hud_update() {
         for (int l = 0; l < 2; l++) {
             auto* rm = dMpath_c::getRoomPointer(l, r); if (!rm || !rm->mpFloatData) continue;
             for (int f = 0; f < rm->mFloorNum; f++) {
-                if (sName && sName[0] != 'F' && rm->mpFloor[f].mFloorNo != floor) continue;
+                if (sName[0] != 'F' && rm->mpFloor[f].mFloorNo != floor) continue;
                 for (int g = 0; g < rm->mpFloor[f].mGroupNum; g++) {
                     auto& grp = rm->mpFloor[f].mpGroup[g]; if (!should_draw_geometry_group(grp, r)) continue;
                     for (int ln = 0; ln < grp.mLineNum; ln++) {
@@ -300,10 +310,7 @@ void hud_update() {
                     }
                     for (int pn = 0; pn < grp.mPolyNum; pn++) {
                         if (grp.mpPoly[pn].field_0x0 & 0x40) continue;
-                        for (int i = 0; i < grp.mpPoly[pn].mDataNum; i++) {
-                            float px = rm->mpFloatData[grp.mpPoly[pn].mpData[i]*2], pz = rm->mpFloatData[grp.mpPoly[pn].mpData[i]*2+1];
-                            lines.push_back(px); lines.push_back(pz); miX=std::min(miX,px); maX=std::max(maX,px); miZ=std::min(miZ,pz); maZ=std::max(maZ,pz);
-                        }
+                        for (int i = 0; i < grp.mpPoly[pn].mDataNum; i++) { float px = rm->mpFloatData[grp.mpPoly[pn].mpData[i]*2], pz = rm->mpFloatData[grp.mpPoly[pn].mpData[i]*2+1]; lines.push_back(px); lines.push_back(pz); }
                         lines.push_back(std::numeric_limits<float>::quiet_NaN()); lines.push_back((float)grp.mpPoly[pn].field_0x0); lines.push_back(1001.0f); lines.push_back(0);
                     }
                 }
@@ -314,12 +321,10 @@ void hud_update() {
     for (int g = 0; g < 17; g++) { for (auto* d = dTres_c::getFirstData(g); d; d = dTres_c::getNextData(d)) { if (should_draw_icon(g, d, stayNo, floor, sName)) { icons.push_back((float)g); icons.push_back(d->mPos.x); icons.push_back(d->mPos.z); icons.push_back((float)d->mRoomNo); } } }
     auto ad = [&](dStage_KeepDoorInfo* in) { if (!in) return; for (int i = 0; i < in->mNum; i++) { auto& dr = in->mDrTgData[i]; int r = (dr.base.parameters >> 24) & 0x3F; if (dMapInfo_c::calcFloorNo(dr.base.position.y, true, r) != floor) continue; if (is_room_visible(r, sName, stayNo, iData[48])) { doors.push_back(dr.base.position.x); doors.push_back(dr.base.position.z); doors.push_back((float)dr.base.angle.y * (180.0f / 32768.0f)); doors.push_back(0); } } };
     ad(dStage_GetKeepDoorInfo()); ad(dStage_GetRoomKeepDoorInfo());
-
     jstring jS = env->NewStringUTF(fName.c_str()); jstring jT = env->NewStringUTF(itemTitle.c_str()); jstring jDe = env->NewStringUTF(itemDesc.c_str());
     jintArray jInts = env->NewIntArray(120); env->SetIntArrayRegion(jInts, 0, 120, iData); jfloatArray jF = env->NewFloatArray(14); env->SetFloatArrayRegion(jF, 0, 14, fData);
     jfloatArray jL = env->NewFloatArray(lines.size()); env->SetFloatArrayRegion(jL, 0, lines.size(), lines.data());
-    jfloatArray jI = env->NewFloatArray(icons.size()); env->SetFloatArrayRegion(jI, 0, icons.size(), icons.data());
-    jfloatArray jD = env->NewFloatArray(doors.size()); env->SetFloatArrayRegion(jD, 0, doors.size(), doors.data());
+    jfloatArray jI = env->NewFloatArray(icons.size()); env->SetFloatArrayRegion(jI, 0, icons.size(), icons.data()); jfloatArray jD = env->NewFloatArray(doors.size()); env->SetFloatArrayRegion(jD, 0, doors.size(), doors.data());
     env->CallVoidMethod(activity, s_onGameStateUpdate, jInts, jF, jS, jT, jDe, jL, jI, jD);
     env->DeleteLocalRef(jInts); env->DeleteLocalRef(jF); env->DeleteLocalRef(jS); env->DeleteLocalRef(jT); env->DeleteLocalRef(jDe); env->DeleteLocalRef(jL); env->DeleteLocalRef(jI); env->DeleteLocalRef(jD); env->DeleteLocalRef(activity);
 }
