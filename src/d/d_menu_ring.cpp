@@ -18,6 +18,7 @@
 #include "d/d_select_cursor.h"
 #include "d/d_menu_item_explain.h"
 #include "d/d_menu_window.h"
+#include "dusk/android_hud.hpp"
 #include "d/d_meter2.h"
 #include "d/d_meter2_draw.h"
 #include "d/d_meter_HIO.h"
@@ -641,6 +642,9 @@ void dMenu_Ring_c::_move() {
 }
 
 void dMenu_Ring_c::_draw() {
+    if (dusk::android::hud_is_second_screen_active()) {
+        return;
+    }
     J2DGrafContext* grafPort = dComIfGp_getCurrentGrafPort();
     grafPort->setup2D();
     if (mDrawFlag == 0) {
