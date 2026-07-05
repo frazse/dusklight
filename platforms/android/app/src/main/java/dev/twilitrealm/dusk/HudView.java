@@ -698,7 +698,21 @@ public class HudView extends View {
             canvas.drawCircle(x, y, 12, mPaint); // Outer Ring
             mPaint.setStyle(Paint.Style.FILL);
             canvas.drawCircle(x, y, 5, mPaint);  // Inner Dot
-        } else if (type == 6 || type == 11) { // Special Objectives (Golden Wolf, Story) -> Cyan
+        } else if (type == 6) { // Golden Wolf -> Exact Yellow Rounded Square with Black Border
+            float radius = 10;
+            RectF rect = new RectF(x - radius, y - radius, x + radius, y + radius);
+            
+            // 1. Black Border / Outer Ring (Highly rounded)
+            mPaint.setColor(Color.BLACK);
+            mPaint.setStyle(Paint.Style.FILL);
+            canvas.drawRoundRect(rect, 8.5f, 8.5f, mPaint);
+            
+            // 2. Exact Yellow Fill (#efdb39)
+            RectF innerRect = new RectF(x - radius + 1.5f, y - radius + 1.5f, x + radius - 1.5f, y + radius - 1.5f);
+            mPaint.setColor(Color.parseColor("#EFDB39"));
+            canvas.drawRoundRect(innerRect, 7.0f, 7.0f, mPaint);
+
+        } else if (type == 11) { // Story Objective -> Original Cyan style
             mPaint.setColor(Color.CYAN);
             canvas.drawCircle(x, y, 8, mPaint);
             mPaint.setStyle(Paint.Style.STROKE);
