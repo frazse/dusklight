@@ -105,7 +105,10 @@ u16 find_item_long_desc_id(u8 itemNo) {
         u8* entry = bmg.entries + (i * bmg.entrySize);
         if (entry[9] == 0x0B && entry[10] == 0x04 && entry[12] == itemNo) {
             u16 mid = be16(*(u16*)(entry + 4));
-            if (bestID == 0xFFFF || mid > bestID) bestID = mid;
+            // IDs < 0x200 are usually short names. Target GC long-descs (0x200-0x400 range).
+            if (mid >= 0x0200 && mid < 0x0800) {
+                if (bestID == 0xFFFF || mid < bestID) bestID = mid;
+            }
         }
     }
     return bestID;
