@@ -292,8 +292,19 @@ void hud_update() {
                 iData[60] = (int)ring->getStatus() + 1; iData[61] = (int)ring->getCurrentSlot(); iData[62] = (int)ring->getItemsTotal();
                 for (int s = 0; s < 24; s++) {
                     u8 slotIdx = ring->getItem(s, 0);
-                    if (slotIdx != 0xFF && slotIdx < 24) { iData[63 + s] = dComIfGs_getItem(slotIdx, true); iData[87 + s] = ring->getMenuRingItemNum(slotIdx); }
-                    else { iData[63 + s] = 0xFF; iData[87 + s] = 0; }
+                    if (slotIdx != 0xFF && slotIdx < 24) {
+                        u8 item = dComIfGs_getItem(slotIdx, true);
+                        iData[63 + s] = item;
+                        int count = ring->getMenuRingItemNum(slotIdx);
+                        if (item == 0x59) { // Bomb Arrow
+                            int arrows = (int)dComIfGs_getArrowNum();
+                            count = std::min(arrows, count); // count here is the bomb count from ring
+                        }
+                        iData[87 + s] = count;
+                    } else {
+                        iData[63 + s] = 0xFF;
+                        iData[87 + s] = 0;
+                    }
                 }
                 dMenu_ItemExplain_c* explain = ring->getItemExplain();
                 if (explain && explain->getStatus() != 0) {
