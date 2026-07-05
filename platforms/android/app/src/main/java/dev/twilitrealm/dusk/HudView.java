@@ -435,10 +435,11 @@ public class HudView extends View {
                             .replace("{{BOMBCAP1}}", String.valueOf(mState.bombMax1))
                             .replace("{{BOMBCAP2}}", String.valueOf(mState.bombMax2));
 
+                        mPaint.setTextAlign(Paint.Align.LEFT);
                         String[] linesArr = resolvedDesc.split("\n");
                         float lineY = cy - 20;
                         for (String line : linesArr) {
-                             canvas.drawText(line, cx, lineY, mPaint);
+                             drawColorText(canvas, line, cx - 260, lineY, mPaint);
                              lineY += 35;
                         }
                     } else {
@@ -449,6 +450,48 @@ public class HudView extends View {
                 }
             }
         }
+    }
+
+    private void drawColorText(Canvas canvas, String line, float x, float y, Paint paint) {
+        float curX = x;
+        int lastPos = 0;
+        int idx = line.indexOf("[[C:");
+        int originalColor = paint.getColor();
+        
+        while (idx != -1) {
+            // Draw text before the tag
+            if (idx > lastPos) {
+                String segment = line.substring(lastPos, idx);
+                canvas.drawText(segment, curX, y, paint);
+                curX += paint.measureText(segment);
+            }
+            
+            int endIdx = line.indexOf("]]", idx);
+            if (endIdx != -1) {
+                String tag = line.substring(idx + 4, endIdx);
+                try {
+                    int colorIdx = Integer.parseInt(tag);
+                    switch (colorIdx) {
+                        case 1: paint.setColor(Color.rgb(255, 100, 100)); break; // Red
+                        case 2: paint.setColor(Color.rgb(100, 255, 100)); break; // Green
+                        case 3: paint.setColor(Color.rgb(120, 120, 255)); break; // Blue
+                        case 4: paint.setColor(Color.rgb(255, 255, 100)); break; // Yellow
+                        case 0: default: paint.setColor(originalColor); break;  // Reset
+                    }
+                } catch (Exception e) {}
+                lastPos = endIdx + 2;
+            } else {
+                lastPos = idx + 4;
+            }
+            idx = line.indexOf("[[C:", lastPos);
+        }
+        
+        // Draw remaining text
+        if (lastPos < line.length()) {
+            canvas.drawText(line.substring(lastPos), curX, y, paint);
+        }
+        
+        paint.setColor(originalColor);
     }
 
     private void drawMiniMap(Canvas canvas, float x, float y, float interX, float interY, float interAngle) {

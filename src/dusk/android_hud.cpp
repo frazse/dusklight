@@ -100,7 +100,14 @@ std::string clean_tp_string(const char* input) {
                     default: break;
                 }
             } else if (group == 0x06) {
-                if (number == 0x0A || number == 0x0B) out += "- ";
+                if (number == 0x0A) out += "- ";
+                else if (number == 0x0B) out += "  ";
+            } else if (group == 0xFF) { // Special/Color Tags
+                if (size >= 6 && number == 0x0000) {
+                    char buf[16];
+                    sprintf(buf, "[[C:%d]]", p[5]);
+                    out += buf;
+                }
             }
 
             p += size;
