@@ -319,8 +319,24 @@ void hud_update() {
     iData[102] = dComIfGs_getBombMax(0x71); // dItemNo_WATER_BOMB_e
     iData[103] = dComIfGs_getBombMax(0x72); // dItemNo_POKE_BOMB_e
 
-    auto get_ammo = [](u8 item) { if (item == 0x43) return (int)dComIfGs_getArrowNum(); if (item == 0x4B) return (int)dComIfGs_getPachinkoNum(); if (item >= 0x70 && item <= 0x72) return (int)dComIfGs_getBombNum(item - 0x70); return -1; };
-    iData[19] = get_ammo(iData[17]); iData[20] = get_ammo(iData[18]);
+    auto get_ammo = [](u8 item, int selIdx) {
+        if (item == 0x59) { // Bomb Arrow
+            int arrows = (int)dComIfGs_getArrowNum();
+            u8 mixSlot = dComIfGs_getMixItemIndex(selIdx);
+            if (mixSlot == 0xFF) return arrows;
+            u8 bombItem = dComIfGs_getItem(mixSlot, false);
+            if (bombItem >= 0x70 && bombItem <= 0x72) {
+                int bombs = (int)dComIfGs_getBombNum(bombItem - 0x70);
+                return std::min(arrows, bombs);
+            }
+            return arrows;
+        }
+        if (item == 0x43) return (int)dComIfGs_getArrowNum();
+        if (item == 0x4B) return (int)dComIfGs_getPachinkoNum();
+        if (item >= 0x70 && item <= 0x72) return (int)dComIfGs_getBombNum(item - 0x70);
+        return -1;
+    };
+    iData[19] = get_ammo(iData[17], 0); iData[20] = get_ammo(iData[18], 1);
 
     for (int k = 50; k <= 56; k++) iData[k] = -1;
     u32 bCount = 0; PADButtonMapping* pbm = PADGetButtonMappings(0, &bCount);
