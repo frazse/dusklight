@@ -352,6 +352,16 @@ void hud_update() {
     iData[102] = dComIfGs_getBombMax(0x71); // dItemNo_WATER_BOMB_e
     iData[103] = dComIfGs_getBombMax(0x72); // dItemNo_POKE_BOMB_e
 
+    // Horse & Riding State (Spur Fix)
+    iData[42] = dMeter2Info_getHorseLifeCount();
+    int stateFlags = 0;
+    auto* player = dComIfGp_getLinkPlayer();
+    if (player) {
+        if (player->checkHorseRide()) stateFlags |= 4;
+        if (player->checkPlayerFly()) stateFlags |= 32;
+    }
+    iData[31] = stateFlags;
+
     auto get_ammo = [](u8 item, int selIdx) {
         if (item == 0x59) { // Bomb Arrow
             int arrows = (int)dComIfGs_getArrowNum();
