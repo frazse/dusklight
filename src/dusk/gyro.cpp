@@ -12,8 +12,9 @@ constexpr float kGyroEmaAlphaMax = 1.0f;
 // Smooth gravity separately so the yaw/roll blend doesn't twitch with raw accel noise.
 constexpr float kGravityEmaAlpha = 0.1f;
 constexpr float kMinGravityProjection = 0.2f;
-// Let roll contribute more strongly as the pad approaches an upright posture.
+// Let yaw/roll contribute more strongly as the pad approaches an upright posture.
 constexpr float kRollAimBoostMax = 2.0f;
+constexpr float kYawThorBoost    = 1.5f;
 
 bool  s_sensor_enabled        = false;
 bool  s_accel_enabled         = false;
@@ -121,44 +122,54 @@ void read(float dt) {
     s_smooth_gz += smooth_alpha * (gyro[2] - s_smooth_gz);
 
     const float pitch_rate = apply_deadband(s_smooth_gx, deadband);
-    const float yaw_rate = apply_deadband(s_smooth_gy, deadband);
-    const float roll_rate = apply_deadband(s_smooth_gz, deadband);
+    const float roll_rate = apply_deadband(s_smooth_gy, deadband); // Swapped for Thor orientation
+    const float yaw_rate = apply_deadband(s_smooth_gz, deadband);  // Swapped for Thor orientation
 
     s_pitch_rad = -pitch_rate * dt * getSettings().game.gyroSensitivityY;
-    s_roll_rad  = roll_rate * dt * getSettings().game.gyroSensitivityX; // GYRO NOTE: Exposing Z sensitivity seems unusual, so I'm just using X
+    s_roll_rad  = roll_rate * dt * getSettings().game.gyroSensitivityX;
 
-    float horizontal_rate = yaw_rate;
-    if (aim_active && s_accel_enabled) {
-        f32 accel[3];
-        if (PADGetSensorData(PAD_CHAN0, PAD_SENSOR_ACCEL, accel, 3)) {
-            if (!s_have_gravity_baseline) {
-                s_gravity_y = accel[1];
-                s_gravity_z = accel[2];
-            } else {
-                s_gravity_y += kGravityEmaAlpha * (accel[1] - s_gravity_y);
-                s_gravity_z += kGravityEmaAlpha * (accel[2] - s_gravity_z);
-            }
+    float horizontal_rate = 0.0f;
+    const auto mode = getSettings().game.gyroHorizontalMode.getValue();
 
-            // Compare the current gravity projection against the gravity vector from
-            // aim start so the user's resting hold angle becomes the neutral baseline.
-            const float gravity_yz_len = std::sqrt((s_gravity_y * s_gravity_y) + (s_gravity_z * s_gravity_z));
-            if (gravity_yz_len >= kMinGravityProjection) {
-                const float current_gravity_y = s_gravity_y / gravity_yz_len;
-                const float current_gravity_z = s_gravity_z / gravity_yz_len;
-
+    if (mode == GyroHorizontalMode::Yaw) {
+        horizontal_rate = -yaw_rate * kYawThorBoost;
+    } else if (mode == GyroHorizontalMode::Combined) {
+        horizontal_rate = (-yaw_rate * kYawThorBoost) + roll_rate;
+    } else {
+        // Roll Mode (Default / Smart Blend)
+        horizontal_rate = roll_rate; // Primary for Roll mode
+        if (aim_active && s_accel_enabled) {
+            f32 accel[3];
+            if (PADGetSensorData(PAD_CHAN0, PAD_SENSOR_ACCEL, accel, 3)) {
                 if (!s_have_gravity_baseline) {
-                    s_baseline_gravity_y = current_gravity_y;
-                    s_baseline_gravity_z = current_gravity_z;
-                    s_have_gravity_baseline = true;
+                    s_gravity_y = accel[1];
+                    s_gravity_z = accel[2];
+                } else {
+                    s_gravity_y += kGravityEmaAlpha * (accel[1] - s_gravity_y);
+                    s_gravity_z += kGravityEmaAlpha * (accel[2] - s_gravity_z);
                 }
 
-                const float yaw_weight =
-                    (s_baseline_gravity_y * current_gravity_y) + (s_baseline_gravity_z * current_gravity_z);
-                const float roll_weight =
-                    (s_baseline_gravity_y * current_gravity_z) - (s_baseline_gravity_z * current_gravity_y);
-                const float roll_mix = std::fabs(roll_weight);
-                const float roll_boost = 1.0f + (roll_mix * (kRollAimBoostMax - 1.0f));
-                horizontal_rate = (yaw_rate * yaw_weight) + (roll_rate * roll_weight * roll_boost);
+                const float gravity_yz_len = std::sqrt((s_gravity_y * s_gravity_y) + (s_gravity_z * s_gravity_z));
+                if (gravity_yz_len >= kMinGravityProjection) {
+                    const float current_gravity_y = s_gravity_y / gravity_yz_len;
+                    const float current_gravity_z = s_gravity_z / gravity_yz_len;
+
+                    if (!s_have_gravity_baseline) {
+                        s_baseline_gravity_y = current_gravity_y;
+                        s_baseline_gravity_z = current_gravity_z;
+                        s_have_gravity_baseline = true;
+                    }
+
+                    // Smart Blend: Weights based on tilt
+                    const float roll_weight =
+                        (s_baseline_gravity_y * current_gravity_y) + (s_baseline_gravity_z * current_gravity_z);
+                    const float yaw_weight =
+                        (s_baseline_gravity_y * current_gravity_z) - (s_baseline_gravity_z * current_gravity_y);
+
+                    const float yaw_mix = std::fabs(yaw_weight);
+                    const float yaw_boost = 1.0f + (yaw_mix * (kRollAimBoostMax - 1.0f));
+                    horizontal_rate = (roll_rate * roll_weight) + (-yaw_rate * kYawThorBoost * yaw_weight * yaw_boost);
+                }
             }
         }
     }

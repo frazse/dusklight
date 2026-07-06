@@ -60,6 +60,12 @@ enum class MagicArmorMode : u8 {
     COSMETIC = 4,
 };
 
+enum class GyroHorizontalMode : u8 {
+    Roll = 0,
+    Yaw = 1,
+    Combined = 2,
+};
+
 namespace config {
 template <>
 struct ConfigEnumRange<BloomMode> {
@@ -107,6 +113,12 @@ template <>
 struct ConfigEnumRange<MagicArmorMode> {
     static constexpr auto min = MagicArmorMode::NORMAL;
     static constexpr auto max = MagicArmorMode::COSMETIC;
+};
+
+template <>
+struct ConfigEnumRange<GyroHorizontalMode> {
+    static constexpr auto min = GyroHorizontalMode::Roll;
+    static constexpr auto max = GyroHorizontalMode::Combined;
 };
 
 template <>
@@ -202,6 +214,7 @@ struct UserSettings {
         // Input
         ConfigVar<bool> enableGyroAim;
         ConfigVar<bool> enableGyroRollgoal;
+        ConfigVar<GyroHorizontalMode> gyroHorizontalMode;
         ConfigVar<float> gyroSensitivityX;
         ConfigVar<float> gyroSensitivityY;
         ConfigVar<float> gyroSensitivityRollgoal;

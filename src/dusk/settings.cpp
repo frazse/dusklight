@@ -82,6 +82,7 @@ UserSettings g_userSettings = {
         // Input
         .enableGyroAim {"game.enableGyroAim", false},
         .enableGyroRollgoal {"game.enableGyroRollgoal", false},
+        .gyroHorizontalMode {"game.gyroHorizontalMode", GyroHorizontalMode::Roll},
         .gyroSensitivityX {"game.gyroSensitivityX", 1.0f},
         .gyroSensitivityY {"game.gyroSensitivityY", 1.0f},
         .gyroSensitivityRollgoal {"game.gyroSensitivityRollgoal", 1.0f},
@@ -316,6 +317,7 @@ void registerSettings() {
     Register(g_userSettings.game.enableFrameInterpolation);
     Register(g_userSettings.game.enableGyroAim);
     Register(g_userSettings.game.enableGyroRollgoal);
+    Register(g_userSettings.game.gyroHorizontalMode);
     Register(g_userSettings.game.gyroSensitivityX);
     Register(g_userSettings.game.gyroSensitivityY);
     Register(g_userSettings.game.gyroSensitivityRollgoal);

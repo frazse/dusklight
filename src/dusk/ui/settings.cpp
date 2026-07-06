@@ -88,6 +88,12 @@ constexpr std::array kMenuScalingModeLabels = {
     "Dusklight",
 };
 
+constexpr std::array kGyroHorizontalModeLabels = {
+    "Roll",
+    "Yaw",
+    "Combined",
+};
+
 constexpr std::array kMagicArmorModes = {
     "Normal",
     "On Damage",
@@ -1041,6 +1047,45 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
             "Hero's Bow, Clawshot(s), Ball and Chain, and Dominion Rod.");
         addOption("Gyro Rollgoal", getSettings().game.enableGyroRollgoal,
             "Enables gyro controls for Rollgoal in Hena's Cabin.");
+        leftPane.register_control(
+            leftPane.add_select_button({
+                .key = "Gyro Horizontal Aim",
+                .getValue =
+                    [] {
+                        return kGyroHorizontalModeLabels[static_cast<u8>(
+                            getSettings().game.gyroHorizontalMode.getValue())];
+                    },
+                .isDisabled = [] { return !gyro_enabled(); },
+                .isModified =
+                    [] {
+                        const auto& mode = getSettings().game.gyroHorizontalMode;
+                        return mode.getValue() != mode.getDefaultValue();
+                    },
+            }),
+            rightPane, [](Pane& pane) {
+                for (int i = 0; i < static_cast<int>(kGyroHorizontalModeLabels.size()); ++i) {
+                    pane
+                        .add_button({
+                            .text = kGyroHorizontalModeLabels[i],
+                            .isSelected =
+                                [i] {
+                                    return getSettings().game.gyroHorizontalMode.getValue() ==
+                                           static_cast<GyroHorizontalMode>(i);
+                                },
+                        })
+                        .on_pressed([i] {
+                            mDoAud_seStartMenu(kSoundItemChange);
+                            getSettings().game.gyroHorizontalMode.setValue(
+                                static_cast<GyroHorizontalMode>(i));
+                            config::Save();
+                        });
+                }
+                pane.add_rml(
+                    "<br/>Select which device axis controls horizontal aiming.<br/><br/>"
+                    "<b>Roll</b>: Steering wheel motion (Smart Blend).<br/>"
+                    "<b>Yaw</b>: Panning motion (turning like a book).<br/>"
+                    "<b>Combined</b>: Both axes contribute.");
+            });
         config_percent_select(leftPane, rightPane, getSettings().game.gyroSensitivityY,
             "Gyro Pitch Sensitivity", "Controls vertical gyro aiming sensitivity.", 25, 400, 5,
             [] { return !gyro_enabled(); });
