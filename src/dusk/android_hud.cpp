@@ -376,9 +376,10 @@ void hud_update() {
         }
     }
 
-    iData[0] = dComIfGs_getLife(); iData[1] = dComIfGs_getMaxLife(); iData[8] = dComIfGs_getRupee();
+    iData[0] = dComIfGs_getLife(); iData[1] = dComIfGs_getMaxLife(); iData[8] = dComIfGs_getRupee(); iData[9] = dComIfGs_getKeyNum() + dComIfGp_getItemKeyNumCount();
     iData[10] = dComIfGs_getArrowNum(); iData[11] = dComIfGs_getBombNum(0); iData[13] = stayNo;
     iData[17] = dComIfGp_getSelectItem(0); iData[18] = dComIfGp_getSelectItem(1);
+    iData[41] = dComIfGs_isDungeonItemBossKey() ? 1 : 0;
     iData[47] = dStage_stagInfo_GetSTType(dComIfGp_getStage()->getStagInfo()) == ST_DUNGEON;
     iData[48] = dComIfGs_isDungeonItemMap() ? 1 : 0; iData[49] = dComIfGs_isDungeonItemCompass() ? 1 : 0;
     iData[100] = dComIfGs_getArrowMax();
@@ -412,6 +413,10 @@ void hud_update() {
         if (item == 0x43) return (int)dComIfGs_getArrowNum();
         if (item == 0x4B) return (int)dComIfGs_getPachinkoNum();
         if (item >= 0x70 && item <= 0x72) return (int)dComIfGs_getBombNum(item - 0x70);
+        if (item >= 0x4F && item <= 0x51) {
+            u8 slotIdx = dComIfGs_getSelectItemIndex(selIdx);
+            if (slotIdx >= 15 && slotIdx <= 17) return (int)dComIfGs_getBombNum(slotIdx - 15);
+        }
         return -1;
     };
     iData[19] = get_ammo(iData[17], 0); iData[20] = get_ammo(iData[18], 1);
