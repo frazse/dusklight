@@ -21,7 +21,7 @@ public class GameState {
     public final int idA, idB, idX, idY, idZ, idL, idR, windowStatus, mapStatus, visMask;
     public final String dPadUpText, dPadDownText, dPadLeftText, dPadRightText;
     public final String stageName, itemTitle, itemDesc, dialogText;
-    public final int arrowMax, bombMax0, bombMax1, bombMax2;
+    public final int arrowMax, bombMax0, bombMax1, bombMax2, dialogOnSecondScreen, selectPos, selectNum, msgStatus;
 
     public final int itemXResId, itemYResId, itemXCount, itemYCount;
     public final int itemDDownId, itemDDownCount, itemDLeftId, itemDLeftCount, itemDRightId, itemDRightCount;
@@ -85,6 +85,10 @@ public class GameState {
         this.bombMax0 = i[101];
         this.bombMax1 = i[102];
         this.bombMax2 = i[103];
+        this.dialogOnSecondScreen = i[104];
+        this.selectPos = i[105];
+        this.selectNum = i[106];
+        this.msgStatus = i[107];
 
         // Visibility Override Logic:
         // - In play (windowStatus==0), respect the visMask (avoids ghost prompts)

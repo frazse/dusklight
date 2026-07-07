@@ -148,8 +148,8 @@ public class HudView extends View {
         drawContextButtons(canvas, 820, 280);
         drawStatusInfo(canvas, 1260, 1060);
 
-        if (mState.dialogText != null && !mState.dialogText.isEmpty()) {
-            drawDialogBox(canvas, 640, 540);
+        if (mState.dialogOnSecondScreen != 0 && mState.dialogText != null && !mState.dialogText.isEmpty()) {
+            drawDialogBox(canvas, 20);
         }
 
         canvas.restore();
@@ -442,10 +442,12 @@ public class HudView extends View {
                         mPaint.setTextAlign(Paint.Align.LEFT);
                         String[] linesArr = resolvedDesc.split("\n");
                         float lineY = cy - 20;
+                        int originalInfoColor = mPaint.getColor();
                         for (String line : linesArr) {
-                             drawColorText(canvas, line, cx - 260, lineY, mPaint);
+                             drawColorText(canvas, line, cx - 260, lineY, mPaint, originalInfoColor);
                              lineY += 35;
                         }
+                        mPaint.setColor(originalInfoColor);
                     } else {
                         canvas.drawText("ITEM INFO", cx, cy + 60, mPaint);
                     }
@@ -456,11 +458,14 @@ public class HudView extends View {
         }
     }
 
-    private void drawColorText(Canvas canvas, String line, float x, float y, Paint paint) {
+    private float measureColorText(String line, Paint paint) {
+        return paint.measureText(line.replaceAll("\\[\\[C:\\d+\\]\\]", ""));
+    }
+
+    private void drawColorText(Canvas canvas, String line, float x, float y, Paint paint, int defaultColor) {
         float curX = x;
         int lastPos = 0;
         int idx = line.indexOf("[[C:");
-        int originalColor = paint.getColor();
         
         while (idx != -1) {
             // Draw text before the tag
@@ -474,13 +479,27 @@ public class HudView extends View {
             if (endIdx != -1) {
                 String tag = line.substring(idx + 4, endIdx);
                 try {
-                    int colorIdx = Integer.parseInt(tag);
-                    switch (colorIdx) {
-                        case 1: paint.setColor(Color.rgb(255, 100, 100)); break; // Red
-                        case 2: paint.setColor(Color.rgb(100, 255, 100)); break; // Green
-                        case 3: paint.setColor(Color.rgb(120, 120, 255)); break; // Blue
-                        case 4: paint.setColor(Color.rgb(255, 255, 100)); break; // Yellow
-                        case 0: default: paint.setColor(originalColor); break;  // Reset
+                    if (tag.startsWith("#")) {
+                        long colorVal = Long.parseLong(tag.substring(1), 16);
+                        // RRGGBBAA -> AARRGGBB
+                        int r = (int)((colorVal >> 24) & 0xFF);
+                        int g = (int)((colorVal >> 16) & 0xFF);
+                        int b = (int)((colorVal >> 8) & 0xFF);
+                        int a = (int)(colorVal & 0xFF);
+                        paint.setColor(Color.argb(a, r, g, b));
+                    } else {
+                        int colorIdx = Integer.parseInt(tag);
+                        switch (colorIdx) {
+                            case 1: paint.setColor(Color.rgb(255, 80, 80)); break;    // Red
+                            case 2: paint.setColor(Color.rgb(80, 255, 80)); break;    // Green
+                            case 3: paint.setColor(Color.rgb(100, 100, 255)); break;  // Blue
+                            case 4: paint.setColor(Color.rgb(255, 255, 80)); break;   // Yellow
+                            case 5: paint.setColor(Color.rgb(100, 255, 255)); break;  // Light Blue
+                            case 6: paint.setColor(Color.rgb(255, 100, 255)); break;  // Purple
+                            case 7: paint.setColor(Color.rgb(180, 180, 180)); break;  // Grey
+                            case 8: paint.setColor(Color.rgb(255, 160, 50)); break;   // Orange
+                            case 0: default: paint.setColor(defaultColor); break;     // Reset
+                        }
                     }
                 } catch (Exception e) {}
                 lastPos = endIdx + 2;
@@ -494,11 +513,9 @@ public class HudView extends View {
         if (lastPos < line.length()) {
             canvas.drawText(line.substring(lastPos), curX, y, paint);
         }
-        
-        paint.setColor(originalColor);
     }
 
-    private void drawDialogBox(Canvas canvas, float centerX, float centerY) {
+    private void drawDialogBox(Canvas canvas, float topY) {
         String text = mState.dialogText;
         if (text == null || text.isEmpty()) return;
 
@@ -508,8 +525,8 @@ public class HudView extends View {
         float padding = 40;
         float height = Math.max(200, lines.length * lineHeight + padding * 2);
         
-        float x = centerX - width / 2;
-        float y = centerY - height / 2;
+        float x = 640 - width / 2; // Center horizontally
+        float y = topY;
 
         // Background
         mPaint.reset();
@@ -532,14 +549,45 @@ public class HudView extends View {
         // Text
         mPaint.reset();
         mPaint.setAntiAlias(true);
+        mPaint.setTextAlign(Paint.Align.LEFT); 
         mPaint.setColor(Color.WHITE);
         mPaint.setTextSize(48);
         mPaint.setShadowLayer(4, 2, 2, Color.BLACK);
         
+        int defaultColor = Color.WHITE;
         float curY = y + padding + 40;
         for (String line : lines) {
-            drawColorText(canvas, line.trim(), x + padding, curY, mPaint);
+            String displayLine = line;
+            boolean isSelected = false;
+            
+            if (line.contains("[[SEL:")) {
+                int selStart = line.indexOf("[[SEL:");
+                int endIdx = line.indexOf("]]", selStart);
+                if (endIdx != -1) {
+                    try {
+                        int idx = Integer.parseInt(line.substring(selStart + 6, endIdx));
+                        isSelected = (idx == mState.selectPos);
+                        displayLine = line.substring(0, selStart) + line.substring(endIdx + 2);
+                    } catch (Exception e) {}
+                }
+            }
+
+            int savedColor = mPaint.getColor();
+            if (isSelected) {
+                mPaint.setColor(Color.YELLOW);
+                canvas.drawText(">", x + padding - 35, curY, mPaint);
+                mPaint.setColor(savedColor);
+            }
+            
+            drawColorText(canvas, displayLine, x + padding, curY, mPaint, defaultColor);
             curY += lineHeight;
+        }
+
+        // Draw "Next" arrow if waiting for input (Status 7 = Outwait/Finished)
+        if (mState.msgStatus == 7 || mState.msgStatus == 5) {
+            mPaint.setColor(Color.rgb(100, 255, 100));
+            mPaint.setTextSize(36);
+            canvas.drawText("▼ Next", x + width - 150, y + height - 25, mPaint);
         }
     }
 

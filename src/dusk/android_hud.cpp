@@ -51,12 +51,14 @@ std::string clean_tp_string(const char* input) {
             if (size < 5) { p += (size > 1) ? size : 1; continue; }
 
             unsigned char group = p[2];
+            unsigned char tag = p[3];
             unsigned int number = (p[3] << 8) | p[4];
 
-            __android_log_print(ANDROID_LOG_INFO, "DuskTag", "1A tag: size=%d group=%02X num=%04X bytes=%02X %02X %02X %02X %02X %02X",
-                size, group, number, p[0], p[1], p[2], p[3], p[4], (size > 5 ? p[5] : 0));
-
-            if (group == 0x03) { // Wii Buttons
+            if (group == 0xFF && tag == 0x00) { // Color Tags \z{7ff, X00}
+                if (size >= 6) {
+                    out += "[[C:" + std::to_string(p[4]) + "]]";
+                }
+            } else if (group == 0x03) { // Wii Buttons
                 switch (number) {
                     case 1:  out += "{{A}}"; break;
                     case 2:  out += "{{B}}"; break;
@@ -114,7 +116,16 @@ std::string clean_tp_string(const char* input) {
             p += size;
             continue;
         }
-        if (*p == 0x1B) { p++; while (*p && *p != ']') p++; if (*p == ']') p++; continue; }
+        if (*p == 0x1B) {
+            p++;
+            if (*p == 'C' && *(p+1) == 'C' && *(p+2) == '[') {
+                char hex[9]; memcpy(hex, p + 3, 8); hex[8] = 0;
+                out += "[[C:#" + std::string(hex) + "]]";
+            }
+            while (*p && *p != ']') p++;
+            if (*p == ']') p++;
+            continue;
+        }
         if (*p == 0x0A || *p == 0x0D || *p == 0x1E) { out += '\n'; p++; continue; }
         if (*p >= 32 && *p < 127) { out += (char)*p++; } else { p++; }
     }
@@ -258,15 +269,19 @@ void hud_update() {
     dMsgObject_c* msgObj = dComIfGp_getMsgObjectClass();
     if (msgObj) {
         u16 status = msgObj->getStatus();
+        iData[107] = (int)status;
         if (status != 1 && status != 0 && status != 14) {
             jmessage_tReference* pRef = (jmessage_tReference*)msgObj->getSequenceProcessor()->getReference();
             if (pRef) {
                 dialogText = clean_tp_string(pRef->getTextPtr());
+                iData[105] = pRef->getSelectPos();
+                iData[106] = pRef->getSelectNum();
+
+                // Append choices with a special marker that Java will handle
                 for (int i = 0; i < 3; i++) {
                     std::string selText = clean_tp_string(pRef->getSelTextPtr(i));
                     if (!selText.empty()) {
-                        if (i == pRef->getSelectPos()) dialogText += "\n* " + selText;
-                        else dialogText += "\n  " + selText;
+                        dialogText += "\n[[SEL:" + std::to_string(i) + "]]" + selText;
                     }
                 }
             }
@@ -370,6 +385,7 @@ void hud_update() {
     iData[101] = dComIfGs_getBombMax(0x70); // dItemNo_NORMAL_BOMB_e
     iData[102] = dComIfGs_getBombMax(0x71); // dItemNo_WATER_BOMB_e
     iData[103] = dComIfGs_getBombMax(0x72); // dItemNo_POKE_BOMB_e
+    iData[104] = getSettings().game.dialogOnSecondScreen.getValue() ? 1 : 0;
 
     // Horse & Riding State (Spur Fix)
     iData[42] = dMeter2Info_getHorseLifeCount();
