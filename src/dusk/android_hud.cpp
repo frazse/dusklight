@@ -54,11 +54,7 @@ std::string clean_tp_string(const char* input) {
             unsigned char tag = p[3];
             unsigned int number = (p[3] << 8) | p[4];
 
-            if (group == 0xFF && tag == 0x00) { // Color Tags \z{7ff, X00}
-                if (size >= 6) {
-                    out += "[[C:" + std::to_string(p[4]) + "]]";
-                }
-            } else if (group == 0x03) { // Wii Buttons
+            if (group == 0x03) { // Wii Buttons
                 switch (number) {
                     case 1:  out += "{{A}}"; break;
                     case 2:  out += "{{B}}"; break;
@@ -107,10 +103,10 @@ std::string clean_tp_string(const char* input) {
                 if (number == 0x0A) out += "- ";
                 else if (number == 0x0B) out += "  ";
             } else if (group == 0xFF) { // Special/Color Tags
-                if (size >= 6 && number == 0x0000) {
-                    char buf[16];
-                    sprintf(buf, "[[C:%d]]", p[5]);
-                    out += buf;
+                if (size == 5) {
+                    out += "[[C:" + std::to_string(p[4]) + "]]";
+                } else if (size >= 6) {
+                    out += "[[C:" + std::to_string(p[5]) + "]]";
                 }
             }
 
