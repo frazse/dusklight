@@ -1244,6 +1244,7 @@ public class HudView extends View {
             
             // Quest Items
             case 0x25: case 0x80: return "Ooccoo";
+            case 0x2D: return "Ooccoo's Note";
             case 0x81: return "Ooccoo Jr.";
             case 0x82: return "Gate Pass";
             case 0x84: return "Horse Call";
