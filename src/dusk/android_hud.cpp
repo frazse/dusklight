@@ -297,16 +297,28 @@ void hud_update() {
 
     dMw_c* mw = dMeter2Info_getMenuWindowClass();
     if (mw) {
+        if (winStatus > 0) {
+            // Clear prompts when any menu is open to prevent gameplay buttons leaking in
+            iData[28] = 0; iData[29] = 0; iData[30] = 0; iData[32] = 0; iData[33] = 0; iData[34] = 0; iData[59] = 0;
+        }
+
         if (winStatus == 3) {
             dMenu_Collect_c* collect = mw->getMenuCollect();
             if (collect) {
                 u8 sub = collect->getSubWindowOpenCheck();
-                if (sub == 1) { dMenu_save_c* s = mw->getMenuSave(); if (s) { iData[28] = (int)s->getAButtonString(); iData[29] = (int)s->getBButtonString(); } }
-                else if (sub == 2) { dMenu_Option_c* o = mw->getMenuOption(); if (o) { iData[28] = (int)o->getAButtonString(); iData[29] = (int)o->getBButtonString(); iData[30] = (int)o->getZButtonString(); } }
-                else if (sub == 3) { dMenu_Letter_c* l = mw->getMenuLetter(); if (l) { iData[28] = (int)l->getAButtonString(); iData[29] = (int)l->getBButtonString(); } }
-                else if (sub == 4) { dMenu_Fishing_c* f = mw->getMenuFishing(); if (f) { iData[28] = (int)f->getAButtonString(); iData[29] = (int)f->getBButtonString(); } }
-                else if (sub == 5) { dMenu_Skill_c* sk = mw->getMenuSkill(); if (sk) { iData[28] = (int)sk->getAButtonString(); iData[29] = (int)sk->getBButtonString(); } }
-                else if (sub == 6) { dMenu_Insect_c* ns = mw->getMenuInsect(); if (ns) { iData[28] = (int)ns->getAButtonString(); iData[29] = (int)ns->getBButtonString(); } }
+                dMenu_save_c* save = mw->getMenuSave();
+                dMenu_Option_c* opt = mw->getMenuOption();
+                dMenu_Letter_c* l = mw->getMenuLetter();
+                dMenu_Fishing_c* f = mw->getMenuFishing();
+                dMenu_Skill_c* sk = mw->getMenuSkill();
+                dMenu_Insect_c* ns = mw->getMenuInsect();
+
+                if (sub == 1 && save) { iData[28] = (int)save->getAButtonString(); iData[29] = (int)save->getBButtonString(); }
+                else if (sub == 2 && opt) { iData[28] = (int)opt->getAButtonString(); iData[29] = (int)opt->getBButtonString(); iData[30] = (int)opt->getZButtonString(); }
+                else if (sub == 3 && l) { iData[28] = (int)l->getAButtonString(); iData[29] = (int)l->getBButtonString(); }
+                else if (sub == 4 && f) { iData[28] = (int)f->getAButtonString(); iData[29] = (int)f->getBButtonString(); }
+                else if (sub == 5 && sk) { iData[28] = (int)sk->getAButtonString(); iData[29] = (int)sk->getBButtonString(); }
+                else if (sub == 6 && ns) { iData[28] = (int)ns->getAButtonString(); iData[29] = (int)ns->getBButtonString(); }
                 else { dMenu_Collect2D_c* collect2d = collect->getCollect2D(); if (collect2d) { iData[28] = (int)collect2d->getCurrentAString(); iData[29] = (int)collect2d->getCurrentBString(); } }
             }
         } else if (winStatus == 4) {
@@ -316,13 +328,21 @@ void hud_update() {
             dMenu_Dmap_c* dmap = mw->getMenuDmap();
             if (dmap) { dMenu_DmapBg_c* bg = dmap->getDrawBg(); if (bg) { iData[28] = (int)bg->getAButtonString(); iData[29] = (int)bg->getBButtonString(); iData[32] = (int)bg->getCButtonString(); iData[59] = (int)bg->getCButtonString(); } }
         } else if (winStatus == 10) {
-            dMenu_save_c* save = mw->getMenuSave(); if (save) { iData[28] = (int)save->getAButtonString(); iData[29] = (int)save->getBButtonString(); }
-            dMenu_Option_c* opt = mw->getMenuOption(); if (opt && iData[28] == 0) { iData[28] = (int)opt->getAButtonString(); iData[29] = (int)opt->getBButtonString(); iData[30] = (int)opt->getZButtonString(); }
-            dMenu_Letter_c* l = mw->getMenuLetter(); if (l && iData[28] == 0) { iData[28] = (int)l->getAButtonString(); iData[29] = (int)l->getBButtonString(); iData[32] = 0x4D8; iData[59] = 0x4D7; }
-            dMenu_Fishing_c* f = mw->getMenuFishing(); if (f && iData[28] == 0) { iData[28] = (int)f->getAButtonString(); iData[29] = (int)f->getBButtonString(); }
-            dMenu_Skill_c* sk = mw->getMenuSkill(); if (sk && iData[28] == 0) { iData[28] = (int)sk->getAButtonString(); iData[29] = (int)sk->getBButtonString(); }
-            dMenu_Insect_c* ns = mw->getMenuInsect(); if (ns && iData[28] == 0) { iData[28] = (int)ns->getAButtonString(); iData[29] = (int)ns->getBButtonString(); }
-        } else if (winStatus == 1 || winStatus == 2) {
+            dMenu_save_c* save = mw->getMenuSave();
+            dMenu_Option_c* opt = mw->getMenuOption();
+            dMenu_Letter_c* l = mw->getMenuLetter();
+            dMenu_Fishing_c* f = mw->getMenuFishing();
+            dMenu_Skill_c* sk = mw->getMenuSkill();
+            dMenu_Insect_c* ns = mw->getMenuInsect();
+
+            if (save) { iData[28] = (int)save->getAButtonString(); iData[29] = (int)save->getBButtonString(); }
+            else if (opt) { iData[28] = (int)opt->getAButtonString(); iData[29] = (int)opt->getBButtonString(); iData[30] = (int)opt->getZButtonString(); }
+            else if (l) { iData[28] = (int)l->getAButtonString(); iData[29] = (int)l->getBButtonString(); iData[32] = 0x4D8; iData[59] = 0x4D7; }
+            else if (f) { iData[28] = (int)f->getAButtonString(); iData[29] = (int)f->getBButtonString(); }
+            else if (sk) { iData[28] = (int)sk->getAButtonString(); iData[29] = (int)sk->getBButtonString(); }
+            else if (ns) { iData[28] = (int)ns->getAButtonString(); iData[29] = (int)ns->getBButtonString(); }
+        }
+else if (winStatus == 1 || winStatus == 2) {
             dMenu_Ring_c* ring = mw->getMenuRing();
             if (ring) {
                 if (ring->isMixItemOff()) iData[32] = 0x90; // "Combine"

@@ -157,8 +157,8 @@ public class HudView extends View {
     }
 
     private int getRupeeStep(int diff) {
-        if (diff > 200) return 5;
-        if (diff > 50)  return 5;
+        if (diff > 200) return 2;
+        if (diff > 50)  return 2;
         if (diff > 20)  return 2;
         return 1;
     }
