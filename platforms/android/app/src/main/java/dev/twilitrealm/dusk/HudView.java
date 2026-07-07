@@ -148,6 +148,10 @@ public class HudView extends View {
         drawContextButtons(canvas, 820, 280);
         drawStatusInfo(canvas, 1260, 1060);
 
+        if (mState.dialogText != null && !mState.dialogText.isEmpty()) {
+            drawDialogBox(canvas, 640, 540);
+        }
+
         canvas.restore();
         if (mState.midnaCalling || t < 1.0f) postInvalidateOnAnimation();
     }
@@ -492,6 +496,51 @@ public class HudView extends View {
         }
         
         paint.setColor(originalColor);
+    }
+
+    private void drawDialogBox(Canvas canvas, float centerX, float centerY) {
+        String text = mState.dialogText;
+        if (text == null || text.isEmpty()) return;
+
+        String[] lines = text.split("\n");
+        float width = 1100;
+        float lineHeight = 55;
+        float padding = 40;
+        float height = Math.max(200, lines.length * lineHeight + padding * 2);
+        
+        float x = centerX - width / 2;
+        float y = centerY - height / 2;
+
+        // Background
+        mPaint.reset();
+        mPaint.setAntiAlias(true);
+        mPaint.setColor(Color.argb(240, 15, 15, 30));
+        mPaint.setStyle(Paint.Style.FILL);
+        canvas.drawRoundRect(x, y, x + width, y + height, 40, 40, mPaint);
+
+        // Border
+        mPaint.setColor(Color.argb(255, 120, 120, 180));
+        mPaint.setStyle(Paint.Style.STROKE);
+        mPaint.setStrokeWidth(6);
+        canvas.drawRoundRect(x, y, x + width, y + height, 40, 40, mPaint);
+
+        // Inner highlight
+        mPaint.setColor(Color.argb(50, 255, 255, 255));
+        mPaint.setStrokeWidth(2);
+        canvas.drawRoundRect(x + 10, y + 10, x + width - 10, y + height - 10, 30, 30, mPaint);
+
+        // Text
+        mPaint.reset();
+        mPaint.setAntiAlias(true);
+        mPaint.setColor(Color.WHITE);
+        mPaint.setTextSize(48);
+        mPaint.setShadowLayer(4, 2, 2, Color.BLACK);
+        
+        float curY = y + padding + 40;
+        for (String line : lines) {
+            drawColorText(canvas, line.trim(), x + padding, curY, mPaint);
+            curY += lineHeight;
+        }
     }
 
     private void drawMiniMap(Canvas canvas, float x, float y, float interX, float interY, float interAngle) {

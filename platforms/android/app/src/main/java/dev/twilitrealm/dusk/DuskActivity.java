@@ -107,11 +107,11 @@ public class DuskActivity extends SDLActivity {
     /**
      * Updated Data Packet version using primitive arrays.
      */
-    public void onGameStateUpdate(int[] i, float[] f, String stageName, String itemTitle, String itemDesc,
+    public void onGameStateUpdate(int[] i, float[] f, String stageName, String itemTitle, String itemDesc, String dialogText,
                                   float[] lines, float[] icons, float[] doors)
     {
         if (mSecondScreen == null) return;
-        final GameState state = new GameState(i, f, stageName, itemTitle, itemDesc, lines, icons, doors, mBatteryLevel, mIsCharging);
+        final GameState state = new GameState(i, f, stageName, itemTitle, itemDesc, dialogText, lines, icons, doors, mBatteryLevel, mIsCharging);
         runOnUiThread(() -> mSecondScreen.updateHud(state));
     }
     // ── End second screen ────────────────────────────────────────────

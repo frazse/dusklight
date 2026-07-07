@@ -73,7 +73,7 @@ void dMsgScrnBase_c::multiDraw() {
 
 void dMsgScrnBase_c::draw() {
 #if TARGET_PC
-    if (dusk::getSettings().game.recordingMode) {
+    if (dusk::getSettings().game.recordingMode || dusk::getSettings().game.dialogOnSecondScreen) {
         return;
     }
 #endif

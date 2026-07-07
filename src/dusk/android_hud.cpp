@@ -5,6 +5,7 @@
 #include "d/d_map_path_dmap.h"
 #include "d/d_meter2_info.h"
 #include "d/d_msg_class.h"
+#include "d/d_msg_object.h"
 #include "d/d_meter2_draw.h"
 #include "d/d_meter2.h"
 #include "d/d_menu_dmap.h"
@@ -243,7 +244,7 @@ void hud_update() {
     if (!activity || clear_pending_exception(env)) return;
     if (s_onGameStateUpdate == nullptr) {
         jclass cls = env->GetObjectClass(activity);
-        s_onGameStateUpdate = env->GetMethodID(cls, "onGameStateUpdate", "([I[FLjava/lang/String;Ljava/lang/String;Ljava/lang/String;[F[F[F)V");
+        s_onGameStateUpdate = env->GetMethodID(cls, "onGameStateUpdate", "([I[FLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;[F[F[F)V");
         env->DeleteLocalRef(cls);
         if (s_onGameStateUpdate == nullptr || clear_pending_exception(env)) return;
     }
@@ -252,7 +253,25 @@ void hud_update() {
     int winStatus = dMeter2Info_getWindowStatus();
     int mapStatus = dMeter2Info_getMapStatus();
     iData[57] = winStatus; iData[58] = mapStatus;
-    std::string itemTitle = ""; std::string itemDesc = "";
+    std::string itemTitle = ""; std::string itemDesc = ""; std::string dialogText = "";
+
+    dMsgObject_c* msgObj = dComIfGp_getMsgObjectClass();
+    if (msgObj) {
+        u16 status = msgObj->getStatus();
+        if (status != 1 && status != 0 && status != 14) {
+            jmessage_tReference* pRef = (jmessage_tReference*)msgObj->getSequenceProcessor()->getReference();
+            if (pRef) {
+                dialogText = clean_tp_string(pRef->getTextPtr());
+                for (int i = 0; i < 3; i++) {
+                    std::string selText = clean_tp_string(pRef->getSelTextPtr(i));
+                    if (!selText.empty()) {
+                        if (i == pRef->getSelectPos()) dialogText += "\n* " + selText;
+                        else dialogText += "\n  " + selText;
+                    }
+                }
+            }
+        }
+    }
 
     iData[4] = dComIfGs_getOil(); iData[5] = dComIfGs_getMaxOil();
     iData[6] = dComIfGp_getNowOxygen(); iData[7] = dComIfGp_getMaxOxygen();
@@ -426,13 +445,13 @@ void hud_update() {
     auto ad = [&](dStage_KeepDoorInfo* in) { if (!in) return; for (int i = 0; i < in->mNum; i++) { auto& dr = in->mDrTgData[i]; int r = (dr.base.parameters >> 24) & 0x3F; if (dMapInfo_c::calcFloorNo(dr.base.position.y, true, r) != floor) continue; if (is_room_visible(r, sName, stayNo, iData[48])) { doors.push_back(dr.base.position.x); doors.push_back(dr.base.position.z); doors.push_back((float)dr.base.angle.y * (180.0f / 32768.0f)); doors.push_back(0); } } };
     ad(dStage_GetKeepDoorInfo()); ad(dStage_GetRoomKeepDoorInfo());
 
-    jstring jS = env->NewStringUTF(fName.c_str()); jstring jT = env->NewStringUTF(itemTitle.c_str()); jstring jDe = env->NewStringUTF(itemDesc.c_str());
+    jstring jS = env->NewStringUTF(fName.c_str()); jstring jT = env->NewStringUTF(itemTitle.c_str()); jstring jDe = env->NewStringUTF(itemDesc.c_str()); jstring jDT = env->NewStringUTF(dialogText.c_str());
     jintArray jInts = env->NewIntArray(120); env->SetIntArrayRegion(jInts, 0, 120, iData); jfloatArray jF = env->NewFloatArray(14); env->SetFloatArrayRegion(jF, 0, 14, fData);
     jfloatArray jL = env->NewFloatArray(lines.size()); env->SetFloatArrayRegion(jL, 0, lines.size(), lines.data());
     jfloatArray jI = env->NewFloatArray(icons.size()); env->SetFloatArrayRegion(jI, 0, icons.size(), icons.data());
     jfloatArray jD = env->NewFloatArray(doors.size()); env->SetFloatArrayRegion(jD, 0, doors.size(), doors.data());
-    env->CallVoidMethod(activity, s_onGameStateUpdate, jInts, jF, jS, jT, jDe, jL, jI, jD);
-    env->DeleteLocalRef(jInts); env->DeleteLocalRef(jF); env->DeleteLocalRef(jS); env->DeleteLocalRef(jT); env->DeleteLocalRef(jDe); env->DeleteLocalRef(jL); env->DeleteLocalRef(jI); env->DeleteLocalRef(jD); env->DeleteLocalRef(activity);
+    env->CallVoidMethod(activity, s_onGameStateUpdate, jInts, jF, jS, jT, jDe, jDT, jL, jI, jD);
+    env->DeleteLocalRef(jInts); env->DeleteLocalRef(jF); env->DeleteLocalRef(jS); env->DeleteLocalRef(jT); env->DeleteLocalRef(jDe); env->DeleteLocalRef(jDT); env->DeleteLocalRef(jL); env->DeleteLocalRef(jI); env->DeleteLocalRef(jD); env->DeleteLocalRef(activity);
 }
 } // namespace dusk::android
 #else

@@ -20,16 +20,17 @@ public class GameState {
     public final String labelA, labelB, labelX, labelY, labelZ, labelL, labelR;
     public final int idA, idB, idX, idY, idZ, idL, idR, windowStatus, mapStatus, visMask;
     public final String dPadUpText, dPadDownText, dPadLeftText, dPadRightText;
-    public final String stageName, itemTitle, itemDesc;
+    public final String stageName, itemTitle, itemDesc, dialogText;
     public final int arrowMax, bombMax0, bombMax1, bombMax2;
 
     public final int itemXResId, itemYResId, itemXCount, itemYCount;
     public final int itemDDownId, itemDDownCount, itemDLeftId, itemDLeftCount, itemDRightId, itemDRightCount;
 
-    public GameState(int[] i, float[] f, String stageName, String itemTitle, String itemDesc, float[] lines, float[] icons, float[] doors, int batteryLevel, boolean isCharging) {
+    public GameState(int[] i, float[] f, String stageName, String itemTitle, String itemDesc, String dialogText, float[] lines, float[] icons, float[] doors, int batteryLevel, boolean isCharging) {
         this.stageName = stageName;
         this.itemTitle = itemTitle;
         this.itemDesc = itemDesc;
+        this.dialogText = dialogText;
         this.health = i[0];     this.maxHealth = i[1];
         this.magic  = i[2];     this.maxMagic  = i[3];
         this.oil    = i[4];     this.maxOil    = i[5];

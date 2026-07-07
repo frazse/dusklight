@@ -181,7 +181,7 @@ void dMsgScrnKanban_c::exec() {
 
 void dMsgScrnKanban_c::draw() {
 #if TARGET_PC
-    if (dusk::getSettings().game.recordingMode) {
+    if (dusk::getSettings().game.recordingMode || dusk::getSettings().game.dialogOnSecondScreen) {
         return;
     }
 #endif

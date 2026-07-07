@@ -200,7 +200,7 @@ void dMsgScrnTree_c::exec() {
 
 void dMsgScrnTree_c::draw() {
 #if TARGET_PC
-    if (dusk::getSettings().game.recordingMode) {
+    if (dusk::getSettings().game.recordingMode || dusk::getSettings().game.dialogOnSecondScreen) {
         return;
     }
 #endif
