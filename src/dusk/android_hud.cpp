@@ -348,6 +348,7 @@ else if (winStatus == 1 || winStatus == 2) {
                 if (ring->isMixItemOff()) iData[32] = 0x90; // "Combine"
                 else if (ring->isMixItemOn()) iData[32] = 0x91; // "Separate"
                 iData[28] = (int)ring->getDoStatus();
+                iData[29] = 0x3F9; // Back
                 iData[60] = (int)ring->getStatus() + 1; iData[61] = (int)ring->getCurrentSlot(); iData[62] = (int)ring->getItemsTotal();
                 for (int s = 0; s < 24; s++) {
                     u8 slotIdx = ring->getItem(s, 0);
@@ -391,7 +392,27 @@ else if (winStatus == 1 || winStatus == 2) {
     iData[0] = dComIfGs_getLife(); iData[1] = dComIfGs_getMaxLife(); iData[8] = dComIfGs_getRupee(); iData[9] = dComIfGs_getKeyNum() + dComIfGp_getItemKeyNumCount();
     iData[10] = dComIfGs_getArrowNum(); iData[11] = dComIfGs_getBombNum(0); iData[13] = stayNo;
     iData[17] = dComIfGp_getSelectItem(0); iData[18] = dComIfGp_getSelectItem(1);
-    iData[19] = dComIfGp_getSelectItemNum(0); iData[20] = dComIfGp_getSelectItemNum(1);
+
+    auto get_ammo = [](u8 item, int selIdx) {
+        if (item == 0x43) return (int)dComIfGs_getArrowNum(); // Bow
+        if (item == 0x59) { // Bomb Arrow
+            int arrows = (int)dComIfGs_getArrowNum();
+            u8 mixSlot = dComIfGs_getMixItemIndex(selIdx);
+            if (mixSlot == 0xFF) return arrows;
+            u8 bombItem = dComIfGs_getItem(mixSlot, false);
+            if (bombItem >= 0x70 && bombItem <= 0x72) {
+                int bombs = (int)dComIfGs_getBombNum(bombItem - 0x70);
+                return std::min(arrows, bombs);
+            }
+            return arrows;
+        }
+        if (item >= 0x4F && item <= 0x51) { // Bomb Bags
+            u8 slotIdx = dComIfGs_getSelectItemIndex(selIdx);
+            if (slotIdx >= 15 && slotIdx <= 17) return (int)dComIfGs_getBombNum(slotIdx - 15);
+        }
+        return (int)dComIfGp_getSelectItemNum(selIdx);
+    };
+    iData[19] = get_ammo(iData[17], 0); iData[20] = get_ammo(iData[18], 1);
     iData[41] = dComIfGs_isDungeonItemBossKey() ? 1 : 0;
     iData[47] = dStage_stagInfo_GetSTType(dComIfGp_getStage()->getStagInfo()) == ST_DUNGEON;
     iData[48] = dComIfGs_isDungeonItemMap() ? 1 : 0; iData[49] = dComIfGs_isDungeonItemCompass() ? 1 : 0;

@@ -1129,21 +1129,29 @@ public class HudView extends View {
 
         // 4. Y (Item Slot 1)
         String yT = mState.buttonYText; boolean yA = (yT != null && !yT.isEmpty());
-        if (!yA) {
-            yT = getItemName(mState.itemYResId);
-            if (mState.itemYCount > 0) yT += " (" + mState.itemYCount + ")";
+        if (!yA) yT = getItemName(mState.itemYResId);
+        if (yT != null && !yT.isEmpty()) {
+            int ammo = mState.itemYCount;
+            if (ammo > 0) yT += " (" + ammo + ")";
+            else if (ammo == 0 && isAmmoItem(mState.itemYResId)) yT += " (0)";
+            yA = true;
         }
-        yA = yA || (mState.itemYResId != 0xFF);
         drawActionButton(canvas, x, startY + spacing * 5, mState.labelY, Color.rgb(200, 200, 200), yT, yA);
         
         // 5. X (Item Slot 2)
         String xT = mState.buttonXText; boolean xA = (xT != null && !xT.isEmpty());
-        if (!xA) {
-            xT = getItemName(mState.itemXResId);
-            if (mState.itemXCount > 0) xT += " (" + mState.itemXCount + ")";
+        if (!xA) xT = getItemName(mState.itemXResId);
+        if (xT != null && !xT.isEmpty()) {
+            int ammo = mState.itemXCount;
+            if (ammo > 0) xT += " (" + ammo + ")";
+            else if (ammo == 0 && isAmmoItem(mState.itemXResId)) xT += " (0)";
+            xA = true;
         }
-        xA = xA || (mState.itemXResId != 0xFF);
         drawActionButton(canvas, x, startY + spacing * 6, mState.labelX, Color.rgb(200, 200, 200), xT, xA);
+    }
+
+    private boolean isAmmoItem(int id) {
+        return id == 0x43 || id == 0x4B || (id >= 0x70 && id <= 0x72) || (id >= 0x4F && id <= 0x51) || id == 0x59;
     }
 
     private void drawActionButton(Canvas canvas, float x, float y, String label, int color, String text, boolean active) {
