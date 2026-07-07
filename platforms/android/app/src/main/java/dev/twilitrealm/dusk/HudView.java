@@ -423,21 +423,7 @@ public class HudView extends View {
                     mPaint.setColor(Color.WHITE);
                     mPaint.setTypeface(android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.NORMAL));
                     if (mState.itemDesc != null && !mState.itemDesc.isEmpty()) {
-                        String resolvedDesc = mState.itemDesc
-                            .replace("{{A}}", mState.labelA)
-                            .replace("{{B}}", mState.labelB)
-                            .replace("{{X}}", mState.labelX)
-                            .replace("{{Y}}", mState.labelY)
-                            .replace("{{Z}}", mState.labelZ)
-                            .replace("{{L}}", mState.labelL)
-                            .replace("{{R}}", mState.labelR)
-                            .replace("{{STICK}}", "Stick")
-                            .replace("{{XORY}}", mState.labelX)
-                            .replace("{{RETICLE}}", "Reticle")
-                            .replace("{{ARROWCAP}}", String.valueOf(mState.arrowMax))
-                            .replace("{{BOMBCAP0}}", String.valueOf(mState.bombMax0))
-                            .replace("{{BOMBCAP1}}", String.valueOf(mState.bombMax1))
-                            .replace("{{BOMBCAP2}}", String.valueOf(mState.bombMax2));
+                        String resolvedDesc = resolvePlaceholders(mState.itemDesc);
 
                         mPaint.setTextAlign(Paint.Align.LEFT);
                         String[] linesArr = resolvedDesc.split("\n");
@@ -557,17 +543,17 @@ public class HudView extends View {
         int defaultColor = Color.WHITE;
         float curY = y + padding + 40;
         for (String line : lines) {
-            String displayLine = line;
+            String displayLine = resolvePlaceholders(line);
             boolean isSelected = false;
             
-            if (line.contains("[[SEL:")) {
-                int selStart = line.indexOf("[[SEL:");
-                int endIdx = line.indexOf("]]", selStart);
+            if (displayLine.contains("[[SEL:")) {
+                int selStart = displayLine.indexOf("[[SEL:");
+                int endIdx = displayLine.indexOf("]]", selStart);
                 if (endIdx != -1) {
                     try {
-                        int idx = Integer.parseInt(line.substring(selStart + 6, endIdx));
+                        int idx = Integer.parseInt(displayLine.substring(selStart + 6, endIdx));
                         isSelected = (idx == mState.selectPos);
-                        displayLine = line.substring(0, selStart) + line.substring(endIdx + 2);
+                        displayLine = displayLine.substring(0, selStart) + displayLine.substring(endIdx + 2);
                     } catch (Exception e) {}
                 }
             }
@@ -589,6 +575,25 @@ public class HudView extends View {
             mPaint.setTextSize(36);
             canvas.drawText("▼ Next", x + width - 150, y + height - 25, mPaint);
         }
+    }
+
+    private String resolvePlaceholders(String text) {
+        if (text == null) return "";
+        return text
+            .replace("{{A}}", mState.labelA)
+            .replace("{{B}}", mState.labelB)
+            .replace("{{X}}", mState.labelX)
+            .replace("{{Y}}", mState.labelY)
+            .replace("{{Z}}", mState.labelZ)
+            .replace("{{L}}", mState.labelL)
+            .replace("{{R}}", mState.labelR)
+            .replace("{{STICK}}", "Stick")
+            .replace("{{XORY}}", mState.labelX)
+            .replace("{{RETICLE}}", "Reticle")
+            .replace("{{ARROWCAP}}", String.valueOf(mState.arrowMax))
+            .replace("{{BOMBCAP0}}", String.valueOf(mState.bombMax0))
+            .replace("{{BOMBCAP1}}", String.valueOf(mState.bombMax1))
+            .replace("{{BOMBCAP2}}", String.valueOf(mState.bombMax2));
     }
 
     private void drawMiniMap(Canvas canvas, float x, float y, float interX, float interY, float interAngle) {
