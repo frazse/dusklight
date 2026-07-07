@@ -1677,7 +1677,13 @@ int dMw_c::_draw() {
                 dComIfGd_set2DOpa(mpMenuInsect);
             }
         } else if (dMeter2Info_getWindowStatus() == 2 && mpMenuRing != NULL) {
+#if TARGET_PC
+            if (!dusk::getSettings().game.itemWheelOnSecondScreen) {
+                dComIfGd_set2DOpa(mpMenuRing);
+            }
+#else
             dComIfGd_set2DOpa(mpMenuRing);
+#endif
         }
     }
     return 1;

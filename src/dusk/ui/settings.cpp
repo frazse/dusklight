@@ -1584,11 +1584,19 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
                 .helpText = "Show gyro sensor values in the input viewer.",
                 .isDisabled = [] { return !getSettings().game.showInputViewer; },
             });
+
+        leftPane.add_section("Dual Screen");
         config_bool_select(leftPane, rightPane, getSettings().game.dialogOnSecondScreen,
             {
                 .key = "Dialog on Second Screen",
                 .helpText = "Move in-game dialog boxes and text to the second screen.",
             });
+        config_bool_select(leftPane, rightPane, getSettings().game.itemWheelOnSecondScreen,
+            {
+                .key = "Item Wheel on Second Screen",
+                .helpText = "Move the item selection wheel to the second screen.",
+            });
+
         leftPane.add_section("Game");
         leftPane.register_control(
             leftPane.add_select_button({

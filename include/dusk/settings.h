@@ -282,6 +282,7 @@ struct UserSettings {
         ConfigVar<bool> showInputViewer;
         ConfigVar<bool> showInputViewerGyro;
         ConfigVar<bool> dialogOnSecondScreen;
+        ConfigVar<bool> itemWheelOnSecondScreen;
     } game;
 
     struct {
