@@ -102,9 +102,9 @@ std::string clean_tp_string(const char* input) {
                     case 0x3702: out += "{{BOMBCAP2}}"; break;
                     default: break;
                 }
-            } else if (group == 0x06) {
-                if (number == 0x0A) out += "- ";
-                else if (number == 0x0B) out += "  ";
+            } else if (group == 0x06) { // Icons/Symbols
+                if (tag == 0x0A || tag == 0x0B || (tag == 0x06 && size >= 6 && p[5] == 0x0A)) out += "- ";
+                else if (tag == 0x06 && size >= 6 && p[5] == 0x0B) out += "  ";
             } else if (group == 0xFF) { // Special/Color Tags
                 if (size >= 6 && number == 0x0000) {
                     char buf[16];
@@ -302,6 +302,10 @@ void hud_update() {
                 u8 sub = collect->getSubWindowOpenCheck();
                 if (sub == 1) { dMenu_save_c* s = mw->getMenuSave(); if (s) { iData[28] = (int)s->getAButtonString(); iData[29] = (int)s->getBButtonString(); } }
                 else if (sub == 2) { dMenu_Option_c* o = mw->getMenuOption(); if (o) { iData[28] = (int)o->getAButtonString(); iData[29] = (int)o->getBButtonString(); iData[30] = (int)o->getZButtonString(); } }
+                else if (sub == 3) { dMenu_Letter_c* l = mw->getMenuLetter(); if (l) { iData[28] = (int)l->getAButtonString(); iData[29] = (int)l->getBButtonString(); } }
+                else if (sub == 4) { dMenu_Fishing_c* f = mw->getMenuFishing(); if (f) { iData[28] = (int)f->getAButtonString(); iData[29] = (int)f->getBButtonString(); } }
+                else if (sub == 5) { dMenu_Skill_c* sk = mw->getMenuSkill(); if (sk) { iData[28] = (int)sk->getAButtonString(); iData[29] = (int)sk->getBButtonString(); } }
+                else if (sub == 6) { dMenu_Insect_c* ns = mw->getMenuInsect(); if (ns) { iData[28] = (int)ns->getAButtonString(); iData[29] = (int)ns->getBButtonString(); } }
                 else { dMenu_Collect2D_c* collect2d = collect->getCollect2D(); if (collect2d) { iData[28] = (int)collect2d->getCurrentAString(); iData[29] = (int)collect2d->getCurrentBString(); } }
             }
         } else if (winStatus == 4) {
@@ -350,27 +354,14 @@ void hud_update() {
                 dMenu_ItemExplain_c* explain = ring->getItemExplain();
                 if (explain && explain->getStatus() != 0) {
                     u8 slotIdx = ring->getItem(ring->getCurrentSlot(), 0);
-                    u8 comboItem = dComIfGs_getItem(slotIdx, true);
-                    u8 baseItem = dComIfGs_getItem(slotIdx, false);
+                    u8 currentItemNo = (slotIdx != 0xFF) ? dComIfGs_getItem(slotIdx, false) : 0xFF;
 
-                    if (comboItem == 0x59 && baseItem != 0x43) {
-                        // This is a Bomb slot combined with a Bow
-                        char titleBuf[256]; dMeter2Info_getString(0x4D2, titleBuf, NULL); // "Bow & Arrow Combo"
-                        itemTitle = clean_tp_string(titleBuf);
+                    uint16_t baseDescID = find_item_long_desc_id(currentItemNo);
+                    if (baseDescID == 0xFFFF) baseDescID = explain->getDescMsgID();
 
-                        // Use original Bomb description
-                        u16 longID = find_item_long_desc_id(baseItem);
-                        u16 baseID = (longID != 0xFFFF) ? longID : explain->getDescMsgID();
-                        itemDesc = get_full_multi_line_desc(baseID, baseItem);
-                    } else {
-                        // Normal item or the Bow slot itself
-                        char titleBuf[256]; dMeter2Info_getString(explain->getNameMsgID(), titleBuf, NULL);
-                        itemTitle = clean_tp_string(titleBuf);
-
-                        u16 longID = find_item_long_desc_id(baseItem);
-                        u16 baseID = (longID != 0xFFFF) ? longID : explain->getDescMsgID();
-                        itemDesc = get_full_multi_line_desc(baseID, baseItem);
-                    }
+                    char tBuf[256]; dMeter2Info_getString(explain->getNameMsgID(), tBuf, NULL);
+                    itemTitle = clean_tp_string(tBuf);
+                    itemDesc = get_full_multi_line_desc(baseDescID, currentItemNo);
                 }
             }
         }
@@ -379,6 +370,7 @@ void hud_update() {
     iData[0] = dComIfGs_getLife(); iData[1] = dComIfGs_getMaxLife(); iData[8] = dComIfGs_getRupee(); iData[9] = dComIfGs_getKeyNum() + dComIfGp_getItemKeyNumCount();
     iData[10] = dComIfGs_getArrowNum(); iData[11] = dComIfGs_getBombNum(0); iData[13] = stayNo;
     iData[17] = dComIfGp_getSelectItem(0); iData[18] = dComIfGp_getSelectItem(1);
+    iData[19] = dComIfGp_getSelectItemNum(0); iData[20] = dComIfGp_getSelectItemNum(1);
     iData[41] = dComIfGs_isDungeonItemBossKey() ? 1 : 0;
     iData[47] = dStage_stagInfo_GetSTType(dComIfGp_getStage()->getStagInfo()) == ST_DUNGEON;
     iData[48] = dComIfGs_isDungeonItemMap() ? 1 : 0; iData[49] = dComIfGs_isDungeonItemCompass() ? 1 : 0;
@@ -397,29 +389,6 @@ void hud_update() {
         if (player->checkPlayerFly()) stateFlags |= 32;
     }
     iData[31] = stateFlags;
-
-    auto get_ammo = [](u8 item, int selIdx) {
-        if (item == 0x59) { // Bomb Arrow
-            int arrows = (int)dComIfGs_getArrowNum();
-            u8 mixSlot = dComIfGs_getMixItemIndex(selIdx);
-            if (mixSlot == 0xFF) return arrows;
-            u8 bombItem = dComIfGs_getItem(mixSlot, false);
-            if (bombItem >= 0x70 && bombItem <= 0x72) {
-                int bombs = (int)dComIfGs_getBombNum(bombItem - 0x70);
-                return std::min(arrows, bombs);
-            }
-            return arrows;
-        }
-        if (item == 0x43) return (int)dComIfGs_getArrowNum();
-        if (item == 0x4B) return (int)dComIfGs_getPachinkoNum();
-        if (item >= 0x70 && item <= 0x72) return (int)dComIfGs_getBombNum(item - 0x70);
-        if (item >= 0x4F && item <= 0x51) {
-            u8 slotIdx = dComIfGs_getSelectItemIndex(selIdx);
-            if (slotIdx >= 15 && slotIdx <= 17) return (int)dComIfGs_getBombNum(slotIdx - 15);
-        }
-        return -1;
-    };
-    iData[19] = get_ammo(iData[17], 0); iData[20] = get_ammo(iData[18], 1);
 
     for (int k = 50; k <= 56; k++) iData[k] = -1;
     u32 bCount = 0; PADButtonMapping* pbm = PADGetButtonMappings(0, &bCount);
