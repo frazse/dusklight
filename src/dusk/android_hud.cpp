@@ -81,6 +81,7 @@ std::string clean_tp_string(const char* input) {
                     case 0x10: out += "{{Y}}"; break;
                     case 0x11: out += "{{Z}}"; break;
                     case 0x13: out += "{{STICK}}"; break;
+                    case 0x1C: out += "{{STICK}}"; break;
                     case 0x24: out += "{{RETICLE}}"; break;
                     case 0x2E: out += "{{XORY}}"; break;
                     case 0x37: { // Bomb Capacity (within group 0x00)
@@ -102,9 +103,9 @@ std::string clean_tp_string(const char* input) {
                     case 0x3702: out += "{{BOMBCAP2}}"; break;
                     default: break;
                 }
-            } else if (group == 0x06) { // Icons/Symbols
-                if (tag == 0x0A || tag == 0x0B || (tag == 0x06 && size >= 6 && p[5] == 0x0A)) out += "- ";
-                else if (tag == 0x06 && size >= 6 && p[5] == 0x0B) out += "  ";
+            } else if (group == 0x06) {
+                if (number == 0x0A) out += "- ";
+                else if (number == 0x0B) out += "  ";
             } else if (group == 0xFF) { // Special/Color Tags
                 if (size >= 6 && number == 0x0000) {
                     char buf[16];
