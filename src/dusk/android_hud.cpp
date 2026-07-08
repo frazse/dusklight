@@ -421,7 +421,10 @@ else if (winStatus == 1 || winStatus == 2) {
 
     iData[0] = dComIfGs_getLife(); iData[1] = dComIfGs_getMaxLife(); iData[8] = dComIfGs_getRupee(); iData[9] = dComIfGs_getKeyNum() + dComIfGp_getItemKeyNumCount();
     iData[10] = dComIfGs_getArrowNum(); iData[11] = dComIfGs_getBombNum(0); iData[13] = stayNo;
-    iData[17] = dComIfGp_getSelectItem(0); iData[18] = dComIfGp_getSelectItem(1);
+    u8 slotX = dComIfGs_getSelectItemIndex(0);
+    iData[17] = (slotX != 0xFF) ? dComIfGs_getItem(slotX, true) : 0xFF;
+    u8 slotY = dComIfGs_getSelectItemIndex(1);
+    iData[18] = (slotY != 0xFF) ? dComIfGs_getItem(slotY, true) : 0xFF;
 
     send_item_icon(iData[17], env, activity);
     send_item_icon(iData[18], env, activity);
@@ -443,12 +446,14 @@ else if (winStatus == 1 || winStatus == 2) {
         if (item == 0x4B) return (int)dComIfGs_getPachinkoNum(); // Slingshot
         if (item == 0x59) { // Bomb Arrow
             int arrows = (int)dComIfGs_getArrowNum();
+            u8 slotIdx = dComIfGs_getSelectItemIndex(selIdx);
             u8 mixSlot = dComIfGs_getMixItemIndex(selIdx);
-            if (mixSlot == 0xFF) return arrows;
-            u8 bombItem = dComIfGs_getItem(mixSlot, false);
-            if (bombItem >= 0x70 && bombItem <= 0x72) {
-                int bombs = (int)dComIfGs_getBombNum(bombItem - 0x70);
-                return std::min(arrows, bombs);
+            u8 bombSlot = 0xFF;
+            if (slotIdx >= 15 && slotIdx <= 17) bombSlot = slotIdx;
+            else if (mixSlot >= 15 && mixSlot <= 17) bombSlot = mixSlot;
+
+            if (bombSlot != 0xFF) {
+                return std::min(arrows, (int)dComIfGs_getBombNum(bombSlot - 15));
             }
             return arrows;
         }
