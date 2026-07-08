@@ -422,7 +422,6 @@ else if (winStatus == 1 || winStatus == 2) {
     iData[0] = dComIfGs_getLife(); iData[1] = dComIfGs_getMaxLife(); iData[8] = dComIfGs_getRupee(); iData[9] = dComIfGs_getKeyNum() + dComIfGp_getItemKeyNumCount();
     iData[10] = dComIfGs_getArrowNum(); iData[11] = dComIfGs_getBombNum(0); iData[13] = stayNo;
     iData[17] = dComIfGp_getSelectItem(0); iData[18] = dComIfGp_getSelectItem(1);
-    iData[28] = (int)meter->getDoStatus(); iData[29] = (int)meter->getAStatus();
 
     send_item_icon(iData[17], env, activity);
     send_item_icon(iData[18], env, activity);
@@ -438,7 +437,6 @@ else if (winStatus == 1 || winStatus == 2) {
     } else {
         iData[110] = 0xFF;
     }
-    send_item_icon(iData[17], env, activity); send_item_icon(iData[18], env, activity);
 
     auto get_ammo = [](u8 item, int selIdx) {
         if (item == 0x43) return (int)dComIfGs_getArrowNum(); // Bow
