@@ -153,7 +153,7 @@ public class HudView extends View {
             drawMiniMap(canvas, MAP_X, MAP_Y, interMapX, interMapY, interMapAngle);
         }
         
-        drawContextButtons(canvas, 820, 280);
+        drawContextButtons(canvas, 940, 280);
         drawStatusInfo(canvas, 1260, 1060);
 
         if (mState.dialogOnSecondScreen != 0 && mState.dialogText != null && !mState.dialogText.isEmpty()) {
@@ -1142,53 +1142,57 @@ public class HudView extends View {
 
     private void drawContextButtons(Canvas canvas, float x, float startY) {
         resetPaint(); float spacing = 95;
-        // 1. Shoulders/Triggers
-        drawActionButton(canvas, x, startY, mState.labelL, Color.rgb(200, 200, 200), mState.buttonLText, mState.buttonLText != null && !mState.buttonLText.isEmpty(), null);
-        drawActionButton(canvas, x, startY + spacing, mState.labelR, Color.rgb(200, 200, 200), mState.buttonRText, mState.buttonRText != null && !mState.buttonRText.isEmpty(), null);
-        drawActionButton(canvas, x, startY + spacing * 2, mState.labelZ, Color.parseColor("#5A429B"), mState.buttonZText, mState.buttonZText != null && !mState.buttonZText.isEmpty(), null);
+        // 1. Shoulders/Triggers (Standard size)
+        drawActionButton(canvas, x, startY, mState.labelL, Color.rgb(200, 200, 200), mState.buttonLText, mState.buttonLText != null && !mState.buttonLText.isEmpty(), null, 38, 52);
+        drawActionButton(canvas, x, startY + spacing, mState.labelR, Color.rgb(200, 200, 200), mState.buttonRText, mState.buttonRText != null && !mState.buttonRText.isEmpty(), null, 38, 52);
+        drawActionButton(canvas, x, startY + spacing * 2, mState.labelZ, Color.parseColor("#5A429B"), mState.buttonZText, mState.buttonZText != null && !mState.buttonZText.isEmpty(), null, 38, 52);
         
-        // 2. Diamond Layout (A=South, B=West, Y=North, X=East)
+        // 2. Diamond Layout (A=South, B=West, Y=North, X=East) - LARGER
         float cx = x + 40; // Shift diamond slightly right
         float cy = startY + spacing * 5.0f;
-        float ds = 110; // Diamond spacing
+        float ds = 145; // Diamond spacing (increased for larger buttons)
+        int br = 52; // Button radius
+        int bis = 70; // Button icon size
 
         // Y (North)
         String yT = mState.buttonYText; boolean yA = (yT != null && !yT.isEmpty());
         android.graphics.Bitmap yIcon = null;
-        if (!yA) { yT = getItemName(mState.itemYResId); yIcon = mItemIcons.get(mState.itemYResId); }
-        if (yT != null && !yT.isEmpty()) {
+        if (!yA) { 
+            yIcon = mItemIcons.get(mState.itemYResId);
             int ammo = mState.itemYCount;
-            if (ammo > 0) yT += " (" + ammo + ")";
-            else if (ammo == 0 && isAmmoItem(mState.itemYResId)) yT += " (0)";
-            yA = true;
+            if (ammo > 0) yT = "(" + ammo + ")";
+            else if (ammo == 0 && isAmmoItem(mState.itemYResId)) yT = "(0)";
+            else yT = "";
+            yA = (yIcon != null);
         }
-        drawActionButton(canvas, cx, cy - ds, mState.labelY, Color.rgb(200, 200, 200), yT, yA, yIcon);
+        drawActionButton(canvas, cx, cy - ds, mState.labelY, Color.rgb(200, 200, 200), yT, yA, yIcon, br, bis);
 
         // X (East)
         String xT = mState.buttonXText; boolean xA = (xT != null && !xT.isEmpty());
         android.graphics.Bitmap xIcon = null;
-        if (!xA) { xT = getItemName(mState.itemXResId); xIcon = mItemIcons.get(mState.itemXResId); }
-        if (xT != null && !xT.isEmpty()) {
+        if (!xA) { 
+            xIcon = mItemIcons.get(mState.itemXResId);
             int ammo = mState.itemXCount;
-            if (ammo > 0) xT += " (" + ammo + ")";
-            else if (ammo == 0 && isAmmoItem(mState.itemXResId)) xT += " (0)";
-            xA = true;
+            if (ammo > 0) xT = "(" + ammo + ")";
+            else if (ammo == 0 && isAmmoItem(mState.itemXResId)) xT = "(0)";
+            else xT = "";
+            xA = (xIcon != null);
         }
-        drawActionButton(canvas, cx + ds, cy, mState.labelX, Color.rgb(200, 200, 200), xT, xA, xIcon);
+        drawActionButton(canvas, cx + ds, cy, mState.labelX, Color.rgb(200, 200, 200), xT, xA, xIcon, br, bis);
 
         // B (West)
         android.graphics.Bitmap bIcon = mItemIcons.get(mState.itemBResId);
-        drawActionButton(canvas, cx - ds, cy, mState.labelB, Color.RED, mState.buttonBText, mState.buttonBText != null && !mState.buttonBText.isEmpty(), bIcon);
+        drawActionButton(canvas, cx - ds, cy, mState.labelB, Color.RED, mState.buttonBText, mState.buttonBText != null && !mState.buttonBText.isEmpty(), bIcon, br, bis);
 
         // A (South)
-        drawActionButton(canvas, cx, cy + ds, mState.labelA, Color.rgb(0, 200, 50), mState.buttonAText, mState.buttonAText != null && !mState.buttonAText.isEmpty(), null);
+        drawActionButton(canvas, cx, cy + ds, mState.labelA, Color.rgb(0, 200, 50), mState.buttonAText, mState.buttonAText != null && !mState.buttonAText.isEmpty(), null, br, bis);
     }
 
     private boolean isAmmoItem(int id) {
         return id == 0x43 || id == 0x4B || (id >= 0x70 && id <= 0x72) || (id >= 0x4F && id <= 0x51) || id == 0x59;
     }
 
-    private void drawActionButton(Canvas canvas, float x, float y, String label, int color, String text, boolean active, android.graphics.Bitmap icon) {
+    private void drawActionButton(Canvas canvas, float x, float y, String label, int color, String text, boolean active, android.graphics.Bitmap icon, float baseRadius, float iconMaxDim) {
         resetPaint(); mPaint.setTextAlign(Paint.Align.CENTER); mPaint.setTextSize(42);
         int circleColor = color; 
         boolean isMidna = active && "Midna".equals(text);
@@ -1200,13 +1204,12 @@ public class HudView extends View {
         }
 
         mPaint.setColor(active ? circleColor : Color.argb(60, 100, 100, 100));
-        float r = isPulse ? 42 : 38; canvas.drawCircle(x, y, r, mPaint);
+        float r = isPulse ? baseRadius * 1.1f : baseRadius; canvas.drawCircle(x, y, r, mPaint);
         
         if (active && icon != null) {
-            float maxDim = 52;
             float w = icon.getWidth();
             float h = icon.getHeight();
-            float scale = maxDim / Math.max(w, h);
+            float scale = iconMaxDim / Math.max(w, h);
             float drawW = w * scale;
             float drawH = h * scale;
             RectF dst = new RectF(x - drawW / 2, y - drawH / 2, x + drawW / 2, y + drawH / 2);
@@ -1219,7 +1222,7 @@ public class HudView extends View {
         if (active && text != null && !text.isEmpty()) {
             mPaint.setTextAlign(Paint.Align.LEFT); mPaint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
             mPaint.setTextSize(42);
-            float lx = x + 60, ly = y + 15;
+            float lx = x + baseRadius + 22, ly = y + 15;
             mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(5.0f); mPaint.setColor(Color.BLACK);
             canvas.drawText(text, lx, ly, mPaint);
             mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.WHITE);
