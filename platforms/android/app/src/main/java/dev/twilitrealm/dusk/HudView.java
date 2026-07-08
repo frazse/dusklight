@@ -886,6 +886,31 @@ public class HudView extends View {
     }
 
     private void drawZeldaHeart(Canvas canvas, float x, float y, float size, int fill) {
+        android.graphics.Bitmap baseBmp = mItemIcons.get(0x1015);
+        if (baseBmp != null) {
+            float w = baseBmp.getWidth(), h = baseBmp.getHeight();
+            float scale = size / Math.max(w, h);
+            float dw = w * scale, dh = h * scale;
+            RectF dst = new RectF(x + size/2 - dw/2, y + size/2 - dh/2, x + size/2 + dw/2, y + size/2 + dh/2);
+            
+            resetPaint();
+            // Draw gold base wave
+            mPaint.setColorFilter(new android.graphics.PorterDuffColorFilter(Color.rgb(255, 210, 100), android.graphics.PorterDuff.Mode.MULTIPLY));
+            canvas.drawBitmap(baseBmp, null, dst, mPaint);
+            
+            if (fill > 0) {
+                // IDs 0x1011 (1/4) to 0x1014 (Full)
+                android.graphics.Bitmap fillBmp = mItemIcons.get(0x1010 + fill);
+                if (fillBmp != null) {
+                    resetPaint();
+                    // Draw red heart fill
+                    mPaint.setColorFilter(new android.graphics.PorterDuffColorFilter(Color.rgb(255, 100, 100), android.graphics.PorterDuff.Mode.MULTIPLY));
+                    canvas.drawBitmap(fillBmp, null, dst, mPaint);
+                }
+            }
+            return;
+        }
+
         resetPaint(); mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(3); mPaint.setColor(Color.WHITE); mHeartPath.reset();
         float mid = size / 2;
         mHeartPath.moveTo(x + mid, y + size * 0.25f);
@@ -941,21 +966,33 @@ public class HudView extends View {
     private void drawRupeeCounter(Canvas canvas, float x, float y) {
         resetPaint();
         float w = 40, h = 58, centerY = y - 24; 
-        mPaint.setColor(Color.rgb(0, 180, 0)); mDrawPath.reset();
-        mDrawPath.moveTo(x + w / 2f, centerY - h / 2f); mDrawPath.lineTo(x + w, centerY - h / 5f);
-        mDrawPath.lineTo(x + w, centerY + h / 5f); mDrawPath.lineTo(x + w / 2f, centerY + h / 2f);
-        mDrawPath.lineTo(x, centerY + h / 5f); mDrawPath.lineTo(x, centerY - h / 5f); mDrawPath.close();
-        canvas.drawPath(mDrawPath, mPaint);
-        mPaint.setColor(Color.rgb(100, 255, 100)); float iw = w * 0.5f, ih = h * 0.5f; mDrawPath.reset();
-        mDrawPath.moveTo(x + w / 2f, centerY - ih / 2f); mDrawPath.lineTo(x + w / 2f + iw / 2f, centerY - ih / 4f);
-        mDrawPath.lineTo(x + w / 2f + iw / 2f, centerY + ih / 4f); mDrawPath.lineTo(x + w / 2f, centerY + ih / 2f);
-        mDrawPath.lineTo(x + w / 2f - iw / 2f, centerY + ih / 4f); mDrawPath.lineTo(x + w / 2f - iw / 2f, centerY - ih / 4f); mDrawPath.close();
-        canvas.drawPath(mDrawPath, mPaint);
-        mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(2); mPaint.setColor(Color.rgb(0, 80, 0));
-        mDrawPath.reset(); mDrawPath.moveTo(x + w / 2f, centerY - h / 2f); mDrawPath.lineTo(x + w, centerY - h / 5f);
-        mDrawPath.lineTo(x + w, centerY + h / 5f); mDrawPath.lineTo(x + w / 2f, centerY + h / 2f);
-        mDrawPath.lineTo(x, centerY + h / 5f); mDrawPath.lineTo(x, centerY - h / 5f); mDrawPath.close();
-        canvas.drawPath(mDrawPath, mPaint);
+
+        android.graphics.Bitmap rupeeIcon = mItemIcons.get(0x1010); // Custom ID for HUD Rupee
+        if (rupeeIcon == null) rupeeIcon = mItemIcons.get(0x01); // Fallback to inventory icon
+
+        if (rupeeIcon != null) {
+            float rw = rupeeIcon.getWidth(), rh = rupeeIcon.getHeight();
+            float rs = h / rh;
+            float dw = rw * rs, dh = rh * rs;
+            RectF dst = new RectF(x + w/2f - dw/2, centerY - dh/2, x + w/2f + dw/2, centerY + dh/2);
+            canvas.drawBitmap(rupeeIcon, null, dst, mPaint);
+        } else {
+            mPaint.setColor(Color.rgb(0, 180, 0)); mDrawPath.reset();
+            mDrawPath.moveTo(x + w / 2f, centerY - h / 2f); mDrawPath.lineTo(x + w, centerY - h / 5f);
+            mDrawPath.lineTo(x + w, centerY + h / 5f); mDrawPath.lineTo(x + w / 2f, centerY + h / 2f);
+            mDrawPath.lineTo(x, centerY + h / 5f); mDrawPath.lineTo(x, centerY - h / 5f); mDrawPath.close();
+            canvas.drawPath(mDrawPath, mPaint);
+            mPaint.setColor(Color.rgb(100, 255, 100)); float iw = w * 0.5f, ih = h * 0.5f; mDrawPath.reset();
+            mDrawPath.moveTo(x + w / 2f, centerY - ih / 2f); mDrawPath.lineTo(x + w / 2f + iw / 2f, centerY - ih / 4f);
+            mDrawPath.lineTo(x + w / 2f + iw / 2f, centerY + ih / 4f); mDrawPath.lineTo(x + w / 2f, centerY + ih / 2f);
+            mDrawPath.lineTo(x + w / 2f - iw / 2f, centerY + ih / 4f); mDrawPath.lineTo(x + w / 2f - iw / 2f, centerY - ih / 4f); mDrawPath.close();
+            canvas.drawPath(mDrawPath, mPaint);
+            mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(2); mPaint.setColor(Color.rgb(0, 80, 0));
+            mDrawPath.reset(); mDrawPath.moveTo(x + w / 2f, centerY - h / 2f); mDrawPath.lineTo(x + w, centerY - h / 5f);
+            mDrawPath.lineTo(x + w, centerY + h / 5f); mDrawPath.lineTo(x + w / 2f, centerY + h / 2f);
+            mDrawPath.lineTo(x, centerY + h / 5f); mDrawPath.lineTo(x, centerY - h / 5f); mDrawPath.close();
+            canvas.drawPath(mDrawPath, mPaint);
+        }
 
         String text = String.valueOf(mDisplayRupees); float textX = x + w + 15;
         mPaint.setTextAlign(Paint.Align.LEFT); mPaint.setTextSize(72);
@@ -1022,7 +1059,7 @@ public class HudView extends View {
         mPaint.setTextAlign(Paint.Align.RIGHT); mPaint.setTextSize(72); // Matched to Rupee font size
         mPaint.setTypeface(android.graphics.Typeface.create(android.graphics.Typeface.SERIF, android.graphics.Typeface.BOLD));
         
-        float textGap = 15; // Exact distance matching the Rupee counter
+        float textGap = 25; // Increased distance to move number left
         float textX = iconRightX - keyW - textGap;
         float textY = iconCenterY + 25; // Adjusted vertical centering for 72pt font
         

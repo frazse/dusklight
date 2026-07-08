@@ -433,6 +433,54 @@ std::optional<CachedIcon> render_item_icon(uint8_t itemNo) {
     return icon;
 }
 
+std::optional<CachedIcon> render_texture_icon(JKRArchive* archive, int index) {
+    if (!archive) {
+        return std::nullopt;
+    }
+    const ResTIMG* image = reinterpret_cast<const ResTIMG*>(archive->getResource(static_cast<u16>(index)));
+    if (!image) {
+        return std::nullopt;
+    }
+
+    auto decoded = decode_timg(image);
+    if (decoded.data.empty()) {
+        return std::nullopt;
+    }
+
+    CachedIcon icon{
+        .pixels = {},
+        .width = decoded.width,
+        .height = decoded.height,
+    };
+    icon.pixels.assign(reinterpret_cast<const uint8_t*>(decoded.data.data()),
+                       reinterpret_cast<const uint8_t*>(decoded.data.data()) + decoded.data.size());
+    return icon;
+}
+
+std::optional<CachedIcon> render_texture_icon(JKRArchive* archive, const char* name) {
+    if (!archive) {
+        return std::nullopt;
+    }
+    const ResTIMG* image = reinterpret_cast<const ResTIMG*>(archive->getResource('TIMG', name));
+    if (!image) {
+        return std::nullopt;
+    }
+
+    auto decoded = decode_timg(image);
+    if (decoded.data.empty()) {
+        return std::nullopt;
+    }
+
+    CachedIcon icon{
+        .pixels = {},
+        .width = decoded.width,
+        .height = decoded.height,
+    };
+    icon.pixels.assign(reinterpret_cast<const uint8_t*>(decoded.data.data()),
+                       reinterpret_cast<const uint8_t*>(decoded.data.data()) + decoded.data.size());
+    return icon;
+}
+
 namespace {
 
 SurfacePtr create_rgba_surface(uint32_t width, uint32_t height) {

@@ -20,6 +20,8 @@ void register_icon_texture_provider() noexcept;
 void unregister_icon_texture_provider() noexcept;
 
 std::optional<CachedIcon> render_item_icon(uint8_t itemNo);
+std::optional<CachedIcon> render_texture_icon(class JKRArchive* archive, int index);
+std::optional<CachedIcon> render_texture_icon(class JKRArchive* archive, const char* name);
 
 void update_midna_icon_texture(J2DPane* pane) noexcept;
 std::string midna_icon_source();

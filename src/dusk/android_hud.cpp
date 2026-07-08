@@ -194,15 +194,15 @@ bool clear_pending_exception(JNIEnv* env) { if (env == nullptr || !env->Exceptio
 jmethodID s_onGameStateUpdate = nullptr;
 jmethodID s_onItemIconLoaded = nullptr;
 std::atomic<bool> s_secondScreenActive{false};
-std::set<u8> s_loadedIcons;
+std::set<u32> s_loadedIcons;
 int s_frameCounter = 0;
 
-void send_item_icon(u8 itemNo, JNIEnv* env, jobject activity) {
-    if (itemNo == 0xFF || itemNo == 0) return;
+void send_item_icon(u32 itemNo, JNIEnv* env, jobject activity) {
+    if (itemNo == 0xFFFFFFFF || itemNo == 0) return;
     if (s_loadedIcons.count(itemNo)) return;
     if (!dComIfGp_getItemIconArchive()) return;
 
-    auto icon = dusk::ui::render_item_icon(itemNo);
+    auto icon = dusk::ui::render_item_icon((u8)itemNo);
     if (!icon) return;
 
     s_loadedIcons.insert(itemNo);
@@ -221,6 +221,46 @@ void send_item_icon(u8 itemNo, JNIEnv* env, jobject activity) {
     env->CallVoidMethod(activity, s_onItemIconLoaded, (jint)itemNo, (jint)icon->width, (jint)icon->height, pixels);
     env->DeleteLocalRef(pixels);
     s_loadedIcons.insert(itemNo);
+}
+
+void send_generic_icon(u32 customID, JKRArchive* arc, int index, JNIEnv* env, jobject activity) {
+    if (s_loadedIcons.count(customID)) return;
+    if (!arc) return;
+    auto icon = dusk::ui::render_texture_icon(arc, index);
+    if (!icon) return;
+
+    std::vector<jint> converted;
+    converted.reserve(icon->pixels.size() / 4);
+    for (size_t i = 0; i < icon->pixels.size(); i += 4) {
+        u8 r = icon->pixels[i], g = icon->pixels[i + 1], b = icon->pixels[i + 2], a = icon->pixels[i + 3];
+        converted.push_back((jint)((a << 24) | (r << 16) | (g << 8) | b));
+    }
+
+    jintArray pixels = env->NewIntArray(converted.size());
+    env->SetIntArrayRegion(pixels, 0, converted.size(), converted.data());
+    env->CallVoidMethod(activity, s_onItemIconLoaded, (jint)customID, (jint)icon->width, (jint)icon->height, pixels);
+    env->DeleteLocalRef(pixels);
+    s_loadedIcons.insert(customID);
+}
+
+void send_generic_icon(u32 customID, JKRArchive* arc, const char* name, JNIEnv* env, jobject activity) {
+    if (s_loadedIcons.count(customID)) return;
+    if (!arc) return;
+    auto icon = dusk::ui::render_texture_icon(arc, name);
+    if (!icon) return;
+
+    std::vector<jint> converted;
+    converted.reserve(icon->pixels.size() / 4);
+    for (size_t i = 0; i < icon->pixels.size(); i += 4) {
+        u8 r = icon->pixels[i], g = icon->pixels[i + 1], b = icon->pixels[i + 2], a = icon->pixels[i + 3];
+        converted.push_back((jint)((a << 24) | (r << 16) | (g << 8) | b));
+    }
+
+    jintArray pixels = env->NewIntArray(converted.size());
+    env->SetIntArrayRegion(pixels, 0, converted.size(), converted.data());
+    env->CallVoidMethod(activity, s_onItemIconLoaded, (jint)customID, (jint)icon->width, (jint)icon->height, pixels);
+    env->DeleteLocalRef(pixels);
+    s_loadedIcons.insert(customID);
 }
 
 bool is_room_visible(int r, const char* sName, int stayNo, bool hasMapItem) { if (sName && sName[0] == 'R') return r == stayNo; return r == stayNo || dComIfGs_isVisitedRoom(r) || hasMapItem; }
@@ -434,6 +474,20 @@ else if (winStatus == 1 || winStatus == 2) {
 
     send_item_icon(iData[17], env, activity);
     send_item_icon(iData[18], env, activity);
+
+    send_item_icon(0x00, env, activity); // Heart
+    send_item_icon(0x01, env, activity); // Green Rupee
+    send_item_icon(0x22, env, activity); // Heart Container
+
+    JKRArchive* main2D = dComIfGp_getMain2DArchive();
+    if (main2D) {
+        send_generic_icon(0x1010, main2D, "tt_rupy_green_icon2.bti", env, activity);
+        send_generic_icon(0x1011, main2D, "tt_heart_01.bti", env, activity); // 1/4
+        send_generic_icon(0x1012, main2D, "tt_heart_02.bti", env, activity); // 2/4
+        send_generic_icon(0x1013, main2D, "tt_heart_03.bti", env, activity); // 3/4
+        send_generic_icon(0x1014, main2D, "tt_heart_00.bti", env, activity); // Full
+        send_generic_icon(0x1015, main2D, "tt_heart_base_wave_24.bti", env, activity);
+    }
 
     // B button item logic
     if (iData[29] == 0x26 || iData[29] == 0x2E) { // Attack/Cut context
