@@ -10,8 +10,16 @@ class J2DPane;
 
 namespace dusk::ui {
 
+struct CachedIcon {
+    std::vector<uint8_t> pixels;
+    uint32_t width = 0;
+    uint32_t height = 0;
+};
+
 void register_icon_texture_provider() noexcept;
 void unregister_icon_texture_provider() noexcept;
+
+std::optional<CachedIcon> render_item_icon(uint8_t itemNo);
 
 void update_midna_icon_texture(J2DPane* pane) noexcept;
 std::string midna_icon_source();

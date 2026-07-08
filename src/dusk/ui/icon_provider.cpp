@@ -53,12 +53,6 @@ struct alignas(32) ItemTextureBuffer {
     const std::byte* data() const noexcept { return bytes.data(); }
 };
 
-struct CachedIcon {
-    std::vector<uint8_t> pixels;
-    uint32_t width = 0;
-    uint32_t height = 0;
-};
-
 struct RuntimeIconState {
     CachedIcon icon;
     uint64_t revision = 0;
@@ -375,7 +369,9 @@ LayerColors layer_colors(J2DPicture& picture, uint8_t alpha) noexcept {
     };
 }
 
-std::optional<CachedIcon> render_item_icon(u8 itemNo) {
+}  // namespace
+
+std::optional<CachedIcon> render_item_icon(uint8_t itemNo) {
     std::array<ItemTextureBuffer, 4> buffers{};
     std::array<J2DPicture, 4> pictures{};
 
@@ -403,6 +399,7 @@ std::optional<CachedIcon> render_item_icon(u8 itemNo) {
     }
 
     CachedIcon icon{
+        .pixels = {},
         .width = decodedLayers[0].width,
         .height = decodedLayers[0].height,
     };
@@ -435,6 +432,8 @@ std::optional<CachedIcon> render_item_icon(u8 itemNo) {
 
     return icon;
 }
+
+namespace {
 
 SurfacePtr create_rgba_surface(uint32_t width, uint32_t height) {
     if (width == 0 || height == 0 ||

@@ -27,6 +27,8 @@
 #include "SSystem/SComponent/c_xyz.h"
 #include "dusk/endian.h"
 
+#include "dusk/ui/icon_provider.hpp"
+
 #include <SDL3/SDL_system.h>
 #include <jni.h>
 #include <atomic>
@@ -36,6 +38,7 @@
 #include <algorithm>
 #include <string>
 #include <cmath>
+#include <set>
 
 namespace dusk::android {
 namespace {
@@ -189,8 +192,37 @@ std::string get_full_multi_line_desc(u16 baseMsgID, u8 itemNo) {
 
 bool clear_pending_exception(JNIEnv* env) { if (env == nullptr || !env->ExceptionCheck()) return false; env->ExceptionClear(); return true; }
 jmethodID s_onGameStateUpdate = nullptr;
+jmethodID s_onItemIconLoaded = nullptr;
 std::atomic<bool> s_secondScreenActive{false};
+std::set<u8> s_loadedIcons;
 int s_frameCounter = 0;
+
+void send_item_icon(u8 itemNo, JNIEnv* env, jobject activity) {
+    if (itemNo == 0xFF || itemNo == 0) return;
+    if (s_loadedIcons.count(itemNo)) return;
+
+    auto icon = dusk::ui::render_item_icon(itemNo);
+    if (!icon) {
+        s_loadedIcons.insert(itemNo);
+        return;
+    }
+
+    std::vector<jint> converted;
+    converted.reserve(icon->pixels.size() / 4);
+    for (size_t i = 0; i < icon->pixels.size(); i += 4) {
+        u8 r = icon->pixels[i];
+        u8 g = icon->pixels[i + 1];
+        u8 b = icon->pixels[i + 2];
+        u8 a = icon->pixels[i + 3];
+        converted.push_back((jint)((a << 24) | (r << 16) | (g << 8) | b));
+    }
+
+    jintArray pixels = env->NewIntArray(converted.size());
+    env->SetIntArrayRegion(pixels, 0, converted.size(), converted.data());
+    env->CallVoidMethod(activity, s_onItemIconLoaded, (jint)itemNo, (jint)icon->width, (jint)icon->height, pixels);
+    env->DeleteLocalRef(pixels);
+    s_loadedIcons.insert(itemNo);
+}
 
 bool is_room_visible(int r, const char* sName, int stayNo, bool hasMapItem) { if (sName && sName[0] == 'R') return r == stayNo; return r == stayNo || dComIfGs_isVisitedRoom(r) || hasMapItem; }
 bool switch_reveals(u8 swBit, int roomNo) { return swBit == 0xFF || dComIfGs_isSwitch(swBit, roomNo); }
@@ -253,8 +285,9 @@ void hud_update() {
     if (s_onGameStateUpdate == nullptr) {
         jclass cls = env->GetObjectClass(activity);
         s_onGameStateUpdate = env->GetMethodID(cls, "onGameStateUpdate", "([I[FLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;[F[F[F)V");
+        s_onItemIconLoaded = env->GetMethodID(cls, "onItemIconLoaded", "(III[I)V");
         env->DeleteLocalRef(cls);
-        if (s_onGameStateUpdate == nullptr || clear_pending_exception(env)) return;
+        if (s_onGameStateUpdate == nullptr || s_onItemIconLoaded == nullptr || clear_pending_exception(env)) return;
     }
     s_secondScreenActive.store(true, std::memory_order_relaxed);
     int iData[120] = {0};
@@ -364,6 +397,7 @@ else if (winStatus == 1 || winStatus == 2) {
                             count = std::min(arrows, count);
                         }
                         iData[87 + s] = count;
+                        send_item_icon(baseItem, env, activity);
                     } else {
                         iData[63 + s] = 0xFF;
                         iData[87 + s] = 0;
@@ -388,9 +422,27 @@ else if (winStatus == 1 || winStatus == 2) {
     iData[0] = dComIfGs_getLife(); iData[1] = dComIfGs_getMaxLife(); iData[8] = dComIfGs_getRupee(); iData[9] = dComIfGs_getKeyNum() + dComIfGp_getItemKeyNumCount();
     iData[10] = dComIfGs_getArrowNum(); iData[11] = dComIfGs_getBombNum(0); iData[13] = stayNo;
     iData[17] = dComIfGp_getSelectItem(0); iData[18] = dComIfGp_getSelectItem(1);
+    iData[28] = (int)meter->getDoStatus(); iData[29] = (int)meter->getAStatus();
+
+    send_item_icon(iData[17], env, activity);
+    send_item_icon(iData[18], env, activity);
+
+    // B button item logic
+    if (iData[29] == 0x26 || iData[29] == 0x2E) { // Attack/Cut context
+        u8 sword = dComIfGs_getSelectEquipSword();
+        if (sword != 0xFF) send_item_icon(sword, env, activity);
+        iData[110] = sword;
+    } else if (iData[29] == 0x4F) { // Fishing
+        send_item_icon(0x4A, env, activity); // Rod
+        iData[110] = 0x4A;
+    } else {
+        iData[110] = 0xFF;
+    }
+    send_item_icon(iData[17], env, activity); send_item_icon(iData[18], env, activity);
 
     auto get_ammo = [](u8 item, int selIdx) {
         if (item == 0x43) return (int)dComIfGs_getArrowNum(); // Bow
+        if (item == 0x4B) return (int)dComIfGs_getPachinkoNum(); // Slingshot
         if (item == 0x59) { // Bomb Arrow
             int arrows = (int)dComIfGs_getArrowNum();
             u8 mixSlot = dComIfGs_getMixItemIndex(selIdx);

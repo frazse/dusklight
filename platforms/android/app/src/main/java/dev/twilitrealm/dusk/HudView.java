@@ -12,7 +12,7 @@ import android.view.View;
 
 public class HudView extends View {
     private static final String TAG = "HudView";
-    private static final boolean DEBUG_IDS = false;
+    private static final boolean DEBUG_IDS = true;
     private GameState mState;
     private GameState mPrevState;
     private long mLastUpdateTime;
@@ -31,6 +31,8 @@ public class HudView extends View {
     private int mDisplayRupees = -1;
     private int mRupeeTimer = 0;
 
+    private final java.util.Map<Integer, android.graphics.Bitmap> mItemIcons = new java.util.HashMap<>();
+
     public HudView(Context context) {
         super(context);
     }
@@ -44,6 +46,12 @@ public class HudView extends View {
         mState = state;
         mLastUpdateTime = System.currentTimeMillis();
         invalidate();
+    }
+
+    public void onItemIconLoaded(int id, int width, int height, int[] pixels) {
+        android.graphics.Bitmap bmp = android.graphics.Bitmap.createBitmap(pixels, width, height, android.graphics.Bitmap.Config.ARGB_8888);
+        mItemIcons.put(id, bmp);
+        postInvalidate();
     }
 
     private void resetPaint() {
@@ -349,48 +357,60 @@ public class HudView extends View {
             mPaint.setStrokeWidth(isSelected ? 5 : 2);
             canvas.drawCircle(x, y, 55, mPaint);
 
-            String name = (itemId == 0) ? "(Empty Slot)" : getItemName(itemId);
-            mPaint.setTextAlign(Paint.Align.CENTER);
-            mPaint.setTextSize(isSelected ? 36 : 24); 
-            mPaint.setColor(isSelected ? Color.WHITE : Color.rgb(180, 180, 180));
-            mPaint.setStyle(Paint.Style.FILL);
-            mPaint.setTypeface(android.graphics.Typeface.create("sans-serif-condensed", isSelected ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL));
-            
-            // For unselected slots, only draw if they aren't empty, or if we want to see holes
-            if (itemId != 0 || isSelected) {
-                canvas.drawText(name, x, y + 10, mPaint);
+            android.graphics.Bitmap icon = mItemIcons.get(itemId);
+            if (icon != null) {
+                float maxDim = isSelected ? 80 : 60;
+                float w = icon.getWidth();
+                float h = icon.getHeight();
+                float scale = maxDim / Math.max(w, h);
+                float drawW = w * scale;
+                float drawH = h * scale;
+                RectF dst = new RectF(x - drawW / 2, y - drawH / 2, x + drawW / 2, y + drawH / 2);
+                canvas.drawBitmap(icon, null, dst, mPaint);
+            } else {
+                String name = (itemId == 0) ? "(Empty Slot)" : getItemName(itemId);
+                mPaint.setTextAlign(Paint.Align.CENTER);
+                mPaint.setTextSize(isSelected ? 36 : 24); 
+                mPaint.setColor(isSelected ? Color.WHITE : Color.rgb(180, 180, 180));
+                mPaint.setStyle(Paint.Style.FILL);
+                mPaint.setTypeface(android.graphics.Typeface.create("sans-serif-condensed", isSelected ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL));
                 
-                // Draw ammo count if applicable
-                int count = mState.ringItemCounts[s];
-                if (count > 0 && itemId != 0x48) { // Don't show count for Lantern (0x48)
-                    resetPaint();
-                    mPaint.setTextAlign(Paint.Align.RIGHT);
-                    mPaint.setTextSize(isSelected ? 24 : 18);
-                    mPaint.setColor(Color.YELLOW);
-                    mPaint.setTypeface(android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.BOLD));
-                    canvas.drawText(String.valueOf(count), x + 45, y + 45, mPaint);
+                // For unselected slots, only draw if they aren't empty, or if we want to see holes
+                if (itemId != 0 || isSelected) {
+                    canvas.drawText(name, x, y + 10, mPaint);
                 }
+            }
 
-                // Draw oil bar for Lantern
-                if (itemId == 0x48 && mState.maxOil > 0) {
-                    float barW = isSelected ? 60 : 40;
-                    float barH = isSelected ? 8 : 6;
-                    float bx = x - barW/2f;
-                    float by = y + (isSelected ? 25 : 18);
-                    
-                    resetPaint();
-                    mPaint.setColor(Color.argb(120, 50, 40, 0));
-                    canvas.drawRect(bx, by, bx + barW, by + barH, mPaint);
-                    
-                    mPaint.setColor(Color.rgb(255, 220, 0));
-                    float fillW = barW * ((float)mState.oil / mState.maxOil);
-                    canvas.drawRect(bx, by, bx + fillW, by + barH, mPaint);
-                    
-                    mPaint.setStyle(Paint.Style.STROKE);
-                    mPaint.setStrokeWidth(1.5f);
-                    mPaint.setColor(Color.WHITE);
-                    canvas.drawRect(bx, by, bx + barW, by + barH, mPaint);
-                }
+            // Draw ammo count if applicable
+            int count = mState.ringItemCounts[s];
+            if (count > 0 && itemId != 0x48) { // Don't show count for Lantern (0x48)
+                resetPaint();
+                mPaint.setTextAlign(Paint.Align.RIGHT);
+                mPaint.setTextSize(isSelected ? 24 : 18);
+                mPaint.setColor(Color.YELLOW);
+                mPaint.setTypeface(android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.BOLD));
+                canvas.drawText(String.valueOf(count), x + 45, y + 45, mPaint);
+            }
+
+            // Draw oil bar for Lantern
+            if (itemId == 0x48 && mState.maxOil > 0) {
+                float barW = isSelected ? 60 : 40;
+                float barH = isSelected ? 8 : 6;
+                float bx = x - barW/2f;
+                float by = y + (isSelected ? 25 : 18);
+                
+                resetPaint();
+                mPaint.setColor(Color.argb(120, 50, 40, 0));
+                canvas.drawRect(bx, by, bx + barW, by + barH, mPaint);
+                
+                mPaint.setColor(Color.rgb(255, 220, 0));
+                float fillW = barW * ((float)mState.oil / mState.maxOil);
+                canvas.drawRect(bx, by, bx + fillW, by + barH, mPaint);
+                
+                mPaint.setStyle(Paint.Style.STROKE);
+                mPaint.setStrokeWidth(1.5f);
+                mPaint.setColor(Color.WHITE);
+                canvas.drawRect(bx, by, bx + barW, by + barH, mPaint);
             }
 
             if (isSelected) {
@@ -416,7 +436,7 @@ public class HudView extends View {
                     mPaint.setTextSize(58);
                     mPaint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
                     mPaint.setColor(Color.rgb(255, 210, 80));
-                    String title = (mState.itemTitle != null && !mState.itemTitle.isEmpty()) ? mState.itemTitle : name;
+                    String title = (mState.itemTitle != null && !mState.itemTitle.isEmpty()) ? mState.itemTitle : "";
                     canvas.drawText(title, cx, cy - 80, mPaint);
                     
                     mPaint.setTextSize(28);
@@ -438,6 +458,7 @@ public class HudView extends View {
                         canvas.drawText("ITEM INFO", cx, cy + 60, mPaint);
                     }
                 } else {
+                    String name = (itemId == 0) ? "(Empty Slot)" : getItemName(itemId);
                     canvas.drawText(name, cx, cy + 25, mPaint);
                 }
             }
@@ -1122,44 +1143,53 @@ public class HudView extends View {
     private void drawContextButtons(Canvas canvas, float x, float startY) {
         resetPaint(); float spacing = 95;
         // 1. Shoulders/Triggers
-        drawActionButton(canvas, x, startY, mState.labelL, Color.rgb(200, 200, 200), mState.buttonLText, mState.buttonLText != null && !mState.buttonLText.isEmpty());
-        drawActionButton(canvas, x, startY + spacing, mState.labelR, Color.rgb(200, 200, 200), mState.buttonRText, mState.buttonRText != null && !mState.buttonRText.isEmpty());
-        drawActionButton(canvas, x, startY + spacing * 2, mState.labelZ, Color.parseColor("#5A429B"), mState.buttonZText, mState.buttonZText != null && !mState.buttonZText.isEmpty());
+        drawActionButton(canvas, x, startY, mState.labelL, Color.rgb(200, 200, 200), mState.buttonLText, mState.buttonLText != null && !mState.buttonLText.isEmpty(), null);
+        drawActionButton(canvas, x, startY + spacing, mState.labelR, Color.rgb(200, 200, 200), mState.buttonRText, mState.buttonRText != null && !mState.buttonRText.isEmpty(), null);
+        drawActionButton(canvas, x, startY + spacing * 2, mState.labelZ, Color.parseColor("#5A429B"), mState.buttonZText, mState.buttonZText != null && !mState.buttonZText.isEmpty(), null);
         
         // 2. A (Action)
-        drawActionButton(canvas, x, startY + spacing * 3, mState.labelA, Color.rgb(0, 200, 50), mState.buttonAText, mState.buttonAText != null && !mState.buttonAText.isEmpty());
+        drawActionButton(canvas, x, startY + spacing * 3, mState.labelA, Color.rgb(0, 200, 50), mState.buttonAText, mState.buttonAText != null && !mState.buttonAText.isEmpty(), null);
 
         // 3. B (Sword/Attack)
-        drawActionButton(canvas, x, startY + spacing * 4, mState.labelB, Color.RED, mState.buttonBText, mState.buttonBText != null && !mState.buttonBText.isEmpty());
+        android.graphics.Bitmap bIcon = mItemIcons.get(mState.itemBResId);
+        drawActionButton(canvas, x, startY + spacing * 4, mState.labelB, Color.RED, mState.buttonBText, mState.buttonBText != null && !mState.buttonBText.isEmpty(), bIcon);
 
         // 4. Y (Item Slot 1)
         String yT = mState.buttonYText; boolean yA = (yT != null && !yT.isEmpty());
-        if (!yA) yT = getItemName(mState.itemYResId);
+        android.graphics.Bitmap yIcon = null;
+        if (!yA) {
+            yT = getItemName(mState.itemYResId);
+            yIcon = mItemIcons.get(mState.itemYResId);
+        }
         if (yT != null && !yT.isEmpty()) {
             int ammo = mState.itemYCount;
             if (ammo > 0) yT += " (" + ammo + ")";
             else if (ammo == 0 && isAmmoItem(mState.itemYResId)) yT += " (0)";
             yA = true;
         }
-        drawActionButton(canvas, x, startY + spacing * 5, mState.labelY, Color.rgb(200, 200, 200), yT, yA);
+        drawActionButton(canvas, x, startY + spacing * 5, mState.labelY, Color.rgb(200, 200, 200), yT, yA, yIcon);
         
         // 5. X (Item Slot 2)
         String xT = mState.buttonXText; boolean xA = (xT != null && !xT.isEmpty());
-        if (!xA) xT = getItemName(mState.itemXResId);
+        android.graphics.Bitmap xIcon = null;
+        if (!xA) {
+            xT = getItemName(mState.itemXResId);
+            xIcon = mItemIcons.get(mState.itemXResId);
+        }
         if (xT != null && !xT.isEmpty()) {
             int ammo = mState.itemXCount;
             if (ammo > 0) xT += " (" + ammo + ")";
             else if (ammo == 0 && isAmmoItem(mState.itemXResId)) xT += " (0)";
             xA = true;
         }
-        drawActionButton(canvas, x, startY + spacing * 6, mState.labelX, Color.rgb(200, 200, 200), xT, xA);
+        drawActionButton(canvas, x, startY + spacing * 6, mState.labelX, Color.rgb(200, 200, 200), xT, xA, xIcon);
     }
 
     private boolean isAmmoItem(int id) {
         return id == 0x43 || id == 0x4B || (id >= 0x70 && id <= 0x72) || (id >= 0x4F && id <= 0x51) || id == 0x59;
     }
 
-    private void drawActionButton(Canvas canvas, float x, float y, String label, int color, String text, boolean active) {
+    private void drawActionButton(Canvas canvas, float x, float y, String label, int color, String text, boolean active, android.graphics.Bitmap icon) {
         resetPaint(); mPaint.setTextAlign(Paint.Align.CENTER); mPaint.setTextSize(42);
         int circleColor = color; 
         boolean isMidna = active && "Midna".equals(text);
@@ -1172,8 +1202,21 @@ public class HudView extends View {
 
         mPaint.setColor(active ? circleColor : Color.argb(60, 100, 100, 100));
         float r = isPulse ? 42 : 38; canvas.drawCircle(x, y, r, mPaint);
-        mPaint.setColor(active ? Color.BLACK : Color.argb(100, 200, 200, 200));
-        canvas.drawText(label, x, y + 15, mPaint);
+        
+        if (active && icon != null) {
+            float maxDim = 52;
+            float w = icon.getWidth();
+            float h = icon.getHeight();
+            float scale = maxDim / Math.max(w, h);
+            float drawW = w * scale;
+            float drawH = h * scale;
+            RectF dst = new RectF(x - drawW / 2, y - drawH / 2, x + drawW / 2, y + drawH / 2);
+            canvas.drawBitmap(icon, null, dst, mPaint);
+        } else {
+            mPaint.setColor(active ? Color.BLACK : Color.argb(100, 200, 200, 200));
+            canvas.drawText(label, x, y + 15, mPaint);
+        }
+
         if (active && text != null && !text.isEmpty()) {
             mPaint.setTextAlign(Paint.Align.LEFT); mPaint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
             mPaint.setTextSize(42);
@@ -1381,7 +1424,7 @@ public class HudView extends View {
         if (DEBUG_IDS) {
             resetPaint(); mPaint.setTextAlign(Paint.Align.RIGHT);
             mPaint.setTextSize(24); mPaint.setColor(Color.YELLOW);
-            canvas.drawText("W:" + mState.windowStatus + " M:" + mState.mapStatus + " V:" + mState.visMask, x, y - 60, mPaint);
+            canvas.drawText("W:" + mState.windowStatus + " M:" + mState.mapStatus + " V:" + mState.visMask + " MSG:" + mState.msgStatus + " SEL:" + mState.selectPos + "/" + mState.selectNum, x, y - 60, mPaint);
         }
     }
 }

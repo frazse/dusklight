@@ -114,6 +114,11 @@ public class DuskActivity extends SDLActivity {
         final GameState state = new GameState(i, f, stageName, itemTitle, itemDesc, dialogText, lines, icons, doors, mBatteryLevel, mIsCharging);
         runOnUiThread(() -> mSecondScreen.updateHud(state));
     }
+
+    public void onItemIconLoaded(int id, int width, int height, int[] pixels) {
+        if (mSecondScreen == null) return;
+        runOnUiThread(() -> mSecondScreen.onItemIconLoaded(id, width, height, pixels));
+    }
     // ── End second screen ────────────────────────────────────────────
 
     private long folderDialogUserdata = 0;

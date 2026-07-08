@@ -23,7 +23,7 @@ public class GameState {
     public final String stageName, itemTitle, itemDesc, dialogText;
     public final int arrowMax, bombMax0, bombMax1, bombMax2, dialogOnSecondScreen, selectPos, selectNum, msgStatus;
 
-    public final int itemXResId, itemYResId, itemXCount, itemYCount;
+    public final int itemXResId, itemYResId, itemXCount, itemYCount, itemBResId;
     public final int itemDDownId, itemDDownCount, itemDLeftId, itemDLeftCount, itemDRightId, itemDRightCount;
 
     public GameState(int[] i, float[] f, String stageName, String itemTitle, String itemDesc, String dialogText, float[] lines, float[] icons, float[] doors, int batteryLevel, boolean isCharging) {
@@ -46,6 +46,7 @@ public class GameState {
         this.itemDDownId = i[21];   this.itemDDownCount = i[22];
         this.itemDLeftId = i[23];   this.itemDLeftCount = i[24];
         this.itemDRightId = i[25];  this.itemDRightCount = i[26];
+        this.itemBResId = i[110];
         
         this.horseSpurs = i[42];
         this.batteryLevel = batteryLevel;

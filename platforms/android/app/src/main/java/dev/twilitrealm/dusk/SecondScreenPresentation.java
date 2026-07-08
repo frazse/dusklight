@@ -28,4 +28,10 @@ public class SecondScreenPresentation extends Presentation {
             mHudView.update(state);
         }
     }
+
+    public void onItemIconLoaded(int id, int width, int height, int[] pixels) {
+        if (mHudView != null) {
+            mHudView.onItemIconLoaded(id, width, height, pixels);
+        }
+    }
 }
