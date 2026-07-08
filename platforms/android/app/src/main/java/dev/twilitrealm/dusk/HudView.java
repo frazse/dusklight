@@ -1143,9 +1143,9 @@ public class HudView extends View {
     private void drawContextButtons(Canvas canvas, float x, float startY) {
         resetPaint(); float spacing = 95;
         // 1. Shoulders/Triggers (Standard size)
-        drawActionButton(canvas, x, startY, mState.labelL, Color.rgb(200, 200, 200), mState.buttonLText, mState.buttonLText != null && !mState.buttonLText.isEmpty(), null, 38, 52);
-        drawActionButton(canvas, x, startY + spacing, mState.labelR, Color.rgb(200, 200, 200), mState.buttonRText, mState.buttonRText != null && !mState.buttonRText.isEmpty(), null, 38, 52);
-        drawActionButton(canvas, x, startY + spacing * 2, mState.labelZ, Color.parseColor("#5A429B"), mState.buttonZText, mState.buttonZText != null && !mState.buttonZText.isEmpty(), null, 38, 52);
+        drawActionButton(canvas, x, startY, mState.labelL, Color.rgb(200, 200, 200), mState.buttonLText, mState.buttonLText != null && !mState.buttonLText.isEmpty(), null, 38, 52, null);
+        drawActionButton(canvas, x, startY + spacing, mState.labelR, Color.rgb(200, 200, 200), mState.buttonRText, mState.buttonRText != null && !mState.buttonRText.isEmpty(), null, 38, 52, null);
+        drawActionButton(canvas, x, startY + spacing * 2, mState.labelZ, Color.parseColor("#5A429B"), mState.buttonZText, mState.buttonZText != null && !mState.buttonZText.isEmpty(), null, 38, 52, null);
         
         // 2. Diamond Layout (A=South, B=West, Y=North, X=East) - LARGER
         float cx = x + 40; // Shift diamond slightly right
@@ -1155,45 +1155,47 @@ public class HudView extends View {
         int bis = 70; // Button icon size
 
         // Y (North)
-        String yT = mState.buttonYText; boolean yA = (yT != null && !yT.isEmpty());
-        android.graphics.Bitmap yIcon = null;
-        if (!yA) { 
+        String yAmm = null; android.graphics.Bitmap yIcon = null; boolean yAct = false;
+        String yProm = mState.buttonYText;
+        if (yProm == null || yProm.isEmpty()) { 
             yIcon = mItemIcons.get(mState.itemYResId);
-            int ammo = mState.itemYCount;
-            if (ammo > 0) yT = "(" + ammo + ")";
-            else if (ammo == 0 && isAmmoItem(mState.itemYResId)) yT = "(0)";
-            else yT = "";
-            yA = (yIcon != null);
+            if (mState.itemYCount > 0) yAmm = String.valueOf(mState.itemYCount);
+            else if (mState.itemYCount == 0 && isAmmoItem(mState.itemYResId)) yAmm = "0";
+            yAct = (yIcon != null);
+        } else {
+            yAct = true;
         }
-        drawActionButton(canvas, cx, cy - ds, mState.labelY, Color.rgb(200, 200, 200), yT, yA, yIcon, br, bis);
+        drawActionButton(canvas, cx, cy - ds, mState.labelY, Color.rgb(200, 200, 200), yProm, yAct, yIcon, br, bis, yAmm);
 
         // X (East)
-        String xT = mState.buttonXText; boolean xA = (xT != null && !xT.isEmpty());
-        android.graphics.Bitmap xIcon = null;
-        if (!xA) { 
+        String xAmm = null; android.graphics.Bitmap xIcon = null; boolean xAct = false;
+        String xProm = mState.buttonXText;
+        if (xProm == null || xProm.isEmpty()) { 
             xIcon = mItemIcons.get(mState.itemXResId);
-            int ammo = mState.itemXCount;
-            if (ammo > 0) xT = "(" + ammo + ")";
-            else if (ammo == 0 && isAmmoItem(mState.itemXResId)) xT = "(0)";
-            else xT = "";
-            xA = (xIcon != null);
+            if (mState.itemXCount > 0) xAmm = String.valueOf(mState.itemXCount);
+            else if (mState.itemXCount == 0 && isAmmoItem(mState.itemXResId)) xAmm = "0";
+            xAct = (xIcon != null);
+        } else {
+            xAct = true;
         }
-        drawActionButton(canvas, cx + ds, cy, mState.labelX, Color.rgb(200, 200, 200), xT, xA, xIcon, br, bis);
+        drawActionButton(canvas, cx + ds, cy, mState.labelX, Color.rgb(200, 200, 200), xProm, xAct, xIcon, br, bis, xAmm);
 
         // B (West)
         android.graphics.Bitmap bIcon = mItemIcons.get(mState.itemBResId);
-        drawActionButton(canvas, cx - ds, cy, mState.labelB, Color.RED, mState.buttonBText, mState.buttonBText != null && !mState.buttonBText.isEmpty(), bIcon, br, bis);
+        String bText = mState.buttonBText;
+        if (bIcon != null && ("Attack".equals(bText) || "Cut".equals(bText))) bText = null;
+        drawActionButton(canvas, cx - ds, cy, mState.labelB, Color.RED, bText, mState.buttonBText != null && !mState.buttonBText.isEmpty(), bIcon, br, bis, null);
 
         // A (South)
-        drawActionButton(canvas, cx, cy + ds, mState.labelA, Color.rgb(0, 200, 50), mState.buttonAText, mState.buttonAText != null && !mState.buttonAText.isEmpty(), null, br, bis);
+        drawActionButton(canvas, cx, cy + ds, mState.labelA, Color.rgb(0, 200, 50), mState.buttonAText, mState.buttonAText != null && !mState.buttonAText.isEmpty(), null, br, bis, null);
     }
 
     private boolean isAmmoItem(int id) {
         return id == 0x43 || id == 0x4B || (id >= 0x70 && id <= 0x72) || (id >= 0x4F && id <= 0x51) || id == 0x59;
     }
 
-    private void drawActionButton(Canvas canvas, float x, float y, String label, int color, String text, boolean active, android.graphics.Bitmap icon, float baseRadius, float iconMaxDim) {
-        resetPaint(); mPaint.setTextAlign(Paint.Align.CENTER); mPaint.setTextSize(42);
+    private void drawActionButton(Canvas canvas, float x, float y, String label, int color, String text, boolean active, android.graphics.Bitmap icon, float baseRadius, float iconMaxDim, String ammo) {
+        resetPaint(); 
         int circleColor = color; 
         boolean isMidna = active && "Midna".equals(text);
         boolean isMidnaContext = active && ("Z".equals(label) || "Z".equals(mState.labelZ)) && ("Check".equals(text) || "Warp".equals(text) || "Select Warp".equals(text));
@@ -1212,18 +1214,37 @@ public class HudView extends View {
             float scale = iconMaxDim / Math.max(w, h);
             float drawW = w * scale;
             float drawH = h * scale;
-            RectF dst = new RectF(x - drawW / 2, y - drawH / 2, x + drawW / 2, y + drawH / 2);
+            // Shift up slightly if there is ammo to show
+            float yOff = (ammo != null) ? -8 : 0;
+            RectF dst = new RectF(x - drawW / 2, y - (drawH / 2) + yOff, x + drawW / 2, y + (drawH / 2) + yOff);
             canvas.drawBitmap(icon, null, dst, mPaint);
-        } else {
+        } else if (label != null) {
             mPaint.setColor(active ? Color.BLACK : Color.argb(100, 200, 200, 200));
-            canvas.drawText(label, x, y + 15, mPaint);
+            mPaint.setTextAlign(Paint.Align.CENTER);
+            mPaint.setTextSize(baseRadius * 0.9f);
+            mPaint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+            Paint.FontMetrics fm = mPaint.getFontMetrics();
+            canvas.drawText(label, x, y - (fm.ascent + fm.descent) / 2, mPaint);
+        }
+
+        if (active && ammo != null) {
+            mPaint.setTextAlign(Paint.Align.CENTER); mPaint.setTextSize(34); // Bigger ammo
+            mPaint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+            mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(5.0f); mPaint.setColor(Color.BLACK);
+            canvas.drawText(ammo, x, y + 42, mPaint);
+            mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.WHITE);
+            canvas.drawText(ammo, x, y + 42, mPaint);
         }
 
         if (active && text != null && !text.isEmpty()) {
-            mPaint.setTextAlign(Paint.Align.LEFT); mPaint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-            mPaint.setTextSize(42);
-            float lx = x + baseRadius + 22, ly = y + 15;
-            mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(5.0f); mPaint.setColor(Color.BLACK);
+            mPaint.setTextAlign(Paint.Align.LEFT); 
+            mPaint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+            mPaint.setTextSize(52); // Larger prompt text
+            Paint.FontMetrics fm = mPaint.getFontMetrics();
+            float ly = y - (fm.ascent + fm.descent) / 2;
+            float lx = x + baseRadius + 18; // Tighter gap to circle
+            
+            mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(6.0f); mPaint.setColor(Color.BLACK);
             canvas.drawText(text, lx, ly, mPaint);
             mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.WHITE);
             canvas.drawText(text, lx, ly, mPaint);
