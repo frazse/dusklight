@@ -1147,42 +1147,41 @@ public class HudView extends View {
         drawActionButton(canvas, x, startY + spacing, mState.labelR, Color.rgb(200, 200, 200), mState.buttonRText, mState.buttonRText != null && !mState.buttonRText.isEmpty(), null);
         drawActionButton(canvas, x, startY + spacing * 2, mState.labelZ, Color.parseColor("#5A429B"), mState.buttonZText, mState.buttonZText != null && !mState.buttonZText.isEmpty(), null);
         
-        // 2. A (Action)
-        drawActionButton(canvas, x, startY + spacing * 3, mState.labelA, Color.rgb(0, 200, 50), mState.buttonAText, mState.buttonAText != null && !mState.buttonAText.isEmpty(), null);
+        // 2. Diamond Layout (A=South, B=West, Y=North, X=East)
+        float cx = x + 40; // Shift diamond slightly right
+        float cy = startY + spacing * 5.0f;
+        float ds = 110; // Diamond spacing
 
-        // 3. B (Sword/Attack)
-        android.graphics.Bitmap bIcon = mItemIcons.get(mState.itemBResId);
-        drawActionButton(canvas, x, startY + spacing * 4, mState.labelB, Color.RED, mState.buttonBText, mState.buttonBText != null && !mState.buttonBText.isEmpty(), bIcon);
-
-        // 4. Y (Item Slot 1)
+        // Y (North)
         String yT = mState.buttonYText; boolean yA = (yT != null && !yT.isEmpty());
         android.graphics.Bitmap yIcon = null;
-        if (!yA) {
-            yT = getItemName(mState.itemYResId);
-            yIcon = mItemIcons.get(mState.itemYResId);
-        }
+        if (!yA) { yT = getItemName(mState.itemYResId); yIcon = mItemIcons.get(mState.itemYResId); }
         if (yT != null && !yT.isEmpty()) {
             int ammo = mState.itemYCount;
             if (ammo > 0) yT += " (" + ammo + ")";
             else if (ammo == 0 && isAmmoItem(mState.itemYResId)) yT += " (0)";
             yA = true;
         }
-        drawActionButton(canvas, x, startY + spacing * 5, mState.labelY, Color.rgb(200, 200, 200), yT, yA, yIcon);
-        
-        // 5. X (Item Slot 2)
+        drawActionButton(canvas, cx, cy - ds, mState.labelY, Color.rgb(200, 200, 200), yT, yA, yIcon);
+
+        // X (East)
         String xT = mState.buttonXText; boolean xA = (xT != null && !xT.isEmpty());
         android.graphics.Bitmap xIcon = null;
-        if (!xA) {
-            xT = getItemName(mState.itemXResId);
-            xIcon = mItemIcons.get(mState.itemXResId);
-        }
+        if (!xA) { xT = getItemName(mState.itemXResId); xIcon = mItemIcons.get(mState.itemXResId); }
         if (xT != null && !xT.isEmpty()) {
             int ammo = mState.itemXCount;
             if (ammo > 0) xT += " (" + ammo + ")";
             else if (ammo == 0 && isAmmoItem(mState.itemXResId)) xT += " (0)";
             xA = true;
         }
-        drawActionButton(canvas, x, startY + spacing * 6, mState.labelX, Color.rgb(200, 200, 200), xT, xA, xIcon);
+        drawActionButton(canvas, cx + ds, cy, mState.labelX, Color.rgb(200, 200, 200), xT, xA, xIcon);
+
+        // B (West)
+        android.graphics.Bitmap bIcon = mItemIcons.get(mState.itemBResId);
+        drawActionButton(canvas, cx - ds, cy, mState.labelB, Color.RED, mState.buttonBText, mState.buttonBText != null && !mState.buttonBText.isEmpty(), bIcon);
+
+        // A (South)
+        drawActionButton(canvas, cx, cy + ds, mState.labelA, Color.rgb(0, 200, 50), mState.buttonAText, mState.buttonAText != null && !mState.buttonAText.isEmpty(), null);
     }
 
     private boolean isAmmoItem(int id) {
