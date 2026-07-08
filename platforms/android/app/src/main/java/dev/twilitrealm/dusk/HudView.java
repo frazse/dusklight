@@ -31,6 +31,20 @@ public class HudView extends View {
     private int mDisplayRupees = -1;
     private int mRupeeTimer = 0;
 
+    private static final java.util.Map<String, Integer> PLACEHOLDER_TO_ICON = new java.util.HashMap<String, Integer>() {{
+        put("{{STICK}}", 0x2000);
+        put("{{CSTICK}}", 0x2001);
+        put("{{DPAD}}", 0x2002);
+        put("{{RETICLE}}", 0x2003);
+        put("{{A}}", 0x2004);
+        put("{{B}}", 0x2005);
+        put("{{X}}", 0x2006);
+        put("{{Y}}", 0x2007);
+        put("{{Z}}", 0x2008);
+        put("{{L}}", 0x2009);
+        put("{{R}}", 0x200A);
+    }};
+
     private final java.util.Map<Integer, android.graphics.Bitmap> mItemIcons = new java.util.HashMap<>();
 
     public HudView(Context context) {
@@ -494,59 +508,93 @@ public class HudView extends View {
     }
 
     private float measureColorText(String line, Paint paint) {
-        return paint.measureText(line.replaceAll("\\[\\[C:\\d+\\]\\]", ""));
+        // Approximate icon width as 'W' for measurement
+        String stripped = line.replaceAll("\\[\\[C:[^\\]]+\\]\\]", "")
+                              .replaceAll("\\{\\{[^\\}]+\\}\\}", "W");
+        return paint.measureText(stripped);
     }
 
     private void drawColorText(Canvas canvas, String line, float x, float y, Paint paint, int defaultColor) {
         float curX = x;
-        int lastPos = 0;
-        int idx = line.indexOf("[[C:");
-        
-        while (idx != -1) {
-            // Draw text before the tag
-            if (idx > lastPos) {
-                String segment = line.substring(lastPos, idx);
+        int pos = 0;
+
+        while (pos < line.length()) {
+            int tagIdx = line.indexOf("[[C:", pos);
+            int iconIdx = line.indexOf("{{", pos);
+
+            int nextIdx = -1;
+            if (tagIdx != -1 && iconIdx != -1) nextIdx = Math.min(tagIdx, iconIdx);
+            else if (tagIdx != -1) nextIdx = tagIdx;
+            else if (iconIdx != -1) nextIdx = iconIdx;
+
+            if (nextIdx == -1) {
+                String segment = line.substring(pos);
                 canvas.drawText(segment, curX, y, paint);
                 curX += paint.measureText(segment);
+                break;
+            } else if (nextIdx > pos) {
+                String segment = line.substring(pos, nextIdx);
+                canvas.drawText(segment, curX, y, paint);
+                curX += paint.measureText(segment);
+                pos = nextIdx;
             }
-            
-            int endIdx = line.indexOf("]]", idx);
-            if (endIdx != -1) {
-                String tag = line.substring(idx + 4, endIdx);
-                try {
-                    if (tag.startsWith("#")) {
-                        long colorVal = Long.parseLong(tag.substring(1), 16);
-                        // RRGGBBAA -> AARRGGBB
-                        int r = (int)((colorVal >> 24) & 0xFF);
-                        int g = (int)((colorVal >> 16) & 0xFF);
-                        int b = (int)((colorVal >> 8) & 0xFF);
-                        int a = (int)(colorVal & 0xFF);
-                        paint.setColor(Color.argb(a, r, g, b));
-                    } else {
-                        int colorIdx = Integer.parseInt(tag);
-                        switch (colorIdx) {
-                            case 1: paint.setColor(Color.rgb(255, 80, 80)); break;    // Red
-                            case 2: paint.setColor(Color.rgb(80, 255, 80)); break;    // Green
-                            case 3: paint.setColor(Color.rgb(100, 100, 255)); break;  // Blue
-                            case 4: paint.setColor(Color.rgb(255, 255, 80)); break;   // Yellow
-                            case 5: paint.setColor(Color.rgb(100, 255, 255)); break;  // Light Blue
-                            case 6: paint.setColor(Color.rgb(255, 100, 255)); break;  // Purple
-                            case 7: paint.setColor(Color.rgb(180, 180, 180)); break;  // Grey
-                            case 8: paint.setColor(Color.rgb(255, 160, 50)); break;   // Orange
-                            case 0: default: paint.setColor(defaultColor); break;     // Reset
+
+            if (pos == tagIdx) {
+                int endIdx = line.indexOf("]]", pos);
+                if (endIdx != -1) {
+                    String tag = line.substring(pos + 4, endIdx);
+                    try {
+                        if (tag.startsWith("#")) {
+                            long colorVal = Long.parseLong(tag.substring(1), 16);
+                            int r = (int)((colorVal >> 24) & 0xFF);
+                            int g = (int)((colorVal >> 16) & 0xFF);
+                            int b = (int)((colorVal >> 8) & 0xFF);
+                            int a = (int)(colorVal & 0xFF);
+                            paint.setColor(Color.argb(a, r, g, b));
+                        } else {
+                            int colorIdx = Integer.parseInt(tag);
+                            switch (colorIdx) {
+                                case 1: paint.setColor(Color.rgb(255, 80, 80)); break;    // Red
+                                case 2: paint.setColor(Color.rgb(80, 255, 80)); break;    // Green
+                                case 3: paint.setColor(Color.rgb(100, 100, 255)); break;  // Blue
+                                case 4: paint.setColor(Color.rgb(255, 255, 80)); break;   // Yellow
+                                case 5: paint.setColor(Color.rgb(100, 255, 255)); break;  // Light Blue
+                                case 6: paint.setColor(Color.rgb(255, 100, 255)); break;  // Purple
+                                case 7: paint.setColor(Color.rgb(180, 180, 180)); break;  // Grey
+                                case 8: paint.setColor(Color.rgb(255, 160, 50)); break;   // Orange
+                                case 0: default: paint.setColor(defaultColor); break;     // Reset
+                            }
                         }
+                    } catch (Exception e) {}
+                    pos = endIdx + 2;
+                } else pos += 4;
+            } else if (pos == iconIdx) {
+                int endIdx = line.indexOf("}}", pos);
+                if (endIdx != -1) {
+                    String tag = line.substring(pos, endIdx + 2);
+                    Integer iconId = PLACEHOLDER_TO_ICON.get(tag);
+                    if (iconId != null) {
+                        android.graphics.Bitmap bmp = mItemIcons.get(iconId);
+                        if (bmp != null) {
+                            float iconH = paint.getTextSize() * 1.3f;
+                            float iconW = iconH * ((float)bmp.getWidth() / bmp.getHeight());
+                            float iconY = y - (iconH * 0.8f);
+                            android.graphics.RectF dst = new android.graphics.RectF(curX, iconY, curX + iconW, iconY + iconH);
+                            canvas.drawBitmap(bmp, null, dst, null);
+                            curX += iconW + 4;
+                        } else {
+                            String fb = tag.substring(2, tag.length() - 2);
+                            canvas.drawText(fb, curX, y, paint);
+                            curX += paint.measureText(fb);
+                        }
+                    } else {
+                        String segment = line.substring(pos, endIdx + 2);
+                        canvas.drawText(segment, curX, y, paint);
+                        curX += paint.measureText(segment);
                     }
-                } catch (Exception e) {}
-                lastPos = endIdx + 2;
-            } else {
-                lastPos = idx + 4;
+                    pos = endIdx + 2;
+                } else pos += 2;
             }
-            idx = line.indexOf("[[C:", lastPos);
-        }
-        
-        // Draw remaining text
-        if (lastPos < line.length()) {
-            canvas.drawText(line.substring(lastPos), curX, y, paint);
         }
     }
 
@@ -601,7 +649,8 @@ public class HudView extends View {
                 if (endIdx != -1) {
                     try {
                         int idx = Integer.parseInt(displayLine.substring(selStart + 6, endIdx));
-                        isSelected = (idx == mState.selectPos);
+                        // Support both 0-indexed and 1-indexed selection positions
+                        isSelected = (idx == mState.selectPos || idx == mState.selectPos - 1);
                         displayLine = displayLine.substring(0, selStart) + displayLine.substring(endIdx + 2);
                     } catch (Exception e) {}
                 }
@@ -629,20 +678,10 @@ public class HudView extends View {
     private String resolvePlaceholders(String text) {
         if (text == null) return "";
         return text
-            .replace("{{A}}", mState.labelA)
-            .replace("{{B}}", mState.labelB)
-            .replace("{{X}}", mState.labelX)
-            .replace("{{Y}}", mState.labelY)
-            .replace("{{Z}}", mState.labelZ)
-            .replace("{{L}}", mState.labelL)
-            .replace("{{R}}", mState.labelR)
-            .replace("{{STICK}}", "Stick")
-            .replace("{{XORY}}", mState.labelX)
-            .replace("{{RETICLE}}", "Reticle")
-            .replace("{{ARROWCAP}}", String.valueOf(mState.arrowMax))
             .replace("{{BOMBCAP0}}", String.valueOf(mState.bombMax0))
             .replace("{{BOMBCAP1}}", String.valueOf(mState.bombMax1))
-            .replace("{{BOMBCAP2}}", String.valueOf(mState.bombMax2));
+            .replace("{{BOMBCAP2}}", String.valueOf(mState.bombMax2))
+            .replace("{{ARROWCAP}}", String.valueOf(mState.arrowMax));
     }
 
     private void drawMiniMap(Canvas canvas, float x, float y, float interX, float interY, float interAngle) {

@@ -508,6 +508,26 @@ else if (winStatus == 1 || winStatus == 2) {
         // Base Wave: Semi-transparent gold (sourced from game's VesselFront)
         send_generic_icon(0x1015, main2D, "tt_heart_base_wave_24.bti", env, activity,
                           {0, 0, 0, 0}, {250, 250, 210, 160});
+
+        // HUD/Text Icons from font_xx.bti (GameCube versions)
+        JUtility::TColor gcnA = {98, 163, 46, 255};
+        JUtility::TColor gcnB = {200, 39, 39, 255};
+        JUtility::TColor gcnC = {255, 200, 50, 255};
+        JUtility::TColor gcnZ = {80, 70, 165, 255};
+        JUtility::TColor gcnGrey = {200, 200, 200, 255};
+
+        send_generic_icon(0x2000, main2D, "font_07_01.bti", env, activity); // Stick
+        send_generic_icon(0x2001, main2D, "font_09.bti", env, activity, {0,0,0,0}, gcnC); // C-Stick
+        send_generic_icon(0x2002, main2D, "font_08.bti", env, activity); // D-Pad
+        send_generic_icon(0x2003, main2D, "font_15.bti", env, activity); // Reticle
+
+        send_generic_icon(0x2004, main2D, "font_00.bti", env, activity, {0,0,0,0}, gcnA); // A
+        send_generic_icon(0x2005, main2D, "font_01.bti", env, activity, {0,0,0,0}, gcnB); // B
+        send_generic_icon(0x2006, main2D, "font_02.bti", env, activity, {0,0,0,0}, gcnGrey); // X
+        send_generic_icon(0x2007, main2D, "font_03.bti", env, activity, {0,0,0,0}, gcnGrey); // Y
+        send_generic_icon(0x2008, main2D, "font_06.bti", env, activity, {0,0,0,0}, gcnZ); // Z
+        send_generic_icon(0x2009, main2D, "font_04.bti", env, activity, {0,0,0,0}, gcnGrey); // L
+        send_generic_icon(0x200A, main2D, "font_05.bti", env, activity, {0,0,0,0}, gcnGrey); // R
     }
 
     // B button item logic
