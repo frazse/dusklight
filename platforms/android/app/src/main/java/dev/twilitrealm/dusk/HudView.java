@@ -1228,12 +1228,13 @@ public class HudView extends View {
         }
 
         if (active && ammo != null) {
-            mPaint.setTextAlign(Paint.Align.CENTER); mPaint.setTextSize(34); // Bigger ammo
+            mPaint.setTextAlign(Paint.Align.CENTER); 
+            mPaint.setTextSize(44); // Even bigger ammo
             mPaint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-            mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(5.0f); mPaint.setColor(Color.BLACK);
-            canvas.drawText(ammo, x, y + 42, mPaint);
+            mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(6.0f); mPaint.setColor(Color.BLACK);
+            canvas.drawText(ammo, x, y + 44, mPaint);
             mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.WHITE);
-            canvas.drawText(ammo, x, y + 42, mPaint);
+            canvas.drawText(ammo, x, y + 44, mPaint);
         }
 
         if (active && text != null && !text.isEmpty()) {
