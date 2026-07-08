@@ -807,26 +807,26 @@ int dMeter2Info_c::readItemTexture(u8 i_itemNo, void* i_texBuf1, J2DPicture* i_p
 
     if (i_texBuf1 != NULL) {
         if ((i_itemNo == dItemNo_KANTERA_e && dComIfGs_getOil() == 0) || i_itemNo == dItemNo_KANTERA2_e) {
-            u32 size = JKRReadIdxResource(i_texBuf1, 0xC00, ITEMICON_BTI_IM_KANTERA_OFF_48, dComIfGp_getItemIconArchive());
+            u32 size = JKRReadIdxResource(i_texBuf1, 0x4000, ITEMICON_BTI_IM_KANTERA_OFF_48, dComIfGp_getItemIconArchive());
             JUT_ASSERT(1166, size != 0);
         } else if (i_itemNo == dItemNo_COPY_ROD_e && !daPy_getPlayerActorClass()->checkCopyRodTopUse() && param_9 == -1) {
-            u32 size = JKRReadIdxResource(i_texBuf1, 0xC00, ITEMICON_BTI_ST_COPY_ROD_B, dComIfGp_getItemIconArchive());
+            u32 size = JKRReadIdxResource(i_texBuf1, 0x4000, ITEMICON_BTI_ST_COPY_ROD_B, dComIfGp_getItemIconArchive());
             JUT_ASSERT(1173, size != 0);
         } else if ((itemType == ItemType_POU_FIRE || itemType == ItemType_FAIRY || itemType == ItemType_BEE_CHILD || itemType == ItemType_WORM) && i_texBuf3 == NULL) {
-            u32 size = JKRReadIdxResource(i_texBuf1, 0xC00, get2ndTexture(itemType), dComIfGp_getItemIconArchive());
+            u32 size = JKRReadIdxResource(i_texBuf1, 0x4000, get2ndTexture(itemType), dComIfGp_getItemIconArchive());
             JUT_ASSERT(1222, size != 0);
         } else {
             u32 size;
             if (param_9 >= 0) {
-                size = JKRReadIdxResource(i_texBuf1, 0xC00, param_9, dComIfGp_getItemIconArchive());
+                size = JKRReadIdxResource(i_texBuf1, 0x4000, param_9, dComIfGp_getItemIconArchive());
             } else {
-                size = JKRReadIdxResource(i_texBuf1, 0xC00, dItem_data::getTexture(i_itemNo), dComIfGp_getItemIconArchive());
+                size = JKRReadIdxResource(i_texBuf1, 0x4000, dItem_data::getTexture(i_itemNo), dComIfGp_getItemIconArchive());
             }
 
             JUT_ASSERT(1238, size != 0);
         }
 
-        DCStoreRangeNoSync(i_texBuf1, 0xC00);
+        DCStoreRangeNoSync(i_texBuf1, 0x4000);
         if (i_pic1 != NULL) {
             if ((itemType == ItemType_POU_FIRE || itemType == ItemType_FAIRY || itemType == ItemType_BEE_CHILD || itemType == ItemType_WORM) && i_texBuf3 == NULL) {
                 set2ndColor(itemType, i_pic1);
@@ -842,10 +842,10 @@ int dMeter2Info_c::readItemTexture(u8 i_itemNo, void* i_texBuf1, J2DPicture* i_p
 
         if (i_texBuf2 != NULL && get2ndTexture(itemType) > 0) {
             if ((itemType == ItemType_POU_FIRE || itemType == ItemType_FAIRY || itemType == ItemType_BEE_CHILD || itemType == ItemType_WORM) && i_texBuf3 == NULL) {
-                u32 size = JKRReadIdxResource(i_texBuf2, 0xC00, get3rdTexture(itemType), dComIfGp_getItemIconArchive());
+                u32 size = JKRReadIdxResource(i_texBuf2, 0x4000, get3rdTexture(itemType), dComIfGp_getItemIconArchive());
                 JUT_ASSERT(1327, size != 0);
 
-                DCStoreRangeNoSync(i_texBuf2, 0xC00);
+                DCStoreRangeNoSync(i_texBuf2, 0x4000);
                 if (i_pic2 != NULL) {
                     set3rdColor(itemType, i_pic2);
                     const ResTIMG* img = i_pic2->changeTexture((ResTIMG*)i_texBuf2, 0);
@@ -854,10 +854,10 @@ int dMeter2Info_c::readItemTexture(u8 i_itemNo, void* i_texBuf1, J2DPicture* i_p
 
                 tex_num++;
             } else {
-                u32 size = JKRReadIdxResource(i_texBuf2, 0xC00, get2ndTexture(itemType), dComIfGp_getItemIconArchive());
+                u32 size = JKRReadIdxResource(i_texBuf2, 0x4000, get2ndTexture(itemType), dComIfGp_getItemIconArchive());
                 JUT_ASSERT(1342, size != 0);
 
-                DCStoreRangeNoSync(i_texBuf2, 0xC00);
+                DCStoreRangeNoSync(i_texBuf2, 0x4000);
                 if (i_pic2 != NULL) {
                     set2ndColor(itemType, i_pic2);
                     const ResTIMG* img = i_pic2->changeTexture((ResTIMG*)i_texBuf2, 0);
@@ -867,10 +867,10 @@ int dMeter2Info_c::readItemTexture(u8 i_itemNo, void* i_texBuf1, J2DPicture* i_p
                 tex_num++;
 
                 if (i_texBuf3 != NULL && get3rdTexture(itemType) > 0) {
-                    u32 size = JKRReadIdxResource(i_texBuf3, 0xC00, get3rdTexture(itemType), dComIfGp_getItemIconArchive());
+                    u32 size = JKRReadIdxResource(i_texBuf3, 0x4000, get3rdTexture(itemType), dComIfGp_getItemIconArchive());
                     JUT_ASSERT(1358, size != 0);
 
-                    DCStoreRangeNoSync(i_texBuf3, 0xC00);
+                    DCStoreRangeNoSync(i_texBuf3, 0x4000);
                     if (i_pic3 != NULL) {
                         set3rdColor(itemType, i_pic3);
                         const ResTIMG* img = i_pic3->changeTexture((ResTIMG*)i_texBuf3, 0);
@@ -880,10 +880,10 @@ int dMeter2Info_c::readItemTexture(u8 i_itemNo, void* i_texBuf1, J2DPicture* i_p
                     tex_num++;
 
                     if (i_texBuf4 != NULL && get4thTexture(itemType) > 0) {
-                        u32 size = JKRReadIdxResource(i_texBuf4, 0xC00, get4thTexture(itemType), dComIfGp_getItemIconArchive());
+                        u32 size = JKRReadIdxResource(i_texBuf4, 0x4000, get4thTexture(itemType), dComIfGp_getItemIconArchive());
                         JUT_ASSERT(1374, size != 0);
 
-                        DCStoreRangeNoSync(i_texBuf4, 0xC00);
+                        DCStoreRangeNoSync(i_texBuf4, 0x4000);
                         if (i_pic4 != NULL) {
                             set4thColor(itemType, i_pic4);
                             const ResTIMG* img = i_pic4->changeTexture((ResTIMG*)i_texBuf4, 0);

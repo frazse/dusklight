@@ -189,10 +189,38 @@ public class HudView extends View {
         resetPaint();
         float iconSize = 64, spacing = 80;
         
-        // Vertical list restored to Map -> Compass -> Boss Key
-        drawZeldaMap(canvas, x, y, iconSize, mState.hasMap);
-        drawZeldaCompass(canvas, x, y + spacing, iconSize, mState.hasCompass);
-        drawZeldaBossKey(canvas, x, y + (spacing * 2), iconSize, mState.hasBossKey);
+        drawNativeDungeonIcon(canvas, x, y, 0x23, mState.hasMap, iconSize);
+        drawNativeDungeonIcon(canvas, x, y + spacing, 0x24, mState.hasCompass, iconSize);
+        
+        // Try various boss key item IDs (Generic, LV2, LV5)
+        android.graphics.Bitmap bk = mItemIcons.get(0x26);
+        if (bk == null) bk = mItemIcons.get(0xFD);
+        if (bk == null) bk = mItemIcons.get(0xF6);
+        
+        if (bk != null) {
+            drawNativeBitmapIcon(canvas, x, y + (spacing * 2), bk, mState.hasBossKey, iconSize);
+        }
+    }
+
+    private void drawNativeDungeonIcon(Canvas canvas, float cx, float cy, int id, boolean collected, float size) {
+        android.graphics.Bitmap icon = mItemIcons.get(id);
+        if (icon != null) {
+            drawNativeBitmapIcon(canvas, cx, cy, icon, collected, size);
+        }
+    }
+
+    private void drawNativeBitmapIcon(Canvas canvas, float cx, float cy, android.graphics.Bitmap icon, boolean collected, float size) {
+        float w = icon.getWidth(), h = icon.getHeight();
+        float scale = size / Math.max(w, h);
+        float dw = w * scale, dh = h * scale;
+        RectF dst = new RectF(cx - dw/2, cy - dh/2, cx + dw/2, cy + dh/2);
+        
+        resetPaint();
+        if (!collected) {
+            mPaint.setAlpha(60);
+            mPaint.setColorFilter(new android.graphics.PorterDuffColorFilter(Color.GRAY, android.graphics.PorterDuff.Mode.SRC_IN));
+        }
+        canvas.drawBitmap(icon, null, dst, mPaint);
     }
 
     private void drawZeldaBossKey(Canvas canvas, float cx, float cy, float size, boolean collected) {
@@ -1006,7 +1034,17 @@ public class HudView extends View {
         canvas.drawText(text, textX, textY, mPaint);
         mPaint.setShader(null);
         
-        drawZeldaKey(canvas, iconCenterX, iconCenterY, keyH);
+        android.graphics.Bitmap keyIcon = mItemIcons.get(0x20);
+        if (keyIcon != null) {
+            float kw = keyIcon.getWidth(), kh = keyIcon.getHeight();
+            float ks = keyH / kh;
+            float dw = kw * ks, dh = kh * ks;
+            RectF dst = new RectF(iconCenterX - dw/2, iconCenterY - dh/2, iconCenterX + dw/2, iconCenterY + dh/2);
+            resetPaint();
+            canvas.drawBitmap(keyIcon, null, dst, mPaint);
+        } else {
+            drawZeldaKey(canvas, iconCenterX, iconCenterY, keyH);
+        }
     }
 
     private void drawZeldaKey(Canvas canvas, float cx, float cy, float size) {

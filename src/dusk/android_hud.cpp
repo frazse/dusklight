@@ -200,13 +200,12 @@ int s_frameCounter = 0;
 void send_item_icon(u8 itemNo, JNIEnv* env, jobject activity) {
     if (itemNo == 0xFF || itemNo == 0) return;
     if (s_loadedIcons.count(itemNo)) return;
+    if (!dComIfGp_getItemIconArchive()) return;
 
     auto icon = dusk::ui::render_item_icon(itemNo);
-    if (!icon) {
-        s_loadedIcons.insert(itemNo);
-        return;
-    }
+    if (!icon) return;
 
+    s_loadedIcons.insert(itemNo);
     std::vector<jint> converted;
     converted.reserve(icon->pixels.size() / 4);
     for (size_t i = 0; i < icon->pixels.size(); i += 4) {
@@ -320,6 +319,13 @@ void hud_update() {
 
     iData[4] = dComIfGs_getOil(); iData[5] = dComIfGs_getMaxOil();
     iData[6] = dComIfGp_getNowOxygen(); iData[7] = dComIfGp_getMaxOxygen();
+
+    bool isDungeon = false;
+    auto* stage = dComIfGp_getStage();
+    if (stage) {
+        isDungeon = dStage_stagInfo_GetSTType(stage->getStagInfo()) == ST_DUNGEON;
+    }
+    iData[47] = isDungeon ? 1 : 0;
 
     iData[28] = meter->getDoStatus(); iData[29] = meter->getAStatus(); iData[30] = meter->getZStatus();
     iData[32] = meter->getRStatus(); iData[33] = meter->getItemStatus(1); iData[34] = meter->getItemStatus(3);
@@ -441,6 +447,17 @@ else if (winStatus == 1 || winStatus == 2) {
         iData[110] = 0xFF;
     }
 
+    // Dungeon items
+    if (isDungeon) {
+        send_item_icon(0x23, env, activity); // Map
+        send_item_icon(0x24, env, activity); // Compass
+        send_item_icon(0x26, env, activity); // Boss Key
+        send_item_icon(0x20, env, activity); // Small Key
+
+        send_item_icon(0xF6, env, activity); // LV5 BK
+        send_item_icon(0xFD, env, activity); // LV2 BK
+    }
+
     auto get_ammo = [](u8 item, int selIdx) {
         if (item == 0x43) return (int)dComIfGs_getArrowNum(); // Bow
         if (item == 0x4B) return (int)dComIfGs_getPachinkoNum(); // Slingshot
@@ -465,7 +482,6 @@ else if (winStatus == 1 || winStatus == 2) {
     };
     iData[19] = get_ammo(iData[17], 0); iData[20] = get_ammo(iData[18], 1);
     iData[41] = dComIfGs_isDungeonItemBossKey() ? 1 : 0;
-    iData[47] = dStage_stagInfo_GetSTType(dComIfGp_getStage()->getStagInfo()) == ST_DUNGEON;
     iData[48] = dComIfGs_isDungeonItemMap() ? 1 : 0; iData[49] = dComIfGs_isDungeonItemCompass() ? 1 : 0;
     iData[100] = dComIfGs_getArrowMax();
     iData[101] = dComIfGs_getBombMax(0x70); // dItemNo_NORMAL_BOMB_e
