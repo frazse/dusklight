@@ -894,8 +894,6 @@ public class HudView extends View {
             RectF dst = new RectF(x + size/2 - dw/2, y + size/2 - dh/2, x + size/2 + dw/2, y + size/2 + dh/2);
             
             resetPaint();
-            // Draw gold base wave
-            mPaint.setColorFilter(new android.graphics.PorterDuffColorFilter(Color.rgb(255, 210, 100), android.graphics.PorterDuff.Mode.MULTIPLY));
             canvas.drawBitmap(baseBmp, null, dst, mPaint);
             
             if (fill > 0) {
@@ -903,8 +901,6 @@ public class HudView extends View {
                 android.graphics.Bitmap fillBmp = mItemIcons.get(0x1010 + fill);
                 if (fillBmp != null) {
                     resetPaint();
-                    // Draw red heart fill
-                    mPaint.setColorFilter(new android.graphics.PorterDuffColorFilter(Color.rgb(255, 100, 100), android.graphics.PorterDuff.Mode.MULTIPLY));
                     canvas.drawBitmap(fillBmp, null, dst, mPaint);
                 }
             }

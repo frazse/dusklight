@@ -243,9 +243,11 @@ void send_generic_icon(u32 customID, JKRArchive* arc, int index, JNIEnv* env, jo
     s_loadedIcons.insert(customID);
 }
 
-void send_generic_icon(u32 customID, JKRArchive* arc, const char* name, JNIEnv* env, jobject activity) {
+void send_generic_icon(u32 customID, JKRArchive* arc, const char* name, JNIEnv* env, jobject activity,
+                       JUtility::TColor black = {0, 0, 0, 0}, JUtility::TColor white = {255, 255, 255, 255}) {
     if (s_loadedIcons.count(customID)) return;
     if (!arc) return;
+
     auto icon = dusk::ui::render_texture_icon(arc, name);
     if (!icon) return;
 
@@ -253,6 +255,17 @@ void send_generic_icon(u32 customID, JKRArchive* arc, const char* name, JNIEnv* 
     converted.reserve(icon->pixels.size() / 4);
     for (size_t i = 0; i < icon->pixels.size(); i += 4) {
         u8 r = icon->pixels[i], g = icon->pixels[i + 1], b = icon->pixels[i + 2], a = icon->pixels[i + 3];
+
+        if (white.r != 255 || white.g != 255 || white.b != 255 || white.a != 255 ||
+            black.r != 0 || black.g != 0 || black.b != 0 || black.a != 0) {
+            u8 srcI = r;
+            r = static_cast<u8>((static_cast<uint32_t>(black.r) * (255 - srcI) + static_cast<uint32_t>(white.r) * srcI) / 255);
+            g = static_cast<u8>((static_cast<uint32_t>(black.g) * (255 - srcI) + static_cast<uint32_t>(white.g) * srcI) / 255);
+            b = static_cast<u8>((static_cast<uint32_t>(black.b) * (255 - srcI) + static_cast<uint32_t>(white.b) * srcI) / 255);
+            u16 a16 = static_cast<u16>((static_cast<uint32_t>(black.a) * (255 - srcI) + static_cast<uint32_t>(white.a) * srcI) / 255);
+            a = static_cast<u8>((static_cast<uint32_t>(a16) * icon->pixels[i+3]) / 255);
+        }
+
         converted.push_back((jint)((a << 24) | (r << 16) | (g << 8) | b));
     }
 
@@ -481,12 +494,20 @@ else if (winStatus == 1 || winStatus == 2) {
 
     JKRArchive* main2D = dComIfGp_getMain2DArchive();
     if (main2D) {
+        // Rupee already has native color
         send_generic_icon(0x1010, main2D, "tt_rupy_green_icon2.bti", env, activity);
-        send_generic_icon(0x1011, main2D, "tt_heart_01.bti", env, activity); // 1/4
-        send_generic_icon(0x1012, main2D, "tt_heart_02.bti", env, activity); // 2/4
-        send_generic_icon(0x1013, main2D, "tt_heart_03.bti", env, activity); // 3/4
-        send_generic_icon(0x1014, main2D, "tt_heart_00.bti", env, activity); // Full
-        send_generic_icon(0x1015, main2D, "tt_heart_base_wave_24.bti", env, activity);
+
+        // Hearts: Opaque pinkish-red (sourced from TP heart palette)
+        JUtility::TColor heartWhite = {255, 128, 128, 255};
+        JUtility::TColor heartBlack = {160, 0, 0, 255}; // Solid black-end
+        send_generic_icon(0x1011, main2D, "tt_heart_01.bti", env, activity, heartBlack, heartWhite);
+        send_generic_icon(0x1012, main2D, "tt_heart_02.bti", env, activity, heartBlack, heartWhite);
+        send_generic_icon(0x1013, main2D, "tt_heart_03.bti", env, activity, heartBlack, heartWhite);
+        send_generic_icon(0x1014, main2D, "tt_heart_00.bti", env, activity, heartBlack, heartWhite);
+
+        // Base Wave: Semi-transparent gold (sourced from game's VesselFront)
+        send_generic_icon(0x1015, main2D, "tt_heart_base_wave_24.bti", env, activity,
+                          {0, 0, 0, 0}, {250, 250, 210, 160});
     }
 
     // B button item logic
