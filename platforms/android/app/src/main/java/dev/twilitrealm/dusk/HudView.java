@@ -674,9 +674,7 @@ public class HudView extends View {
         int defaultColor = Color.WHITE;
         float curY = y + padding + 40;
         
-        // selectPos: 1=Choice1, 2=Choice2... (0 usually means opening/closing)
-        // Ensure we default to Choice 1 if engine reports 0 but we have options.
-        int effectivePos = Math.max(1, mState.selectPos);
+        int effectivePos = mState.selectPos;
 
         for (String line : lines) {
             String displayLine = resolvePlaceholders(line);
@@ -688,8 +686,8 @@ public class HudView extends View {
                 if (endIdx != -1) {
                     try {
                         int idx = Integer.parseInt(displayLine.substring(selStart + 6, endIdx));
-                        // idx is 0-indexed Choice0, Choice1... from synced C++ markers
-                        isSelected = (idx == effectivePos - 1);
+                        // Both idx and effectivePos are 0-indexed
+                        isSelected = (idx == effectivePos);
                         displayLine = displayLine.substring(0, selStart) + displayLine.substring(endIdx + 2);
                     } catch (Exception e) {}
                 }
