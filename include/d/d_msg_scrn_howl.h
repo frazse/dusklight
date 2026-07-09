@@ -6,6 +6,7 @@
 struct dMsgScrnHowl_c : public dMsgScrnBase_c {
     dMsgScrnHowl_c();
     ~dMsgScrnHowl_c();
+    void draw();
     void exec();
     void drawSelf();
     void guide_on_init();

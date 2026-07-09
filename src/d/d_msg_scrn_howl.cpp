@@ -325,6 +325,22 @@ void dMsgScrnHowl_c::exec() {
 #endif
 }
 
+void dMsgScrnHowl_c::draw() {
+    // Howl minigame MUST be drawn even if dialogs are on second screen
+    // because it contains critical gameplay visual cues (the staff)
+#if TARGET_PC
+    if (dusk::getSettings().game.recordingMode) {
+        return;
+    }
+#endif
+    J2DGrafContext* ctx = dComIfGp_getCurrentGrafPort();
+
+    ctx->setup2D();
+    mpScreen->draw(0.0f, 0.0f, ctx);
+    drawSelf();
+    ctx->setup2D();
+}
+
 void dMsgScrnHowl_c::drawSelf() {
     J2DGrafContext* grafContext = dComIfGp_getCurrentGrafPort();
     GXGetScissor(&field_0x2114, &field_0x2118, &field_0x211c, &field_0x2120);
