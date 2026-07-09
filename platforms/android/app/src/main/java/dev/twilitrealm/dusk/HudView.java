@@ -43,6 +43,7 @@ public class HudView extends View {
         put("{{Z}}", 0x2008);
         put("{{L}}", 0x2009);
         put("{{R}}", 0x200A);
+        put("{{STICK_UD}}", 0x200B);
     }};
 
     private final java.util.Map<Integer, android.graphics.Bitmap> mItemIcons = new java.util.HashMap<>();
@@ -572,9 +573,14 @@ public class HudView extends View {
                 int endIdx = line.indexOf("}}", pos);
                 if (endIdx != -1) {
                     String tag = line.substring(pos, endIdx + 2);
-                    Integer iconId = PLACEHOLDER_TO_ICON.get(tag);
-                    if (iconId != null) {
+                    if ("{{STICK_UD}}".equals(tag)) {
+                        // Animate between 0x200B and 0x200C
+                        long time = System.currentTimeMillis();
+                        int iconId = ((time / 500) % 2 == 0) ? 0x200B : 0x200C;
                         android.graphics.Bitmap bmp = mItemIcons.get(iconId);
+                        if (bmp == null) bmp = mItemIcons.get(0x200B); // Fallback
+                        if (bmp == null) bmp = mItemIcons.get(0x200C); // Fallback
+                        
                         if (bmp != null) {
                             float iconH = paint.getTextSize() * 1.3f;
                             float iconW = iconH * ((float)bmp.getWidth() / bmp.getHeight());
@@ -582,15 +588,32 @@ public class HudView extends View {
                             android.graphics.RectF dst = new android.graphics.RectF(curX, iconY, curX + iconW, iconY + iconH);
                             canvas.drawBitmap(bmp, null, dst, null);
                             curX += iconW + 4;
+                            invalidate(); // Keep animating
                         } else {
-                            String fb = tag.substring(2, tag.length() - 2);
-                            canvas.drawText(fb, curX, y, paint);
-                            curX += paint.measureText(fb);
+                            canvas.drawText("UD", curX, y, paint);
+                            curX += paint.measureText("UD");
                         }
                     } else {
-                        String segment = line.substring(pos, endIdx + 2);
-                        canvas.drawText(segment, curX, y, paint);
-                        curX += paint.measureText(segment);
+                        Integer iconId = PLACEHOLDER_TO_ICON.get(tag);
+                        if (iconId != null) {
+                            android.graphics.Bitmap bmp = mItemIcons.get(iconId);
+                            if (bmp != null) {
+                                float iconH = paint.getTextSize() * 1.3f;
+                                float iconW = iconH * ((float)bmp.getWidth() / bmp.getHeight());
+                                float iconY = y - (iconH * 0.8f);
+                                android.graphics.RectF dst = new android.graphics.RectF(curX, iconY, curX + iconW, iconY + iconH);
+                                canvas.drawBitmap(bmp, null, dst, null);
+                                curX += iconW + 4;
+                            } else {
+                                String fb = tag.substring(2, tag.length() - 2);
+                                canvas.drawText(fb, curX, y, paint);
+                                curX += paint.measureText(fb);
+                            }
+                        } else {
+                            String segment = line.substring(pos, endIdx + 2);
+                            canvas.drawText(segment, curX, y, paint);
+                            curX += paint.measureText(segment);
+                        }
                     }
                     pos = endIdx + 2;
                 } else pos += 2;

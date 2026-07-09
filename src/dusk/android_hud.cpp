@@ -80,7 +80,7 @@ std::string clean_tp_string(const char* input) {
                     case 0x10: out += "{{Y}}"; break;
                     case 0x11: out += "{{Z}}"; break;
                     case 0x13: out += "{{STICK}}"; break;
-                    case 0x1C: out += "{{STICK}}"; break;
+                    case 0x1C: out += "{{STICK_UD}}"; break;
                     case 0x24: out += "{{RETICLE}}"; break;
                     case 0x2E: out += "{{XORY}}"; break;
                     case 0x37: { // Bomb Capacity (within group 0x00)
@@ -528,6 +528,8 @@ else if (winStatus == 1 || winStatus == 2) {
         send_generic_icon(0x2008, main2D, "font_06.bti", env, activity, {0,0,0,0}, gcnZ); // Z
         send_generic_icon(0x2009, main2D, "font_04.bti", env, activity, {0,0,0,0}, gcnGrey); // L
         send_generic_icon(0x200A, main2D, "font_05.bti", env, activity, {0,0,0,0}, gcnGrey); // R
+        send_generic_icon(0x200B, main2D, "font_09_01.bti", env, activity); // Stick Up
+        send_generic_icon(0x200C, main2D, "font_09_02.bti", env, activity); // Stick Down
     }
 
     // B button item logic
