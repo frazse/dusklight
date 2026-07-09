@@ -174,7 +174,7 @@ public class GameState {
             case 0x02: return "Peek";
             case 0x03: return "Attack";
             case 0x04: return "Put Away";
-            case 0x05: return "Howl";
+            case 0x05: return (wolfForm != 0) ? "Howl" : "";
             case 0x06: return "Open";
             case 0x07: return "Enter";
             case 0x08: return "Check";
@@ -186,7 +186,7 @@ public class GameState {
             case 0x0A: return "Crouch";
             case 0x0B: return "Defend";
             case 0x0C: return "Pick Up";
-            case 0x0D: return "Dig";
+            case 0x0D: return (wolfForm != 0) ? "Dig" : "";
             case 0x0E: return "Eat";
             case 0x0F: return "Select";
             case 0x10: return "Lock";
@@ -232,7 +232,7 @@ public class GameState {
             case 0x38: return "Pet";
             case 0x39: return "Pick Up";
             case 0x3A: return "Shield Attack";
-            case 0x3B: return "Listen";
+            case 0x3B: return (wolfForm != 0) ? "Listen" : "";
             case 0x3C: return "Drink";
             case 0x3E: return "Cover";
             case 0x3F: return "Push";
@@ -241,8 +241,8 @@ public class GameState {
             case 0x42: return "Put Together";
             case 0x43: return "Skip";
             case 0x44: return "Slap";
-            case 0x45: return "Sniff";
-            case 0x46: return "Bite";
+            case 0x45: return (wolfForm != 0) ? "Sniff" : "";
+            case 0x46: return (wolfForm != 0) ? "Bite" : "";
             case 0x47: return (wolfForm != 0) ? "Dash" : "Roll";
             case 0x48: return "Fasten";
             case 0x49: return "Get Down";
@@ -250,8 +250,8 @@ public class GameState {
             case 0x4B: return isFlying ? "Dash" : "Target";
             case 0x4C: return "Swim";
             case 0x4D: return "Can't Skip";
-            case 0x4E: return isZ ? "Midna" : "Sense";
-            case 0x4F: return "Warp";
+            case 0x4E: return isZ ? "Midna" : ((wolfForm != 0) ? "Sense" : "");
+            case 0x4F: return (wolfForm != 0) ? "Warp" : "";
             case 0x50: return "Check";
             case 0x51: return "Land";
             case 0x52: return "Hook";
