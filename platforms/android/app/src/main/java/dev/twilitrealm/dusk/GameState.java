@@ -243,7 +243,7 @@ public class GameState {
             case 0x44: return "Slap";
             case 0x45: return "Sniff";
             case 0x46: return "Bite";
-            case 0x47: return "Roll";
+            case 0x47: return (wolfForm == 1) ? "Dash" : "Roll";
             case 0x48: return "Fasten";
             case 0x49: return "Get Down";
             case 0x4A: return "Hawkeye Off";
@@ -292,7 +292,7 @@ public class GameState {
             case 0x76: return "Rotate";
             case 0x77: return "Helm Splitter";
             case 0x78: return "Move";
-            case 0x79: return "Roll";
+            case 0x79: return (wolfForm == 1) ? "Dash" : "Roll";
             case 0x7A: return "Hold On";
             case 0x7C: return "Help";
             case 0x7D: return "Zoom In";

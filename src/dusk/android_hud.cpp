@@ -479,7 +479,7 @@ else if (winStatus == 1 || winStatus == 2) {
     }
 
     iData[0] = dComIfGs_getLife(); iData[1] = dComIfGs_getMaxLife(); iData[8] = dComIfGs_getRupee(); iData[9] = dComIfGs_getKeyNum() + dComIfGp_getItemKeyNumCount();
-    iData[10] = dComIfGs_getArrowNum(); iData[11] = dComIfGs_getBombNum(0); iData[13] = stayNo;
+    iData[10] = dComIfGs_getArrowNum(); iData[11] = dComIfGs_getBombNum(0); iData[12] = (int)dComIfGs_getTransformStatus(); iData[13] = stayNo;
     u8 slotX = dComIfGs_getSelectItemIndex(0);
     iData[17] = (slotX != 0xFF) ? dComIfGs_getItem(slotX, true) : 0xFF;
     u8 slotY = dComIfGs_getSelectItemIndex(1);
@@ -589,6 +589,7 @@ else if (winStatus == 1 || winStatus == 2) {
     };
     iData[19] = get_ammo(iData[17], 0); iData[20] = get_ammo(iData[18], 1);
     iData[41] = dComIfGs_isDungeonItemBossKey() ? 1 : 0;
+    iData[46] = 1; // showRestart
     iData[48] = dComIfGs_isDungeonItemMap() ? 1 : 0; iData[49] = dComIfGs_isDungeonItemCompass() ? 1 : 0;
     iData[100] = dComIfGs_getArrowMax();
     iData[101] = dComIfGs_getBombMax(0x70); // dItemNo_NORMAL_BOMB_e
