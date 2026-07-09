@@ -673,6 +673,11 @@ public class HudView extends View {
         
         int defaultColor = Color.WHITE;
         float curY = y + padding + 40;
+        
+        // selectPos: 1=Choice1, 2=Choice2... (0 usually means opening/closing)
+        // Ensure we default to Choice 1 if engine reports 0 but we have options.
+        int effectivePos = Math.max(1, mState.selectPos);
+
         for (String line : lines) {
             String displayLine = resolvePlaceholders(line);
             boolean isSelected = false;
@@ -683,17 +688,17 @@ public class HudView extends View {
                 if (endIdx != -1) {
                     try {
                         int idx = Integer.parseInt(displayLine.substring(selStart + 6, endIdx));
-                        // Support both 0-indexed and 1-indexed selection positions
-                        isSelected = (idx == mState.selectPos || idx == mState.selectPos - 1);
+                        // idx is 0-indexed Choice0, Choice1... from synced C++ markers
+                        isSelected = (idx == effectivePos - 1);
                         displayLine = displayLine.substring(0, selStart) + displayLine.substring(endIdx + 2);
                     } catch (Exception e) {}
                 }
             }
 
-            int savedColor = mPaint.getColor();
-            if (isSelected) {
+            if (isSelected && !displayLine.trim().isEmpty()) {
+                int savedColor = mPaint.getColor();
                 mPaint.setColor(Color.YELLOW);
-                canvas.drawText(">", x + padding - 35, curY, mPaint);
+                canvas.drawText(">", x + padding - 40, curY, mPaint);
                 mPaint.setColor(savedColor);
             }
             
@@ -773,10 +778,11 @@ public class HudView extends View {
                     int id0 = (int)mState.mapLines[i+1], id1 = (int)mState.mapLines[i+2];
                     if (id1 > 1000) {
                         int pId = id0 & 0x3F;
-                        // Mirror retail palette selection (indices into l_dungeon_Color tables)
+                        // Mirror retail palette: pId 5 is water in most dungeons/sewers
                         if (pId != 3) { 
                             mPaint.setStyle(Paint.Style.FILL_AND_STROKE); mPaint.setStrokeWidth(0.8f);
-                            if (pId == 2 || pId == 5) mPaint.setColor(colorWater);
+                            if (pId == 5) mPaint.setColor(colorWater);
+                            else if (pId == 2) mPaint.setColor(Color.rgb(255, 128, 0)); // Test: Debug Orange for pId 2
                             else if (pId == 6 || pId == 7) mPaint.setColor(colorHazard);
                             else mPaint.setColor(colorTerrain);
 
