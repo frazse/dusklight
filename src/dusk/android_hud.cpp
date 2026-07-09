@@ -479,7 +479,7 @@ else if (winStatus == 1 || winStatus == 2) {
     }
 
     iData[0] = dComIfGs_getLife(); iData[1] = dComIfGs_getMaxLife(); iData[8] = dComIfGs_getRupee(); iData[9] = dComIfGs_getKeyNum() + dComIfGp_getItemKeyNumCount();
-    iData[10] = dComIfGs_getArrowNum(); iData[11] = dComIfGs_getBombNum(0); iData[12] = (int)dComIfGs_getTransformStatus(); iData[13] = stayNo;
+    iData[10] = dComIfGs_getArrowNum(); iData[11] = dComIfGs_getBombNum(0); iData[12] = (int)daPy_py_c::checkNowWolf(); iData[13] = stayNo;
     u8 slotX = dComIfGs_getSelectItemIndex(0);
     iData[17] = (slotX != 0xFF) ? dComIfGs_getItem(slotX, true) : 0xFF;
     u8 slotY = dComIfGs_getSelectItemIndex(1);
