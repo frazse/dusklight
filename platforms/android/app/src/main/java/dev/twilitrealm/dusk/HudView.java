@@ -916,31 +916,70 @@ public class HudView extends View {
     }
 
     private void drawHearts(Canvas canvas, float startX, float startY) {
-        int maxHearts = mState.maxHealth / 5; float heartSize = 58, gap = 12;
+        int maxHearts = mState.maxHealth / 5;
+        float heartSize = 58, gap = 12;
+        int activeHeartIdx = (mState.health > 0) ? (mState.health - 1) / 4 : -1;
+        
+        // Draw all base waves first so they are behind all fills
+        android.graphics.Bitmap baseBmp = mItemIcons.get(0x1015);
+        if (baseBmp != null) {
+            resetPaint();
+            for (int i = 0; i < maxHearts; i++) {
+                float x = startX + (i % 10) * (heartSize + gap), y = startY + (i / 10) * (heartSize + gap);
+                RectF baseDst = new RectF(x, y, x + heartSize, y + heartSize);
+                canvas.drawBitmap(baseBmp, null, baseDst, mPaint);
+            }
+        }
+
+        // Draw all fills
         for (int i = 0; i < maxHearts; i++) {
-            float x = startX + (i % 10) * (heartSize + gap), y = startY + (i / 10) * (heartSize + gap);
             int fill = Math.min(4, Math.max(0, mState.health - (i * 4)));
-            drawZeldaHeart(canvas, x, y, heartSize, fill);
+            if (fill <= 0) continue;
+
+            float x = startX + (i % 10) * (heartSize + gap), y = startY + (i / 10) * (heartSize + gap);
+            boolean isActive = (i == activeHeartIdx);
+            float currentSize = isActive ? heartSize * 1.5f : heartSize;
+            
+            android.graphics.Bitmap fillBmp = mItemIcons.get(0x1010 + fill);
+            if (fillBmp != null) {
+                resetPaint();
+                // Heart grows from top-left anchor x,y
+                RectF fillDst = new RectF(x, y, x + currentSize, y + currentSize);
+                canvas.drawBitmap(fillBmp, null, fillDst, mPaint);
+            }
         }
     }
 
-    private void drawZeldaHeart(Canvas canvas, float x, float y, float size, int fill) {
+    private void drawZeldaHeart(Canvas canvas, float x, float y, float size, int fill, boolean isActive) {
         android.graphics.Bitmap baseBmp = mItemIcons.get(0x1015);
         if (baseBmp != null) {
             float w = baseBmp.getWidth(), h = baseBmp.getHeight();
-            float scale = size / Math.max(w, h);
-            float dw = w * scale, dh = h * scale;
-            RectF dst = new RectF(x + size/2 - dw/2, y + size/2 - dh/2, x + size/2 + dw/2, y + size/2 + dh/2);
+            // Base wave uses the standard slot size
+            float standardSize = 58; 
+            float baseScale = standardSize / Math.max(w, h);
+            float bdw = w * baseScale, bdh = h * baseScale;
+            
+            // Re-calculate slot coordinates for base wave (always standard size)
+            // Note: startX/startY logic passed 'x' and 'y' based on standard slot size.
+            // If the heart is active, x and y were passed with no offset, so base wave draws at standard position.
+            RectF baseDst = new RectF(x, y, x + bdw, y + bdh);
             
             resetPaint();
-            canvas.drawBitmap(baseBmp, null, dst, mPaint);
+            canvas.drawBitmap(baseBmp, null, baseDst, mPaint);
             
             if (fill > 0) {
                 // IDs 0x1011 (1/4) to 0x1014 (Full)
                 android.graphics.Bitmap fillBmp = mItemIcons.get(0x1010 + fill);
                 if (fillBmp != null) {
+                    float fw = fillBmp.getWidth(), fh = fillBmp.getHeight();
+                    float fScale = size / Math.max(fw, fh);
+                    float fdw = fw * fScale, fdh = fh * fScale;
+                    
+                    // Fill grows from top-left anchor x,y
+                    RectF fillDst = new RectF(x, y, x + fdw, y + fdh);
+                    
                     resetPaint();
-                    canvas.drawBitmap(fillBmp, null, dst, mPaint);
+                    canvas.drawBitmap(fillBmp, null, fillDst, mPaint);
                 }
             }
             return;
@@ -1257,10 +1296,10 @@ public class HudView extends View {
         drawActionButton(canvas, x, startY + spacing, mState.labelR, Color.rgb(200, 200, 200), mState.buttonRText, mState.buttonRText != null && !mState.buttonRText.isEmpty(), null, 38, 52, null);
         drawActionButton(canvas, x, startY + spacing * 2, mState.labelZ, Color.parseColor("#5A429B"), mState.buttonZText, mState.buttonZText != null && !mState.buttonZText.isEmpty(), null, 38, 52, null);
         
-        // 2. Diamond Layout (A=South, B=West, Y=North, X=East) - LARGER
+        // 2. Diamond Layout (A=South, B=West, Y=North, X=East) - Reverted to previous layout
         float cx = x + 40; // Shift diamond slightly right
         float cy = startY + spacing * 5.0f;
-        float ds = 145; // Diamond spacing (increased for larger buttons)
+        float ds = 145; // Diamond spacing
         int br = 52; // Button radius
         int bis = 70; // Button icon size
 
@@ -1348,17 +1387,34 @@ public class HudView extends View {
         }
 
         if (active && text != null && !text.isEmpty()) {
-            mPaint.setTextAlign(Paint.Align.LEFT); 
-            mPaint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-            mPaint.setTextSize(52); // Larger prompt text
-            Paint.FontMetrics fm = mPaint.getFontMetrics();
-            float ly = y - (fm.ascent + fm.descent) / 2;
-            float lx = x + baseRadius + 18; // Tighter gap to circle
-            
-            mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(6.0f); mPaint.setColor(Color.BLACK);
-            canvas.drawText(text, lx, ly, mPaint);
-            mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.WHITE);
-            canvas.drawText(text, lx, ly, mPaint);
+            boolean isFaceButton = "A".equals(label) || "B".equals(label) || "X".equals(label) || "Y".equals(label);
+            if (isFaceButton) {
+                mPaint.setTextAlign(Paint.Align.LEFT);
+                mPaint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+                mPaint.setTextSize(48); 
+                float ly = y + (baseRadius * 0.85f) + 15; 
+                
+                float firstCharW = mPaint.measureText(text.substring(0, 1));
+                float secondCharW = (text.length() > 1) ? mPaint.measureText(text.substring(1, 2)) : 0;
+                float lx = x - firstCharW - (secondCharW / 2);
+                
+                mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(6.0f); mPaint.setColor(Color.BLACK);
+                canvas.drawText(text, lx, ly, mPaint);
+                mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.WHITE);
+                canvas.drawText(text, lx, ly, mPaint);
+            } else {
+                mPaint.setTextAlign(Paint.Align.LEFT); 
+                mPaint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+                mPaint.setTextSize(52); // Larger prompt text
+                Paint.FontMetrics fm = mPaint.getFontMetrics();
+                float ly = y - (fm.ascent + fm.descent) / 2;
+                float lx = x + baseRadius + 18; // Tighter gap to circle
+                
+                mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(6.0f); mPaint.setColor(Color.BLACK);
+                canvas.drawText(text, lx, ly, mPaint);
+                mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.WHITE);
+                canvas.drawText(text, lx, ly, mPaint);
+            }
         }
     }
 

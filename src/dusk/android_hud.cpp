@@ -497,9 +497,9 @@ else if (winStatus == 1 || winStatus == 2) {
         // Rupee already has native color
         send_generic_icon(0x1010, main2D, "tt_rupy_green_icon2.bti", env, activity);
 
-        // Hearts: Opaque pinkish-red (sourced from TP heart palette)
-        JUtility::TColor heartWhite = {255, 128, 128, 255};
-        JUtility::TColor heartBlack = {160, 0, 0, 255}; // Solid black-end
+        // Hearts: Balanced glossy variation to match Save Screen look
+        JUtility::TColor heartWhite = {255, 220, 230, 255};
+        JUtility::TColor heartBlack = {170, 0, 0, 255};
         send_generic_icon(0x1011, main2D, "tt_heart_01.bti", env, activity, heartBlack, heartWhite);
         send_generic_icon(0x1012, main2D, "tt_heart_02.bti", env, activity, heartBlack, heartWhite);
         send_generic_icon(0x1013, main2D, "tt_heart_03.bti", env, activity, heartBlack, heartWhite);
