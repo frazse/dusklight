@@ -505,9 +505,19 @@ else if (winStatus == 1 || winStatus == 2) {
         send_generic_icon(0x1013, main2D, "tt_heart_03.bti", env, activity, heartBlack, heartWhite);
         send_generic_icon(0x1014, main2D, "tt_heart_00.bti", env, activity, heartBlack, heartWhite);
 
-        // Base Wave: Semi-transparent gold (sourced from game's VesselFront)
-        send_generic_icon(0x1015, main2D, "tt_heart_base_wave_24.bti", env, activity,
-                          {0, 0, 0, 0}, {250, 250, 210, 160});
+        // Base: Empty heart slot (replaces back wave)
+        send_generic_icon(0x1015, main2D, "tt_heart_00.bti", env, activity,
+                          {20, 10, 10, 255}, {80, 40, 40, 255});
+
+        // Meters: Magic, Oxygen, Oil
+        send_generic_icon(0x1020, main2D, "tt_magic_base_wave_64.bti", env, activity,
+                          {26, 21, 2, 255}, {201, 161, 90, 255}); // Gold wave palette
+        send_generic_icon(0x1021, main2D, "tt_zelda_shizuku_00.bti", env, activity); // Oxygen Drop
+
+        JKRArchive* itemIcon = dComIfGp_getItemIconArchive();
+        if (itemIcon) {
+            send_generic_icon(0x1022, itemIcon, "tt_kantera_48.bti", env, activity); // Lantern icon
+        }
 
         // HUD/Text Icons from font_xx.bti (GameCube versions)
         JUtility::TColor gcnA = {98, 163, 46, 255};

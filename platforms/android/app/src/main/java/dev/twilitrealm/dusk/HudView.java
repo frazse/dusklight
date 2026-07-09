@@ -5,6 +5,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -940,16 +941,21 @@ public class HudView extends View {
 
     private void drawHearts(Canvas canvas, float startX, float startY) {
         int maxHearts = mState.maxHealth / 5;
-        float heartSize = 58, gap = 12;
-        int activeHeartIdx = (mState.health > 0) ? (mState.health - 1) / 4 : -1;
+        float heartSize = 64; 
+        float gap = 6; 
+        float verticalPitch = 80;
         
-        // Draw all base waves first so they are behind all fills
+        // Draw all base (empty) hearts first
         android.graphics.Bitmap baseBmp = mItemIcons.get(0x1015);
         if (baseBmp != null) {
             resetPaint();
+            float aspect = (float)baseBmp.getHeight() / baseBmp.getWidth();
+            float drawW = heartSize;
+            float drawH = heartSize * aspect;
+            
             for (int i = 0; i < maxHearts; i++) {
-                float x = startX + (i % 10) * (heartSize + gap), y = startY + (i / 10) * (heartSize + gap);
-                RectF baseDst = new RectF(x, y, x + heartSize, y + heartSize);
+                float x = startX + (i % 10) * (heartSize + gap), y = startY + (i / 10) * verticalPitch;
+                RectF baseDst = new RectF(x, y, x + drawW, y + drawH);
                 canvas.drawBitmap(baseBmp, null, baseDst, mPaint);
             }
         }
@@ -959,15 +965,16 @@ public class HudView extends View {
             int fill = Math.min(4, Math.max(0, mState.health - (i * 4)));
             if (fill <= 0) continue;
 
-            float x = startX + (i % 10) * (heartSize + gap), y = startY + (i / 10) * (heartSize + gap);
-            boolean isActive = (i == activeHeartIdx);
-            float currentSize = isActive ? heartSize * 1.5f : heartSize;
+            float x = startX + (i % 10) * (heartSize + gap), y = startY + (i / 10) * verticalPitch;
             
             android.graphics.Bitmap fillBmp = mItemIcons.get(0x1010 + fill);
             if (fillBmp != null) {
                 resetPaint();
-                // Heart grows from top-left anchor x,y
-                RectF fillDst = new RectF(x, y, x + currentSize, y + currentSize);
+                float aspect = (float)fillBmp.getHeight() / fillBmp.getWidth();
+                float drawW = heartSize;
+                float drawH = heartSize * aspect;
+                
+                RectF fillDst = new RectF(x, y, x + drawW, y + drawH);
                 canvas.drawBitmap(fillBmp, null, fillDst, mPaint);
             }
         }
@@ -1034,30 +1041,80 @@ public class HudView extends View {
 
     private void drawMagicBar(Canvas canvas, float x, float y) {
         if (mState.maxMagic <= 0) return;
-        resetPaint(); mPaint.setColor(Color.argb(100, 0, 50, 0));
-        canvas.drawRect(x, y, x + 740, y + 22, mPaint);
-        mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(3); mPaint.setColor(Color.WHITE);
-        canvas.drawRect(x, y, x + 740, y + 22, mPaint);
-        mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.rgb(0, 255, 120));
-        canvas.drawRect(x + 2, y + 2, x + (740 * (float)mState.magic / mState.maxMagic) - 2, y + 20, mPaint);
+        float barW = 740, barH = 24;
+        
+        // 1. Draw tiled background wave
+        android.graphics.Bitmap waveBmp = mItemIcons.get(0x1020);
+        if (waveBmp != null) {
+            resetPaint();
+            float unitW = 64; // Native width of wave texture
+            float unitH = barH;
+            for (float curX = x; curX < x + barW; curX += unitW) {
+                float drawW = Math.min(unitW, x + barW - curX);
+                RectF dst = new RectF(curX, y, curX + drawW, y + unitH);
+                Rect src = new Rect(0, 0, (int)(waveBmp.getWidth() * (drawW / unitW)), waveBmp.getHeight());
+                canvas.drawBitmap(waveBmp, src, dst, mPaint);
+            }
+        } else {
+            resetPaint(); mPaint.setColor(Color.argb(100, 0, 50, 0));
+            canvas.drawRect(x, y, x + barW, y + barH, mPaint);
+        }
+
+        // 2. Draw green fill
+        float fillRatio = (float)mState.magic / mState.maxMagic;
+        if (fillRatio > 0) {
+            mPaint.setStyle(Paint.Style.FILL);
+            mPaint.setColor(Color.rgb(0, 200, 80)); // Native-ish Magic Green
+            canvas.drawRect(x + 2, y + 4, x + (barW * fillRatio) - 2, y + barH - 4, mPaint);
+            
+            // Add a subtle top highlight
+            mPaint.setColor(Color.argb(120, 255, 255, 255));
+            canvas.drawRect(x + 2, y + 4, x + (barW * fillRatio) - 2, y + 8, mPaint);
+        }
+
+        // 3. Border
+        mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(1.5f); mPaint.setColor(Color.WHITE);
+        canvas.drawRect(x, y, x + barW, y + barH, mPaint);
     }
 
     private void drawOilBar(Canvas canvas, float x, float y) {
-        resetPaint(); mPaint.setColor(Color.argb(100, 50, 40, 0));
-        canvas.drawRect(x, y, x + 300, y + 22, mPaint);
-        mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(3); mPaint.setColor(Color.WHITE);
-        canvas.drawRect(x, y, x + 300, y + 22, mPaint);
-        mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.rgb(255, 220, 0));
-        canvas.drawRect(x + 2, y + 2, x + (300 * (float)mState.oil / mState.maxOil) - 2, y + 20, mPaint);
+        float barW = 300, barH = 20;
+
+        resetPaint(); 
+        mPaint.setColor(Color.argb(120, 50, 40, 0));
+        canvas.drawRect(x, y, x + barW, y + barH, mPaint);
+        
+        float fillRatio = (float)mState.oil / mState.maxOil;
+        if (fillRatio > 0) {
+            mPaint.setStyle(Paint.Style.FILL); 
+            mPaint.setColor(Color.rgb(255, 220, 0));
+            canvas.drawRect(x, y, x + (barW * fillRatio), y + barH, mPaint);
+        }
+
+        mPaint.setStyle(Paint.Style.STROKE); 
+        mPaint.setStrokeWidth(1.5f); 
+        mPaint.setColor(Color.WHITE);
+        canvas.drawRect(x, y, x + barW, y + barH, mPaint);
     }
 
     private void drawOxygenBar(Canvas canvas, float x, float y) {
-        resetPaint(); mPaint.setColor(Color.argb(100, 0, 30, 50));
-        canvas.drawRect(x, y, x + 300, y + 22, mPaint);
-        mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(3); mPaint.setColor(Color.WHITE);
-        canvas.drawRect(x, y, x + 300, y + 22, mPaint);
-        mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.rgb(0, 180, 255));
-        canvas.drawRect(x + 2, y + 2, x + (300 * (float)mState.oxygen / mState.maxOxygen) - 2, y + 20, mPaint);
+        float barW = 300, barH = 20;
+
+        resetPaint(); 
+        mPaint.setColor(Color.argb(120, 0, 30, 50));
+        canvas.drawRect(x, y, x + barW, y + barH, mPaint);
+        
+        float fillRatio = (float)mState.oxygen / mState.maxOxygen;
+        if (fillRatio > 0) {
+            mPaint.setStyle(Paint.Style.FILL); 
+            mPaint.setColor(Color.rgb(0, 180, 255));
+            canvas.drawRect(x, y, x + (barW * fillRatio), y + barH, mPaint);
+        }
+
+        mPaint.setStyle(Paint.Style.STROKE); 
+        mPaint.setStrokeWidth(1.5f); 
+        mPaint.setColor(Color.WHITE);
+        canvas.drawRect(x, y, x + barW, y + barH, mPaint);
     }
 
     private void drawRupeeCounter(Canvas canvas, float x, float y) {
