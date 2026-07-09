@@ -428,12 +428,22 @@ public class HudView extends View {
             // Draw ammo count if applicable
             int count = mState.ringItemCounts[s];
             if (count > 0 && itemId != 0x48) { // Don't show count for Lantern (0x48)
+                String ammo = String.valueOf(count);
                 resetPaint();
-                mPaint.setTextAlign(Paint.Align.RIGHT);
-                mPaint.setTextSize(isSelected ? 24 : 18);
-                mPaint.setColor(Color.YELLOW);
-                mPaint.setTypeface(android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.BOLD));
-                canvas.drawText(String.valueOf(count), x + 45, y + 45, mPaint);
+                mPaint.setTextAlign(Paint.Align.CENTER);
+                mPaint.setTextSize(isSelected ? 32 : 24);
+                mPaint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+                
+                float ay = y + (isSelected ? 42 : 32);
+
+                mPaint.setStyle(Paint.Style.STROKE);
+                mPaint.setStrokeWidth(isSelected ? 5.0f : 4.0f);
+                mPaint.setColor(Color.BLACK);
+                canvas.drawText(ammo, x, ay, mPaint);
+                
+                mPaint.setStyle(Paint.Style.FILL);
+                mPaint.setColor(Color.WHITE);
+                canvas.drawText(ammo, x, ay, mPaint);
             }
 
             // Draw oil bar for Lantern
