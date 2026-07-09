@@ -362,8 +362,10 @@ void hud_update() {
                 // Append choices with a special marker that Java will handle
                 for (int i = 0; i < 3; i++) {
                     std::string selText = clean_tp_string(pRef->getSelTextPtr(i + 1));
-                    // Use 0-indexed markers to match engine's internal selection array
-                    dialogText += "\n[[SEL:" + std::to_string(i) + "]]" + selText;
+                    if (!selText.empty()) {
+                        // Use 0-indexed markers for the choices
+                        dialogText += "\n[[SEL:" + std::to_string(i) + "]]" + selText;
+                    }
                 }
             }
         }
