@@ -674,8 +674,6 @@ public class HudView extends View {
         int defaultColor = Color.WHITE;
         float curY = y + padding + 40;
         
-        int effectivePos = mState.selectPos;
-
         for (String line : lines) {
             String displayLine = resolvePlaceholders(line);
             boolean isSelected = false;
@@ -686,8 +684,8 @@ public class HudView extends View {
                 if (endIdx != -1) {
                     try {
                         int idx = Integer.parseInt(displayLine.substring(selStart + 6, endIdx));
-                        // Both idx and effectivePos are 0-indexed
-                        isSelected = (idx == effectivePos);
+                        // Markers are now indexed sequentially (0, 1, 2...) to match engine's selectPos
+                        isSelected = (idx == mState.selectPos);
                         displayLine = displayLine.substring(0, selStart) + displayLine.substring(endIdx + 2);
                     } catch (Exception e) {}
                 }

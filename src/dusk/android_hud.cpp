@@ -359,12 +359,12 @@ void hud_update() {
                 iData[105] = pRef->getSelectPos();
                 iData[106] = pRef->getSelectNum();
 
-                // Append choices with a special marker that Java will handle
-                for (int i = 0; i < 3; i++) {
-                    std::string selText = clean_tp_string(pRef->getSelTextPtr(i + 1));
+                // Append choices with sequential markers to match engine's selectPos
+                int markerIdx = 0;
+                for (int i = 0; i < 4; i++) {
+                    std::string selText = clean_tp_string(pRef->getSelTextPtr(i));
                     if (!selText.empty()) {
-                        // Use 0-indexed markers for the choices
-                        dialogText += "\n[[SEL:" + std::to_string(i) + "]]" + selText;
+                        dialogText += "\n[[SEL:" + std::to_string(markerIdx++) + "]]" + selText;
                     }
                 }
             }
