@@ -46,6 +46,7 @@ public class HudView extends View {
         put("{{L}}", 0x2009);
         put("{{R}}", 0x200A);
         put("{{STICK_UD}}", 0x200B);
+        put("{{C}}", 0x2001);
         put("{{XORY}}", 0x2006);
         put("{{LEFT}}", 0x200D);
         put("{{RIGHT}}", 0x200E);
@@ -166,7 +167,7 @@ public class HudView extends View {
 
         drawRupeeCounter(canvas, 20, 1060);
         
-        if (mState.ringStatus > 0) {
+        if (mState.ringStatus > 0 && mState.itemWheelOnSecondScreen != 0) {
             drawRingMenu(canvas, MAP_X + MAP_SIZE/2f, MAP_Y + MAP_SIZE/2f);
         } else {
             if (mState.showLightDrops && mState.maxLightDrops > 0) {
