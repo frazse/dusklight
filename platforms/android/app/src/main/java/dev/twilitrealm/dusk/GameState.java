@@ -21,7 +21,7 @@ public class GameState {
     public final int idA, idB, idX, idY, idZ, idL, idR, windowStatus, mapStatus, visMask;
     public final String dPadUpText, dPadDownText, dPadLeftText, dPadRightText;
     public final String stageName, itemTitle, itemDesc, dialogText;
-    public final int arrowMax, bombMax0, bombMax1, bombMax2, dialogOnSecondScreen, selectPos, selectNum, msgStatus;
+    public final int arrowMax, bombMax0, bombMax1, bombMax2, dialogOnSecondScreen, selectPos, selectNum, msgStatus, obtItemId;
 
     public final int itemXResId, itemYResId, itemXCount, itemYCount, itemBResId;
     public final int itemDDownId, itemDDownCount, itemDLeftId, itemDLeftCount, itemDRightId, itemDRightCount;
@@ -90,10 +90,11 @@ public class GameState {
         this.selectPos = i[105];
         this.selectNum = i[106];
         this.msgStatus = i[107];
+        this.obtItemId = i[108];
 
         // Visibility Logic: Ignore visMask (the minimap toggle) to keep HUD elements 
         // always visible on the second screen, except when explicitly hidden by the engine (ID 0).
-        boolean inMenu = (windowStatus > 0 || mapStatus > 0);
+        boolean inMenu = (windowStatus > 0);
 
         this.buttonAText = getActionLabel(idA, isSwimming, isRiding, isFlying, transform, false);
         this.buttonBText = getActionLabel(idB, isSwimming, isRiding, isFlying, transform, false);

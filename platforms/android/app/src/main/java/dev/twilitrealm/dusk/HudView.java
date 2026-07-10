@@ -1,6 +1,7 @@
 package dev.twilitrealm.dusk;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -45,6 +46,14 @@ public class HudView extends View {
         put("{{L}}", 0x2009);
         put("{{R}}", 0x200A);
         put("{{STICK_UD}}", 0x200B);
+        put("{{XORY}}", 0x2006);
+        put("{{LEFT}}", 0x200D);
+        put("{{RIGHT}}", 0x200E);
+        put("{{UP}}", 0x200F);
+        put("{{DOWN}}", 0x2010);
+        put("{{STICK_LEFT}}", 0x2011);
+        put("{{STICK_RIGHT}}", 0x2012);
+        put("{{RUPEE}}", 0x1010);
     }};
 
     private final java.util.Map<Integer, android.graphics.Bitmap> mItemIcons = new java.util.HashMap<>();
@@ -636,6 +645,12 @@ public class HudView extends View {
         String text = mState.dialogText;
         if (text == null || text.isEmpty()) return;
 
+        int obtItemId = mState.obtItemId;
+        Bitmap itemIcon = null;
+        if (obtItemId != -1 && obtItemId != 0xFF) {
+            itemIcon = mItemIcons.get(obtItemId);
+        }
+
         String[] lines = text.split("\n");
         float width = 1100;
         float lineHeight = 55;
@@ -662,6 +677,16 @@ public class HudView extends View {
         mPaint.setColor(Color.argb(50, 255, 255, 255));
         mPaint.setStrokeWidth(2);
         canvas.drawRoundRect(x + 10, y + 10, x + width - 10, y + height - 10, 30, 30, mPaint);
+
+        float textX = x + padding;
+        if (itemIcon != null) {
+            float iconSize = 140;
+            float iconX = x + padding;
+            float iconY = y + padding;
+            RectF dst = new RectF(iconX, iconY, iconX + iconSize, iconY + iconSize);
+            canvas.drawBitmap(itemIcon, null, dst, mPaint);
+            textX += iconSize + 30;
+        }
 
         // Text
         mPaint.reset();
@@ -694,11 +719,11 @@ public class HudView extends View {
             if (isSelected && !displayLine.trim().isEmpty()) {
                 int savedColor = mPaint.getColor();
                 mPaint.setColor(Color.YELLOW);
-                canvas.drawText(">", x + padding - 40, curY, mPaint);
+                canvas.drawText(">", textX - 40, curY, mPaint);
                 mPaint.setColor(savedColor);
             }
             
-            drawColorText(canvas, displayLine, x + padding, curY, mPaint, defaultColor);
+            drawColorText(canvas, displayLine, textX, curY, mPaint, defaultColor);
             curY += lineHeight;
         }
 
