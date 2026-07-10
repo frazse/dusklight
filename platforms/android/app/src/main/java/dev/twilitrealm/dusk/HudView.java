@@ -391,138 +391,152 @@ public class HudView extends View {
         mPaint.setColor(Color.WHITE);
         canvas.drawCircle(cx, cy, radius + 70, mPaint);
 
+        int selectedSlot = mState.ringCurrentSlot;
+        int selectedItemId = -1;
+
+        // Pass 1: Draw all items
         for (int s = 0; s < total; s++) {
             int itemId = mState.ringItemIds[s];
             if (itemId == 0xFF) continue;
 
-            double angle = (s * (360.0 / total) - 90.0) * (Math.PI / 180.0);
-            float x = (float) (cx + radius * Math.cos(angle));
-            float y = (float) (cy + radius * Math.sin(angle));
+            boolean isSelected = (s == selectedSlot);
+            if (isSelected) {
+                selectedItemId = itemId;
+                continue; // Draw selected item in next pass to keep it on top
+            }
 
-            boolean isSelected = (s == mState.ringCurrentSlot);
+            drawRingItem(canvas, cx, cy, radius, s, total, itemId, false);
+        }
+
+        // Pass 2: Draw selected item
+        if (selectedSlot >= 0 && selectedSlot < total && selectedItemId != -1) {
+            drawRingItem(canvas, cx, cy, radius, selectedSlot, total, selectedItemId, true);
+
+            // Pass 3: Draw Info Box or Label on top of everything
+            resetPaint();
+            mPaint.setTextAlign(Paint.Align.CENTER);
+            mPaint.setTextSize(72);
+            mPaint.setTypeface(android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.BOLD));
+            mPaint.setColor(Color.WHITE);
+            
+            if (mState.ringStatus == 3) { // Explain state (STATUS_EXPLAIN + 1)
+                // Draw a simple info box in the center
+                mPaint.setColor(Color.argb(240, 15, 15, 25));
+                mPaint.setStyle(Paint.Style.FILL);
+                canvas.drawRoundRect(cx - 300, cy - 180, cx + 300, cy + 180, 25, 25, mPaint);
+                
+                mPaint.setColor(Color.WHITE);
+                mPaint.setStyle(Paint.Style.STROKE);
+                mPaint.setStrokeWidth(4);
+                canvas.drawRoundRect(cx - 300, cy - 180, cx + 300, cy + 180, 25, 25, mPaint);
+                
+                resetPaint();
+                mPaint.setTextAlign(Paint.Align.CENTER);
+                mPaint.setTextSize(58);
+                mPaint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+                mPaint.setColor(Color.rgb(255, 210, 80));
+                String title = (mState.itemTitle != null && !mState.itemTitle.isEmpty()) ? mState.itemTitle : "";
+                canvas.drawText(title, cx, cy - 80, mPaint);
+                
+                mPaint.setTextSize(28);
+                mPaint.setColor(Color.WHITE);
+                mPaint.setTypeface(android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.NORMAL));
+                if (mState.itemDesc != null && !mState.itemDesc.isEmpty()) {
+                    String resolvedDesc = resolvePlaceholders(mState.itemDesc);
+
+                    mPaint.setTextAlign(Paint.Align.LEFT);
+                    String[] linesArr = resolvedDesc.split("\n");
+                    float lineY = cy - 20;
+                    int originalInfoColor = mPaint.getColor();
+                    for (String line : linesArr) {
+                         drawColorText(canvas, line, cx - 260, lineY, mPaint, originalInfoColor);
+                         lineY += 35;
+                    }
+                    mPaint.setColor(originalInfoColor);
+                } else {
+                    canvas.drawText("ITEM INFO", cx, cy + 60, mPaint);
+                }
+            } else {
+                String name = (mState.itemTitle != null && !mState.itemTitle.isEmpty()) ? mState.itemTitle : 
+                             ((selectedItemId == 0) ? "(Empty Slot)" : getItemName(selectedItemId));
+                canvas.drawText(name, cx, cy + 25, mPaint);
+            }
+        }
+    }
+
+    private void drawRingItem(Canvas canvas, float cx, float cy, float radius, int slot, int total, int itemId, boolean isSelected) {
+        double angle = (slot * (360.0 / total) - 90.0) * (Math.PI / 180.0);
+        float x = (float) (cx + radius * Math.cos(angle));
+        float y = (float) (cy + radius * Math.sin(angle));
+
+        resetPaint();
+        if (isSelected) {
+            mPaint.setColor(Color.argb(220, 255, 255, 255));
+            canvas.drawCircle(x, y, 70, mPaint);
+        }
+
+        android.graphics.Bitmap icon = mItemIcons.get(itemId);
+        if (icon != null) {
+            float maxDim = isSelected ? 80 : 60;
+            float w = icon.getWidth();
+            float h = icon.getHeight();
+            float scale = maxDim / Math.max(w, h);
+            float drawW = w * scale;
+            float drawH = h * scale;
+            RectF dst = new RectF(x - drawW / 2, y - drawH / 2, x + drawW / 2, y + drawH / 2);
+            canvas.drawBitmap(icon, null, dst, mPaint);
+        } else {
+            String name = (itemId == 0) ? "(Empty Slot)" : getItemName(itemId);
+            mPaint.setTextAlign(Paint.Align.CENTER);
+            mPaint.setTextSize(isSelected ? 36 : 24); 
+            mPaint.setColor(isSelected ? Color.WHITE : Color.rgb(180, 180, 180));
+            mPaint.setStyle(Paint.Style.FILL);
+            mPaint.setTypeface(android.graphics.Typeface.create("sans-serif-condensed", isSelected ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL));
+            
+            if (itemId != 0 || isSelected) {
+                canvas.drawText(name, x, y + 10, mPaint);
+            }
+        }
+
+        // Draw ammo count if applicable
+        int count = mState.ringItemCounts[slot];
+        if (count > 0 && itemId != 0x48) { 
+            String ammo = String.valueOf(count);
+            resetPaint();
+            mPaint.setTextAlign(Paint.Align.CENTER);
+            mPaint.setTextSize(isSelected ? 32 : 24);
+            mPaint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+            
+            float ay = y + (isSelected ? 42 : 32);
+            mPaint.setStyle(Paint.Style.STROKE);
+            mPaint.setStrokeWidth(isSelected ? 5.0f : 4.0f);
+            mPaint.setColor(Color.BLACK);
+            canvas.drawText(ammo, x, ay, mPaint);
+            
+            mPaint.setStyle(Paint.Style.FILL);
+            mPaint.setColor(Color.WHITE);
+            canvas.drawText(ammo, x, ay, mPaint);
+        }
+
+        // Draw oil bar for Lantern
+        if (itemId == 0x48 && mState.maxOil > 0) {
+            float barW = isSelected ? 60 : 40;
+            float barH = isSelected ? 8 : 6;
+            float bx = x - barW/2f;
+            float by = y + (isSelected ? 25 : 18);
             
             resetPaint();
-            if (isSelected) {
-                mPaint.setColor(Color.argb(220, 255, 255, 255));
-                canvas.drawCircle(x, y, 70, mPaint);
-            }
-
-            android.graphics.Bitmap icon = mItemIcons.get(itemId);
-            if (icon != null) {
-                float maxDim = isSelected ? 80 : 60;
-                float w = icon.getWidth();
-                float h = icon.getHeight();
-                float scale = maxDim / Math.max(w, h);
-                float drawW = w * scale;
-                float drawH = h * scale;
-                RectF dst = new RectF(x - drawW / 2, y - drawH / 2, x + drawW / 2, y + drawH / 2);
-                canvas.drawBitmap(icon, null, dst, mPaint);
-            } else {
-                String name = (itemId == 0) ? "(Empty Slot)" : getItemName(itemId);
-                mPaint.setTextAlign(Paint.Align.CENTER);
-                mPaint.setTextSize(isSelected ? 36 : 24); 
-                mPaint.setColor(isSelected ? Color.WHITE : Color.rgb(180, 180, 180));
-                mPaint.setStyle(Paint.Style.FILL);
-                mPaint.setTypeface(android.graphics.Typeface.create("sans-serif-condensed", isSelected ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL));
-                
-                // For unselected slots, only draw if they aren't empty, or if we want to see holes
-                if (itemId != 0 || isSelected) {
-                    canvas.drawText(name, x, y + 10, mPaint);
-                }
-            }
-
-            // Draw ammo count if applicable
-            int count = mState.ringItemCounts[s];
-            if (count > 0 && itemId != 0x48) { // Don't show count for Lantern (0x48)
-                String ammo = String.valueOf(count);
-                resetPaint();
-                mPaint.setTextAlign(Paint.Align.CENTER);
-                mPaint.setTextSize(isSelected ? 32 : 24);
-                mPaint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-                
-                float ay = y + (isSelected ? 42 : 32);
-
-                mPaint.setStyle(Paint.Style.STROKE);
-                mPaint.setStrokeWidth(isSelected ? 5.0f : 4.0f);
-                mPaint.setColor(Color.BLACK);
-                canvas.drawText(ammo, x, ay, mPaint);
-                
-                mPaint.setStyle(Paint.Style.FILL);
-                mPaint.setColor(Color.WHITE);
-                canvas.drawText(ammo, x, ay, mPaint);
-            }
-
-            // Draw oil bar for Lantern
-            if (itemId == 0x48 && mState.maxOil > 0) {
-                float barW = isSelected ? 60 : 40;
-                float barH = isSelected ? 8 : 6;
-                float bx = x - barW/2f;
-                float by = y + (isSelected ? 25 : 18);
-                
-                resetPaint();
-                mPaint.setColor(Color.argb(120, 50, 40, 0));
-                canvas.drawRect(bx, by, bx + barW, by + barH, mPaint);
-                
-                mPaint.setColor(Color.rgb(255, 220, 0));
-                float fillW = barW * ((float)mState.oil / mState.maxOil);
-                canvas.drawRect(bx, by, bx + fillW, by + barH, mPaint);
-                
-                mPaint.setStyle(Paint.Style.STROKE);
-                mPaint.setStrokeWidth(1.5f);
-                mPaint.setColor(Color.WHITE);
-                canvas.drawRect(bx, by, bx + barW, by + barH, mPaint);
-            }
-
-            if (isSelected) {
-                resetPaint();
-                mPaint.setTextAlign(Paint.Align.CENTER);
-                mPaint.setTextSize(72);
-                mPaint.setTypeface(android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.BOLD));
-                mPaint.setColor(Color.WHITE);
-                
-                if (mState.ringStatus == 3) { // Explain state (STATUS_EXPLAIN + 1)
-                    // Draw a simple info box in the center
-                    mPaint.setColor(Color.argb(240, 15, 15, 25));
-                    mPaint.setStyle(Paint.Style.FILL);
-                    canvas.drawRoundRect(cx - 300, cy - 180, cx + 300, cy + 180, 25, 25, mPaint);
-                    
-                    mPaint.setColor(Color.WHITE);
-                    mPaint.setStyle(Paint.Style.STROKE);
-                    mPaint.setStrokeWidth(4);
-                    canvas.drawRoundRect(cx - 300, cy - 180, cx + 300, cy + 180, 25, 25, mPaint);
-                    
-                    resetPaint();
-                    mPaint.setTextAlign(Paint.Align.CENTER);
-                    mPaint.setTextSize(58);
-                    mPaint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-                    mPaint.setColor(Color.rgb(255, 210, 80));
-                    String title = (mState.itemTitle != null && !mState.itemTitle.isEmpty()) ? mState.itemTitle : "";
-                    canvas.drawText(title, cx, cy - 80, mPaint);
-                    
-                    mPaint.setTextSize(28);
-                    mPaint.setColor(Color.WHITE);
-                    mPaint.setTypeface(android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.NORMAL));
-                    if (mState.itemDesc != null && !mState.itemDesc.isEmpty()) {
-                        String resolvedDesc = resolvePlaceholders(mState.itemDesc);
-
-                        mPaint.setTextAlign(Paint.Align.LEFT);
-                        String[] linesArr = resolvedDesc.split("\n");
-                        float lineY = cy - 20;
-                        int originalInfoColor = mPaint.getColor();
-                        for (String line : linesArr) {
-                             drawColorText(canvas, line, cx - 260, lineY, mPaint, originalInfoColor);
-                             lineY += 35;
-                        }
-                        mPaint.setColor(originalInfoColor);
-                    } else {
-                        canvas.drawText("ITEM INFO", cx, cy + 60, mPaint);
-                    }
-                } else {
-                    String name = (mState.itemTitle != null && !mState.itemTitle.isEmpty()) ? mState.itemTitle : 
-                                 ((itemId == 0) ? "(Empty Slot)" : getItemName(itemId));
-                    canvas.drawText(name, cx, cy + 25, mPaint);
-                }
-            }
+            mPaint.setColor(Color.argb(120, 50, 40, 0));
+            canvas.drawRect(bx, by, bx + barW, by + barH, mPaint);
+            
+            mPaint.setColor(Color.rgb(255, 220, 0));
+            float fillW = barW * ((float)mState.oil / mState.maxOil);
+            canvas.drawRect(bx, by, bx + fillW, by + barH, mPaint);
+            
+            mPaint.setStyle(Paint.Style.STROKE);
+            mPaint.setStrokeWidth(1.5f);
+            mPaint.setColor(Color.WHITE);
+            canvas.drawRect(bx, by, bx + barW, by + barH, mPaint);
         }
     }
 
