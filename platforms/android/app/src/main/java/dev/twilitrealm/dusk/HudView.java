@@ -54,6 +54,8 @@ public class HudView extends View {
         put("{{STICK_LEFT}}", 0x2011);
         put("{{STICK_RIGHT}}", 0x2012);
         put("{{RUPEE}}", 0x1010);
+        put("{{NEXT}}", 0x2005);
+        put("{{BOMBBAG}}", 0x1022);
     }};
 
     private final java.util.Map<Integer, android.graphics.Bitmap> mItemIcons = new java.util.HashMap<>();
@@ -680,6 +682,8 @@ public class HudView extends View {
 
         float textX = x + padding;
         if (itemIcon != null) {
+            mPaint.reset();
+            mPaint.setAntiAlias(true);
             float iconSize = 140;
             float iconX = x + padding;
             float iconY = y + padding;

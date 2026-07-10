@@ -3607,6 +3607,13 @@ void jmessage_tRenderingProcessor::do_outfont(u8 i_iconNo, u32 i_color) {
     mpOutFont->drawFont(NULL, i_iconNo, posX - field_0x7c[field_0x142], posY, sizeX, sizeY, color, 0xFF);
     pReference->addDrawLightCount();
 
+    char buffer[16];
+#if defined(TARGET_ANDROID) || defined(__ANDROID__) || defined(ANDROID)
+    // Custom tag for Android HUD: \x1B I[iconID]
+    snprintf(buffer, sizeof(buffer) - 1, "\x1B" "I[%d]", (int)i_iconNo);
+    do_strcat(buffer, false, true, false);
+#endif
+
     if (mCharInfoPtr != NULL) {
         getCharInfo(0.5f + (posX + (0.5f * sizeX)), field_0x138 + (posY + (0.5f * sizeY)),
                     field_0x44, field_0x44, 1.0f);
@@ -3615,9 +3622,9 @@ void jmessage_tRenderingProcessor::do_outfont(u8 i_iconNo, u32 i_color) {
     f32 spacing = 0.5f + ((field_0x44 * (sizeX * var_r28)) + pReference->getCharSpace());
     field_0x48 += (int)spacing;
 
-    char buffer[16];
-    snprintf(buffer, sizeof(buffer) - 1, "\x1B" "CR[%d]", (int)spacing);
-    do_strcat(buffer, false, true, false);
+    char buffer2[16];
+    snprintf(buffer2, sizeof(buffer2) - 1, "\x1B" "CR[%d]", (int)spacing);
+    do_strcat(buffer2, false, true, false);
 }
 
 void jmessage_tRenderingProcessor::do_arrow2() {

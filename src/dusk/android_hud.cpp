@@ -48,13 +48,11 @@ std::string clean_tp_string(const char* input) {
     std::string out;
     const unsigned char* p = (const unsigned char*)input;
     int safety = 0;
-    while (*p && safety++ < 2048) {
-        if (*p == 0x1A) {
+    while (*p && safety++ < 4096) {
+        if (*p == 0x1A) { // Raw BMG Tag escape
             unsigned char size = p[1];
             if (size < 5) { p += (size > 1) ? size : 1; continue; }
-
             unsigned char group = p[2];
-            unsigned char tag = p[3];
             unsigned int number = (p[3] << 8) | p[4];
 
             if (group == 0x03) { // Wii Buttons
@@ -67,7 +65,6 @@ std::string clean_tp_string(const char* input) {
                     case 16: out += "{{Y}}"; break;
                     case 19: out += "{{STICK}}"; break;
                     case 20: out += "{{Z}}"; break;
-                    default: break;
                 }
             } else if (group == 0x00) { // GC Buttons
                 switch (number) {
@@ -83,7 +80,7 @@ std::string clean_tp_string(const char* input) {
                     case 0x1C: out += "{{STICK_UD}}"; break;
                     case 0x24: out += "{{RETICLE}}"; break;
                     case 0x2E: out += "{{XORY}}"; break;
-                    case 0x37: { // Bomb Capacity (within group 0x00)
+                    case 0x37: {
                         if (size >= 6) {
                             unsigned char type = p[5];
                             if (type == 0) out += "{{BOMBCAP0}}";
@@ -93,39 +90,64 @@ std::string clean_tp_string(const char* input) {
                         break;
                     }
                     case 0x38: out += "{{ARROWCAP}}"; break;
-                    default: break;
                 }
-            } else if (group == 0x07) { // GC Capacity Tags (Legacy/Wii?)
+            } else if (group == 0x07) {
                 switch (number) {
                     case 0x3700: out += "{{BOMBCAP0}}"; break;
                     case 0x3701: out += "{{BOMBCAP1}}"; break;
                     case 0x3702: out += "{{BOMBCAP2}}"; break;
-                    default: break;
                 }
             } else if (group == 0x06) {
                 if (number == 0x0A) out += "- ";
-                else if (number == 0x0B) out += "  ";
-            } else if (group == 0xFF) { // Special/Color Tags
-                if (size == 5) {
-                    out += "[[C:" + std::to_string(p[4]) + "]]";
-                } else if (size >= 6) {
-                    out += "[[C:" + std::to_string(p[5]) + "]]";
-                }
+            } else if (group == 0xFF) {
+                if (size == 5) out += "[[C:" + std::to_string(p[4]) + "]]";
+                else if (size >= 6) out += "[[C:" + std::to_string(p[5]) + "]]";
             }
-
             p += size;
             continue;
         }
-        if (*p == 0x1B) {
+
+        if (*p == 0x1B) { // Control escape (Processed buffer)
             p++;
-            if (*p == 'C' && *(p+1) == 'C' && *(p+2) == '[') {
+            if (*p == 'C' && *(p+1) == 'C' && *(p+2) == '[') { // Color
                 char hex[9]; memcpy(hex, p + 3, 8); hex[8] = 0;
                 out += "[[C:#" + std::string(hex) + "]]";
+            } else if (*p == 'I' && *(p+1) == '[') { // Custom Icon tag
+                const char* start = (const char*)p + 2;
+                char* end = nullptr;
+                int iconID = (int)strtol(start, &end, 10);
+                switch (iconID) {
+                    case 0: out += "{{A}}"; break;
+                    case 1: out += "{{B}}"; break;
+                    case 2: out += "{{STICK}}"; break;
+                    case 3: out += "{{L}}"; break;
+                    case 4: out += "{{R}}"; break;
+                    case 5: out += "{{X}}"; break;
+                    case 6: out += "{{Y}}"; break;
+                    case 7: out += "{{Z}}"; break;
+                    case 8: out += "{{DPAD}}"; break;
+                    case 9: out += "{{STICK}}"; break;
+                    case 10: out += "{{LEFT}}"; break;
+                    case 11: out += "{{RIGHT}}"; break;
+                    case 12: out += "{{UP}}"; break;
+                    case 13: out += "{{DOWN}}"; break;
+                    case 14: out += "{{STICK_UP}}"; break;
+                    case 15: out += "{{STICK_DOWN}}"; break;
+                    case 16: out += "{{STICK_LEFT}}"; break;
+                    case 17: out += "{{STICK_RIGHT}}"; break;
+                    case 18: out += "{{STICK_UD}}"; break;
+                    case 29: out += "{{NEXT}}"; break;
+                    case 30: out += "{{RUPEE}}"; break;
+                    case 41: out += "{{BOMBBAG}}"; break;
+                    default: break;
+                }
             }
+            // Skip the entire control block until the closing ']'
             while (*p && *p != ']') p++;
             if (*p == ']') p++;
             continue;
         }
+
         if (*p == 0x0A || *p == 0x0D || *p == 0x1E) { out += '\n'; p++; continue; }
         if (*p >= 32 && *p < 127) { out += (char)*p++; } else { p++; }
     }
@@ -352,14 +374,15 @@ void hud_update() {
     if (msgObj) {
         u16 status = msgObj->getStatus();
         iData[107] = (int)status;
-        if (status != 1 && status != 0 && status != 14) {
+        if (status != 0 && status != 1) { // Show typing (status varies) and finished (14)
+            u16 msgID = msgObj->getMessageID();
             jmessage_tReference* pRef = (jmessage_tReference*)msgObj->getSequenceProcessor()->getReference();
             if (pRef) {
                 dialogText = clean_tp_string(pRef->getTextPtr());
                 iData[105] = pRef->getSelectPos();
                 iData[106] = pRef->getSelectNum();
 
-                // Append choices with sequential markers to match engine's selectPos
+                // Append choices
                 int markerIdx = 0;
                 for (int i = 0; i < 4; i++) {
                     std::string selText = clean_tp_string(pRef->getSelTextPtr(i));
@@ -368,6 +391,25 @@ void hud_update() {
                     }
                 }
             }
+
+            // Identify obtained item
+            int obtItem = -1;
+            if (msgObj->getFukiKind() == 9 || msgID == 0x2a5) {
+                bool bVar5 = false;
+                if (msgID >= 0x645 && msgID <= 0x648) { obtItem = (int)msgID - 0x641; bVar5 = true; }
+                else if (msgID >= 0x8f5 && msgID <= 0x90c) { obtItem = (int)msgID - 0x835; bVar5 = true; }
+                if (!bVar5) obtItem = (int)msgID - 0x65;
+
+                if (obtItem == 0x240) obtItem = 0x40;
+                else if (obtItem == 0x191e || obtItem == 0x402e) obtItem = 0x46;
+                else if (obtItem == 0x46a || obtItem == 0x46b || obtItem == 0x46c) obtItem = 0xe0;
+                else if (obtItem == 0x1d35) obtItem = 0x21;
+                else if (obtItem == 0x55b || obtItem == 0x55c) obtItem = 0x23;
+                else if (obtItem == 0x6b9 || obtItem == 0x6eb) obtItem = 0x60;
+                if (obtItem == 0xec) obtItem = 0x33;
+            }
+            iData[108] = obtItem;
+            if (obtItem != -1 && obtItem < 256) send_item_icon(obtItem, env, activity);
         }
     }
 
@@ -541,6 +583,14 @@ else if (winStatus == 1 || winStatus == 2) {
         send_generic_icon(0x200A, main2D, "font_05.bti", env, activity, {0,0,0,0}, gcnGrey); // R
         send_generic_icon(0x200B, main2D, "font_09_01.bti", env, activity); // Stick Up
         send_generic_icon(0x200C, main2D, "font_09_02.bti", env, activity); // Stick Down
+
+        send_generic_icon(0x200D, main2D, "font_10.bti", env, activity); // Left
+        send_generic_icon(0x200E, main2D, "font_11.bti", env, activity); // Right
+        send_generic_icon(0x200F, main2D, "font_12.bti", env, activity); // Up
+        send_generic_icon(0x2010, main2D, "font_13.bti", env, activity); // Down
+
+        send_generic_icon(0x2011, main2D, "font_14.bti", env, activity); // Stick Left
+        send_generic_icon(0x2012, main2D, "font_15.bti", env, activity); // Stick Right
     }
 
     // B button item logic
