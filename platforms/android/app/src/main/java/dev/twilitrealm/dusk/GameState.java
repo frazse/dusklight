@@ -91,29 +91,25 @@ public class GameState {
         this.selectNum = i[106];
         this.msgStatus = i[107];
 
-        // Visibility Override Logic:
-        // - In play (windowStatus==0), respect the visMask (avoids ghost prompts)
-        // - In menus, force buttons on if they have a non-zero ID
+        // Visibility Logic: Ignore visMask (the minimap toggle) to keep HUD elements 
+        // always visible on the second screen, except when explicitly hidden by the engine (ID 0).
         boolean inMenu = (windowStatus > 0 || mapStatus > 0);
 
-        this.buttonAText = (inMenu || (visMask & 1) != 0) ? getActionLabel(idA, isSwimming, isRiding, isFlying, transform, false) : "";
-        this.buttonBText = (inMenu || (visMask & 2) != 0) ? getActionLabel(idB, isSwimming, isRiding, isFlying, transform, false) : "";
+        this.buttonAText = getActionLabel(idA, isSwimming, isRiding, isFlying, transform, false);
+        this.buttonBText = getActionLabel(idB, isSwimming, isRiding, isFlying, transform, false);
         
         String zLabel = getActionLabel(idZ, isSwimming, isRiding, isFlying, transform, true);
         if (zLabel.isEmpty() && !inMenu && windowStatus == 0) {
             zLabel = "Midna";
         }
-        this.buttonZText = (inMenu || (visMask & 4) != 0 || !zLabel.isEmpty()) ? zLabel : "";
+        this.buttonZText = zLabel;
 
         String lLabel = getActionLabel(idL, isSwimming, isRiding, isFlying, transform, false);
-        if (lLabel.isEmpty() && !inMenu && windowStatus == 0 && transform == 1) {
-            lLabel = "Sense";
-        }
-        this.buttonLText = (inMenu || (visMask & 64) != 0 || !lLabel.isEmpty()) ? lLabel : (targeting ? "Target" : "");
+        this.buttonLText = (lLabel.isEmpty() && targeting) ? "Target" : lLabel;
 
-        this.buttonRText = (inMenu || (visMask & 8) != 0 || idR == 0x90 || idR == 0x91) ? getActionLabel(idR, isSwimming, isRiding, isFlying, transform, false) : "";
-        this.buttonXText = (inMenu || (visMask & 16) != 0) ? getActionLabel(idX, isSwimming, isRiding, isFlying, transform, false) : "";
-        this.buttonYText = (inMenu || (visMask & 32) != 0) ? getActionLabel(idY, isSwimming, isRiding, isFlying, transform, false) : "";
+        this.buttonRText = getActionLabel(idR, isSwimming, isRiding, isFlying, transform, false);
+        this.buttonXText = getActionLabel(idX, isSwimming, isRiding, isFlying, transform, false);
+        this.buttonYText = getActionLabel(idY, isSwimming, isRiding, isFlying, transform, false);
 
         this.dPadUpText    = getActionLabel(i[35], isSwimming, isRiding, isFlying, transform, false);
         this.dPadDownText  = getActionLabel(i[36], isSwimming, isRiding, isFlying, transform, false);
