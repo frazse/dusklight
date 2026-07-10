@@ -738,10 +738,10 @@ public class HudView extends View {
     private String resolvePlaceholders(String text) {
         if (text == null) return "";
         return text
-            .replace("{{BOMBCAP0}}", String.valueOf(mState.bombMax0))
-            .replace("{{BOMBCAP1}}", String.valueOf(mState.bombMax1))
-            .replace("{{BOMBCAP2}}", String.valueOf(mState.bombMax2))
-            .replace("{{ARROWCAP}}", String.valueOf(mState.arrowMax));
+            .replace("{{BOMBCAP0}}", mState.bombMax0 + " bombs")
+            .replace("{{BOMBCAP1}}", mState.bombMax1 + " bombs")
+            .replace("{{BOMBCAP2}}", mState.bombMax2 + " bombs")
+            .replace("{{ARROWCAP}}", mState.arrowMax + " arrows");
     }
 
     private void drawMiniMap(Canvas canvas, float x, float y, float interX, float interY, float interAngle) {
