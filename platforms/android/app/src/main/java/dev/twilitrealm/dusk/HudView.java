@@ -407,11 +407,6 @@ public class HudView extends View {
                 canvas.drawCircle(x, y, 70, mPaint);
             }
 
-            mPaint.setColor(Color.BLACK);
-            mPaint.setStyle(Paint.Style.STROKE);
-            mPaint.setStrokeWidth(isSelected ? 5 : 2);
-            canvas.drawCircle(x, y, 55, mPaint);
-
             android.graphics.Bitmap icon = mItemIcons.get(itemId);
             if (icon != null) {
                 float maxDim = isSelected ? 80 : 60;
@@ -481,7 +476,7 @@ public class HudView extends View {
             if (isSelected) {
                 resetPaint();
                 mPaint.setTextAlign(Paint.Align.CENTER);
-                mPaint.setTextSize(92);
+                mPaint.setTextSize(72);
                 mPaint.setTypeface(android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.BOLD));
                 mPaint.setColor(Color.WHITE);
                 
@@ -523,7 +518,8 @@ public class HudView extends View {
                         canvas.drawText("ITEM INFO", cx, cy + 60, mPaint);
                     }
                 } else {
-                    String name = (itemId == 0) ? "(Empty Slot)" : getItemName(itemId);
+                    String name = (mState.itemTitle != null && !mState.itemTitle.isEmpty()) ? mState.itemTitle : 
+                                 ((itemId == 0) ? "(Empty Slot)" : getItemName(itemId));
                     canvas.drawText(name, cx, cy + 25, mPaint);
                 }
             }
