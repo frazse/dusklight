@@ -32,6 +32,7 @@ public class HudView extends View {
 
     private int mDisplayRupees = -1;
     private int mRupeeTimer = 0;
+    private android.graphics.Typeface mRodinTypeface;
 
     private static final java.util.Map<String, Integer> PLACEHOLDER_TO_ICON = new java.util.HashMap<String, Integer>() {{
         put("{{STICK}}", 0x2000);
@@ -63,6 +64,12 @@ public class HudView extends View {
 
     public HudView(Context context) {
         super(context);
+        try {
+            mRodinTypeface = android.graphics.Typeface.createFromAsset(context.getAssets(), "res/Rodin-Regular.ttf");
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to load Rodin font: " + e.getMessage());
+            mRodinTypeface = android.graphics.Typeface.DEFAULT;
+        }
     }
 
     public void update(GameState state) {
@@ -86,7 +93,7 @@ public class HudView extends View {
         mPaint.reset();
         mPaint.setAntiAlias(true);
         mPaint.setStyle(Paint.Style.FILL);
-        mPaint.setTypeface(android.graphics.Typeface.DEFAULT);
+        mPaint.setTypeface(mRodinTypeface != null ? mRodinTypeface : android.graphics.Typeface.DEFAULT);
         mPaint.setShadowLayer(0, 0, 0, 0);
         mPaint.setShader(null);
         mPaint.setStrokeWidth(0);
@@ -416,8 +423,8 @@ public class HudView extends View {
             // Pass 3: Draw Info Box or Label on top of everything
             resetPaint();
             mPaint.setTextAlign(Paint.Align.CENTER);
-            mPaint.setTextSize(72);
-            mPaint.setTypeface(android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.BOLD));
+            mPaint.setTextSize(64);
+            mPaint.setTypeface(android.graphics.Typeface.create(mRodinTypeface, android.graphics.Typeface.BOLD));
             mPaint.setColor(Color.WHITE);
             
             if (mState.ringStatus == 3) { // Explain state (STATUS_EXPLAIN + 1)
@@ -433,15 +440,15 @@ public class HudView extends View {
                 
                 resetPaint();
                 mPaint.setTextAlign(Paint.Align.CENTER);
-                mPaint.setTextSize(58);
-                mPaint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+                mPaint.setTextSize(48);
+                mPaint.setTypeface(android.graphics.Typeface.create(mRodinTypeface, android.graphics.Typeface.BOLD));
                 mPaint.setColor(Color.rgb(255, 210, 80));
                 String title = (mState.itemTitle != null && !mState.itemTitle.isEmpty()) ? mState.itemTitle : "";
                 canvas.drawText(title, cx, cy - 80, mPaint);
                 
-                mPaint.setTextSize(28);
+                mPaint.setTextSize(24);
                 mPaint.setColor(Color.WHITE);
-                mPaint.setTypeface(android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.NORMAL));
+                mPaint.setTypeface(mRodinTypeface);
                 if (mState.itemDesc != null && !mState.itemDesc.isEmpty()) {
                     String resolvedDesc = resolvePlaceholders(mState.itemDesc);
 
@@ -492,7 +499,7 @@ public class HudView extends View {
             mPaint.setTextSize(isSelected ? 36 : 24); 
             mPaint.setColor(isSelected ? Color.WHITE : Color.rgb(180, 180, 180));
             mPaint.setStyle(Paint.Style.FILL);
-            mPaint.setTypeface(android.graphics.Typeface.create("sans-serif-condensed", isSelected ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL));
+            mPaint.setTypeface(android.graphics.Typeface.create(mRodinTypeface, isSelected ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL));
             
             if (itemId != 0 || isSelected) {
                 canvas.drawText(name, x, y + 10, mPaint);
@@ -506,7 +513,7 @@ public class HudView extends View {
             resetPaint();
             mPaint.setTextAlign(Paint.Align.CENTER);
             mPaint.setTextSize(isSelected ? 32 : 24);
-            mPaint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+            mPaint.setTypeface(android.graphics.Typeface.create(mRodinTypeface, android.graphics.Typeface.BOLD));
             
             float ay = y + (isSelected ? 42 : 32);
             mPaint.setStyle(Paint.Style.STROKE);
@@ -1604,15 +1611,15 @@ public class HudView extends View {
             mPaint.setColor(active ? Color.BLACK : Color.argb(100, 200, 200, 200));
             mPaint.setTextAlign(Paint.Align.CENTER);
             mPaint.setTextSize(baseRadius * 0.9f);
-            mPaint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+            mPaint.setTypeface(android.graphics.Typeface.create(mRodinTypeface, android.graphics.Typeface.BOLD));
             Paint.FontMetrics fm = mPaint.getFontMetrics();
             canvas.drawText(label, x, y - (fm.ascent + fm.descent) / 2, mPaint);
         }
 
         if (active && ammo != null) {
             mPaint.setTextAlign(Paint.Align.CENTER); 
-            mPaint.setTextSize(44); // Even bigger ammo
-            mPaint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+            mPaint.setTextSize(38); // Even bigger ammo
+            mPaint.setTypeface(android.graphics.Typeface.create(mRodinTypeface, android.graphics.Typeface.BOLD));
             mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(6.0f); mPaint.setColor(Color.BLACK);
             canvas.drawText(ammo, x, y + 44, mPaint);
             mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.WHITE);
@@ -1623,7 +1630,7 @@ public class HudView extends View {
             boolean isFaceButton = "A".equals(label) || "B".equals(label) || "X".equals(label) || "Y".equals(label);
             if (isFaceButton) {
                 mPaint.setTextAlign(Paint.Align.LEFT);
-                mPaint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+                mPaint.setTypeface(android.graphics.Typeface.create(mRodinTypeface, android.graphics.Typeface.BOLD));
                 mPaint.setTextSize(48); 
                 float ly = y + (baseRadius * 0.85f) + 15; 
                 
@@ -1637,8 +1644,8 @@ public class HudView extends View {
                 canvas.drawText(text, lx, ly, mPaint);
             } else {
                 mPaint.setTextAlign(Paint.Align.LEFT); 
-                mPaint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-                mPaint.setTextSize(52); // Larger prompt text
+                mPaint.setTypeface(android.graphics.Typeface.create(mRodinTypeface, android.graphics.Typeface.BOLD));
+                mPaint.setTextSize(44); // Larger prompt text
                 Paint.FontMetrics fm = mPaint.getFontMetrics();
                 float ly = y - (fm.ascent + fm.descent) / 2;
                 float lx = x + baseRadius + 18; // Tighter gap to circle
@@ -1714,8 +1721,8 @@ public class HudView extends View {
         // legible whether it's sitting over the colored fill or the unfilled track
         resetPaint();
         mPaint.setTextAlign(Paint.Align.CENTER);
-        mPaint.setTextSize(30);
-        mPaint.setTypeface(android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.BOLD));
+        mPaint.setTextSize(26);
+        mPaint.setTypeface(android.graphics.Typeface.create(mRodinTypeface, android.graphics.Typeface.BOLD));
 
         Paint.FontMetrics fm = mPaint.getFontMetrics();
         float textY = pillY + (pillH - fm.ascent - fm.descent) / 2;

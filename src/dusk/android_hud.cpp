@@ -100,6 +100,7 @@ std::string clean_tp_string(const char* input) {
                 }
             } else if (group == 0x06) {
                 if (number == 0x0A) out += "- ";
+                else if (number == 0x0B) out += "  ";
             } else if (group == 0xFF) {
                 if (size == 5) out += "[[C:" + std::to_string(p[4]) + "]]";
                 else if (size >= 6) out += "[[C:" + std::to_string(p[5]) + "]]";
