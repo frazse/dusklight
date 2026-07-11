@@ -621,13 +621,17 @@ void dMeter2Draw_c::exec(u32 i_status) {
         }
     }
 #else
+    bool wheelShowMain = dusk::android::dusk_shouldWheelShowOnMainScreen();
+    bool secondActive = dusk::android::hud_is_second_screen_active();
+
     if (i_status & (0x1000000 | 0x8)) { // Active or Opening/Closing
-        if (mButtonsPosX != g_drawHIO.mRingHUDButtonsPosX ||
-            mButtonsPosY != g_drawHIO.mRingHUDButtonsPosY)
-        {
-            mButtonsPosX = g_drawHIO.mRingHUDButtonsPosX;
-            mButtonsPosY = g_drawHIO.mRingHUDButtonsPosY;
-            mpButtonParent->paneTrans(g_drawHIO.mRingHUDButtonsPosX, g_drawHIO.mRingHUDButtonsPosY);
+        f32 targetX = !wheelShowMain ? 1E5f : g_drawHIO.mRingHUDButtonsPosX;
+        f32 targetY = !wheelShowMain ? 0.0f : g_drawHIO.mRingHUDButtonsPosY;
+
+        if (mButtonsPosX != targetX || mButtonsPosY != targetY) {
+            mButtonsPosX = targetX;
+            mButtonsPosY = targetY;
+            mpButtonParent->paneTrans(targetX, targetY);
         }
 
         if (mButtonsScale != g_drawHIO.mRingHUDButtonsScale) {
@@ -635,12 +639,13 @@ void dMeter2Draw_c::exec(u32 i_status) {
             mpButtonParent->scale(g_drawHIO.mRingHUDButtonsScale, g_drawHIO.mRingHUDButtonsScale);
         }
     } else {
-        if (mButtonsPosX != g_drawHIO.mMainHUDButtonsPosX ||
-            mButtonsPosY != g_drawHIO.mMainHUDButtonsPosY)
-        {
-            mButtonsPosX = g_drawHIO.mMainHUDButtonsPosX;
-            mButtonsPosY = g_drawHIO.mMainHUDButtonsPosY;
-            mpButtonParent->paneTrans(g_drawHIO.mMainHUDButtonsPosX, g_drawHIO.mMainHUDButtonsPosY);
+        f32 targetX = secondActive ? 1E5f : g_drawHIO.mMainHUDButtonsPosX;
+        f32 targetY = secondActive ? 0.0f : g_drawHIO.mMainHUDButtonsPosY;
+
+        if (mButtonsPosX != targetX || mButtonsPosY != targetY) {
+            mButtonsPosX = targetX;
+            mButtonsPosY = targetY;
+            mpButtonParent->paneTrans(targetX, targetY);
         }
 
         if (mButtonsScale != g_drawHIO.mMainHUDButtonsScale) {

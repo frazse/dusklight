@@ -485,14 +485,14 @@ void hud_update() {
             else if (f) { iData[28] = (int)f->getAButtonString(); iData[29] = (int)f->getBButtonString(); }
             else if (sk) { iData[28] = (int)sk->getAButtonString(); iData[29] = (int)sk->getBButtonString(); }
             else if (ns) { iData[28] = (int)ns->getAButtonString(); iData[29] = (int)ns->getBButtonString(); }
-        }
-else if (winStatus == 1 || winStatus == 2) {
+        } else if (winStatus == 1 || winStatus == 2) {
             dMenu_Ring_c* ring = mw->getMenuRing();
             if (ring) {
                 if (ring->isMixItemOff()) iData[32] = 0x90; // "Combine"
                 else if (ring->isMixItemOn()) iData[32] = 0x91; // "Separate"
                 iData[28] = (int)ring->getDoStatus();
                 iData[29] = 0x3F9; // Back
+                iData[59] = 0x4CD; // Direct Select
                 iData[60] = (int)ring->getStatus() + 1; iData[61] = (int)ring->getCurrentSlot(); iData[62] = (int)ring->getItemsTotal();
                 for (int s = 0; s < 24; s++) {
                     u8 slotIdx = ring->getItem(s, 0);

@@ -654,7 +654,7 @@ void dMenu_Ring_c::_move() {
 }
 
 void dMenu_Ring_c::_draw() {
-    if (dusk::getSettings().game.itemWheelOnSecondScreen) {
+    if (!dusk::android::dusk_shouldWheelShowOnMainScreen()) {
         return;
     }
     J2DGrafContext* grafPort = dComIfGp_getCurrentGrafPort();

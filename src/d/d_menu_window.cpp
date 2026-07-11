@@ -1677,7 +1677,7 @@ int dMw_c::_draw() {
                 dComIfGd_set2DOpa(mpMenuInsect);
             }
         } else if ((dMeter2Info_getWindowStatus() == 1 || dMeter2Info_getWindowStatus() == 2) && mpMenuRing != NULL) {
-            if (!dusk::getSettings().game.itemWheelOnSecondScreen) {
+            if (dusk::android::dusk_shouldWheelShowOnMainScreen()) {
                 dComIfGd_set2DOpa(mpMenuRing);
             }
         }

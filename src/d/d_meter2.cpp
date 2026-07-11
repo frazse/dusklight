@@ -267,7 +267,7 @@ int dMeter2_c::_execute() {
         g_drawHIO.mOxygenMeterPosX    = 1E5f;
 
         g_drawHIO.mMainHUDButtonsPosX = 1E5f;
-        if (dusk::getSettings().game.itemWheelOnSecondScreen) {
+        if (!dusk::android::dusk_shouldWheelShowOnMainScreen()) {
             g_drawHIO.mRingHUDButtonsPosX = 1E5f;
         } else {
             g_drawHIO.mRingHUDButtonsPosX = -15.0f;
@@ -286,6 +286,10 @@ int dMeter2_c::_execute() {
         g_drawHIO.mButtonATextPosX    = 1E5f;
         g_drawHIO.mButtonBFontPosX    = 1E5f;
         g_drawHIO.mButtonZFontPosX    = 1E5f;
+
+        g_drawHIO.mButtonDebug[0]      = true;
+        g_drawHIO.mButtonDebug[1]      = true;
+        g_drawHIO.mButtonDebug[3]      = true;
 
         g_drawHIO.mMidnaIconPosX      = 1E5f;
         g_drawHIO.mSpurBarPosX        = 1E5f;
@@ -387,9 +391,8 @@ int dMeter2_c::_draw() {
 #if defined(TARGET_ANDROID) || defined(__ANDROID__) || defined(ANDROID)
     const bool secondScreen = dusk::android::hud_is_second_screen_active();
     const bool inRing = (dMeter2Info_getWindowStatus() == 1 || dMeter2Info_getWindowStatus() == 2);
-    const bool wheelOnSecond = dusk::getSettings().game.itemWheelOnSecondScreen;
 
-    if (!secondScreen || (inRing && !wheelOnSecond)) {
+    if (!secondScreen || (inRing && dusk::android::dusk_shouldWheelShowOnMainScreen())) {
         if (dMeter2Info_getWindowStatus() == 2) {
             dComIfGd_set2DOpa(mpMeterDraw);
         } else {
