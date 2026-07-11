@@ -913,6 +913,7 @@ public class HudView extends View {
         int colorTerrain = Color.parseColor("#3E8E1F");
         int colorHazard = Color.rgb(100, 0, 180); // Matches center of dungeon icon
         int colorLava = Color.parseColor("#8E1F1F");   // Red for Lava/Heat
+        int colorSand = Color.parseColor("#424242");   // Light Grey for Sand
 
         if (mState.mapLines != null) {
             float[] strip = new float[32768];
@@ -927,9 +928,15 @@ public class HudView extends View {
                         if (pId != 3) { 
                             mPaint.setStyle(Paint.Style.FILL_AND_STROKE); mPaint.setStrokeWidth(0.8f);
                             if (pId == 5) mPaint.setColor(colorWater);
-                            else if (pId == 2) mPaint.setColor(Color.rgb(255, 128, 0)); // Test: Debug Orange for pId 2
                             else if (pId == 6 || pId == 7) mPaint.setColor(colorHazard);
-                            else mPaint.setColor(colorTerrain);
+                            else if (pId == 2) mPaint.setColor(Color.rgb(255, 128, 0)); // Debug Orange
+                            else if (pId == 0 || pId == 1) mPaint.setColor(colorTerrain);
+                            else if (pId == 4) mPaint.setColor(Color.parseColor("#424242")); // Sand
+                            else {
+                                // Unique deterministic HSV palette for discovery (0-63)
+                                float hue = (pId * 137.5f) % 360f; // Golden angle for distribution
+                                mPaint.setColor(Color.HSVToColor(new float[]{hue, 0.8f, 0.9f}));
+                            }
 
                             for (int j = 0; j < vCount - 2; j++) {
                                 mDrawPath.reset(); mDrawPath.moveTo(strip[j*2], strip[j*2+1]);
@@ -1356,7 +1363,7 @@ public class HudView extends View {
     }
 
     private void drawItems(Canvas canvas, float x, float y) {
-        if (!mState.isDungeon) return;
+        if (!mState.isDungeon && mState.keys <= 0) return;
         resetPaint();
         
         float keyH = 80;

@@ -763,7 +763,22 @@ void hud_update() {
     }
     fData[3]=miX; fData[4]=miZ; fData[5]=maX; fData[6]=maZ;
     for (int g = 0; g < 17; g++) { for (auto* d = dTres_c::getFirstData(g); d; d = dTres_c::getNextData(d)) { if (should_draw_icon(g, d, stayNo, floor, sName)) { icons.push_back((float)g); icons.push_back(d->mPos.x); icons.push_back(d->mPos.z); icons.push_back((float)d->mRoomNo); } } }
-    auto ad = [&](dStage_KeepDoorInfo* in) { if (!in) return; for (int i = 0; i < in->mNum; i++) { auto& dr = in->mDrTgData[i]; int r = (dr.base.parameters >> 24) & 0x3F; if (dMapInfo_c::calcFloorNo(dr.base.position.y, true, r) != floor) continue; if (is_room_visible(r, sName, stayNo, iData[48])) { doors.push_back(dr.base.position.x); doors.push_back(dr.base.position.z); doors.push_back((float)dr.base.angle.y * (180.0f / 32768.0f)); doors.push_back(0); } } };
+    auto ad = [&](dStage_KeepDoorInfo* in) {
+        if (!in) return;
+        for (int i = 0; i < in->mNum; i++) {
+            auto& dr = in->mDrTgData[i];
+            int r0 = (dr.base.parameters >> 0xD) & 0x3F;
+            int r1 = (dr.base.parameters >> 0x13) & 0x3F;
+            if (dMapInfo_c::calcFloorNo(dr.base.position.y, true, r0) != floor &&
+                dMapInfo_c::calcFloorNo(dr.base.position.y, true, r1) != floor) continue;
+            if (is_room_visible(r0, sName, stayNo, iData[48]) || is_room_visible(r1, sName, stayNo, iData[48])) {
+                doors.push_back(dr.base.position.x);
+                doors.push_back(dr.base.position.z);
+                doors.push_back((float)dr.base.angle.y * (180.0f / 32768.0f));
+                doors.push_back(0);
+            }
+        }
+    };
     ad(dStage_GetKeepDoorInfo()); ad(dStage_GetRoomKeepDoorInfo());
 
     jstring jS = env->NewStringUTF(fName.c_str()); jstring jT = env->NewStringUTF(itemTitle.c_str()); jstring jDe = env->NewStringUTF(itemDesc.c_str()); jstring jDT = env->NewStringUTF(dialogText.c_str());
