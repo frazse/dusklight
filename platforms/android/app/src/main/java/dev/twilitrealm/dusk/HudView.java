@@ -549,6 +549,7 @@ public class HudView extends View {
     }
 
     private void drawColorText(Canvas canvas, String line, float x, float y, Paint paint, int defaultColor) {
+        paint.setColor(defaultColor);
         float curX = x;
         int pos = 0;
 
@@ -658,8 +659,7 @@ public class HudView extends View {
         Bitmap corner = mItemIcons.get(0x3000);
         if (corner == null) return;
 
-        float size = 48; // Size of the corner piece
-        float padding = 20; // How much it overlaps/extends
+        float padding = 12; // Tighter overlap
         
         // Top Left
         canvas.drawBitmap(corner, x - padding, y - padding, mPaint);
@@ -696,43 +696,47 @@ public class HudView extends View {
             itemIcon = mItemIcons.get(obtItemId);
         }
 
-        String[] lines = text.split("\n");
+        String[] allLines = text.split("\n");
+        java.util.List<String> msgLines = new java.util.ArrayList<>();
+        java.util.List<String> choiceLines = new java.util.ArrayList<>();
+        
+        for (String line : allLines) {
+            if (line.contains("[[SEL:")) {
+                String clean = line.replaceAll("\\[\\[SEL:\\d+\\]\\]", "").trim();
+                if (!clean.isEmpty()) choiceLines.add(line);
+            } else {
+                if (!line.trim().isEmpty()) msgLines.add(line);
+            }
+        }
+
         float width = 1100;
         float lineHeight = 55;
         float padding = 40;
-        
-        // Use a fixed minimum height for icon-based dialogs to prevent jitter
-        float minHeight = (itemIcon != null) ? 320 : 200;
-        float height = Math.max(minHeight, lines.length * lineHeight + padding * 2);
+        float height = 320; // Fixed authoritative height
         
         float x = 640 - width / 2; // Center horizontally
         float y = topY;
 
-        // Background
+        // --- Main Box ---
         mPaint.reset();
         mPaint.setAntiAlias(true);
         mPaint.setColor(Color.argb(240, 15, 15, 30));
         mPaint.setStyle(Paint.Style.FILL);
         canvas.drawRoundRect(x, y, x + width, y + height, 40, 40, mPaint);
 
-        // Border
         mPaint.setColor(Color.argb(255, 120, 120, 180));
         mPaint.setStyle(Paint.Style.STROKE);
         mPaint.setStrokeWidth(6);
         canvas.drawRoundRect(x, y, x + width, y + height, 40, 40, mPaint);
 
-        // Inner highlight
         mPaint.setColor(Color.argb(50, 255, 255, 255));
         mPaint.setStrokeWidth(2);
         canvas.drawRoundRect(x + 10, y + 10, x + width - 10, y + height - 10, 30, 30, mPaint);
 
         float textX = x + padding;
         if (itemIcon != null) {
-            mPaint.reset();
-            mPaint.setAntiAlias(true);
             float iconSize = 140;
             float iconX = x + padding;
-            // Center icon vertically in the box
             float iconY = y + (height - iconSize) / 2;
             
             float w = itemIcon.getWidth();
@@ -743,12 +747,12 @@ public class HudView extends View {
             float offX = (iconSize - drawW) / 2;
             float offY = (iconSize - drawH) / 2;
             
+            resetPaint();
             RectF dst = new RectF(iconX + offX, iconY + offY, iconX + offX + drawW, iconY + offY + drawH);
             canvas.drawBitmap(itemIcon, null, dst, mPaint);
             textX += iconSize + 30;
         }
 
-        // Text
         mPaint.reset();
         mPaint.setAntiAlias(true);
         mPaint.setTextAlign(Paint.Align.LEFT); 
@@ -757,41 +761,93 @@ public class HudView extends View {
         mPaint.setShadowLayer(4, 2, 2, Color.BLACK);
         
         int defaultColor = Color.WHITE;
-        // Center the text block vertically within the height
-        float totalTextHeight = lines.length * lineHeight;
-        float curY = y + (height - totalTextHeight) / 2 + 42;
-        
-        for (String line : lines) {
-            String displayLine = resolvePlaceholders(line);
-            boolean isSelected = false;
+        float curY;
+        if (itemIcon != null) {
+            // Stable vertical centering for Item Reveals
+            float totalMsgHeight = msgLines.size() * lineHeight;
+            curY = y + (height - totalMsgHeight) / 2 + 42;
+        } else {
+            // Top-aligned for normal dialog
+            curY = y + padding + 45;
+        }
+
+        for (String line : msgLines) {
+            drawColorText(canvas, resolvePlaceholders(line), textX, curY, mPaint, defaultColor);
+            curY += lineHeight;
+        }
+
+        if (mState.msgStatus == 7 || mState.msgStatus == 5) {
+            mPaint.setColor(Color.rgb(100, 255, 100));
+            mPaint.setTextSize(36);
+            canvas.drawText("▼ Next", x + width - 150, y + height - 25, mPaint);
+        }
+
+        // --- Choice Box ---
+        if (!choiceLines.isEmpty()) {
+            float cPadding = 30;
+            float cLineHeight = 70; // Increased padding between choices
+            float cWidth = 0;
+            for (String line : choiceLines) {
+                String clean = line.replaceAll("\\[\\[SEL:\\d+\\]\\]", "");
+                cWidth = Math.max(cWidth, measureColorText(resolvePlaceholders(clean), mPaint));
+            }
+            cWidth += cPadding * 2 + 50; // Extra room for selection cursor
+            float cHeight = choiceLines.size() * cLineHeight + cPadding * 2;
             
-            if (displayLine.contains("[[SEL:")) {
+            float cx = x;
+            float cy = y + height + 20;
+
+            // Background
+            mPaint.reset();
+            mPaint.setAntiAlias(true);
+            mPaint.setColor(Color.argb(240, 15, 15, 30));
+            mPaint.setStyle(Paint.Style.FILL);
+            canvas.drawRoundRect(cx, cy, cx + cWidth, cy + cHeight, 40, 40, mPaint);
+
+            // Border (Matched to Main)
+            mPaint.setColor(Color.argb(255, 120, 120, 180));
+            mPaint.setStyle(Paint.Style.STROKE);
+            mPaint.setStrokeWidth(6);
+            canvas.drawRoundRect(cx, cy, cx + cWidth, cy + cHeight, 40, 40, mPaint);
+            
+            // Inner highlight (Matched to Main)
+            mPaint.setColor(Color.argb(50, 255, 255, 255));
+            mPaint.setStrokeWidth(2);
+            canvas.drawRoundRect(cx + 10, cy + 10, cx + cWidth - 10, cy + cHeight - 10, 30, 30, mPaint);
+
+            mPaint.setStyle(Paint.Style.FILL);
+            mPaint.setStrokeWidth(0);
+            mPaint.setTextSize(48);
+            mPaint.setShadowLayer(4, 2, 2, Color.BLACK);
+            
+            float optY = cy + cPadding + 52; // Adjusted baseline for 70px line
+            for (String line : choiceLines) {
+                String displayLine = resolvePlaceholders(line);
+                boolean isSelected = false;
+                
                 int selStart = displayLine.indexOf("[[SEL:");
                 int endIdx = displayLine.indexOf("]]", selStart);
                 if (endIdx != -1) {
                     try {
                         int idx = Integer.parseInt(displayLine.substring(selStart + 6, endIdx));
-                        // Markers are now indexed sequentially (0, 1, 2...) to match engine's selectPos
                         isSelected = (idx == mState.selectPos);
                         displayLine = displayLine.substring(0, selStart) + displayLine.substring(endIdx + 2);
                     } catch (Exception e) {}
                 }
-            }
 
-            if (isSelected && !displayLine.trim().isEmpty()) {
-                float textWidth = measureColorText(displayLine, mPaint);
-                drawSelectionCorners(canvas, textX - 10, curY - 45, textWidth + 20, 55);
+                float optX = cx + cPadding + 30; // Reduced indent
+                if (isSelected && !displayLine.trim().isEmpty()) {
+                    float textWidth = measureColorText(displayLine, mPaint);
+                    Paint.FontMetrics fm = mPaint.getFontMetrics();
+                    float textMid = (fm.ascent + fm.descent) / 2;
+                    float indicatorH = 60; // Tighter indicator
+                    // Centered vertically with a slight -3px tweak to move it UP based on your feedback
+                    drawSelectionCorners(canvas, optX - 10, optY + textMid - (indicatorH / 2) - 3, textWidth + 20, indicatorH);
+                }
+                
+                drawColorText(canvas, displayLine, optX, optY, mPaint, defaultColor);
+                optY += cLineHeight;
             }
-            
-            drawColorText(canvas, displayLine, textX, curY, mPaint, defaultColor);
-            curY += lineHeight;
-        }
-
-        // Draw "Next" arrow if waiting for input (Status 7 = Outwait/Finished)
-        if (mState.msgStatus == 7 || mState.msgStatus == 5) {
-            mPaint.setColor(Color.rgb(100, 255, 100));
-            mPaint.setTextSize(36);
-            canvas.drawText("▼ Next", x + width - 150, y + height - 25, mPaint);
         }
     }
 
