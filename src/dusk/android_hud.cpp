@@ -606,6 +606,9 @@ else if (winStatus == 1 || winStatus == 2) {
 
         send_generic_icon(0x2011, main2D, "font_14.bti", env, activity); // Stick Left
         send_generic_icon(0x2012, main2D, "font_15.bti", env, activity); // Stick Right
+
+        // Selection Cursor (4 parts corner)
+        send_generic_icon(0x3000, main2D, "im_select_cursor_4parts_pikapika_try05_00_40x40_gre.bti", env, activity);
     }
 
     // B button item logic

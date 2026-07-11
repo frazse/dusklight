@@ -654,6 +654,38 @@ public class HudView extends View {
         }
     }
 
+    private void drawSelectionCorners(Canvas canvas, float x, float y, float w, float h) {
+        Bitmap corner = mItemIcons.get(0x3000);
+        if (corner == null) return;
+
+        float size = 48; // Size of the corner piece
+        float padding = 20; // How much it overlaps/extends
+        
+        // Top Left
+        canvas.drawBitmap(corner, x - padding, y - padding, mPaint);
+        
+        // Top Right
+        canvas.save();
+        canvas.translate(x + w + padding, y - padding);
+        canvas.scale(-1, 1);
+        canvas.drawBitmap(corner, 0, 0, mPaint);
+        canvas.restore();
+        
+        // Bottom Left
+        canvas.save();
+        canvas.translate(x - padding, y + h + padding);
+        canvas.scale(1, -1);
+        canvas.drawBitmap(corner, 0, 0, mPaint);
+        canvas.restore();
+        
+        // Bottom Right
+        canvas.save();
+        canvas.translate(x + w + padding, y + h + padding);
+        canvas.scale(-1, -1);
+        canvas.drawBitmap(corner, 0, 0, mPaint);
+        canvas.restore();
+    }
+
     private void drawDialogBox(Canvas canvas, float topY) {
         String text = mState.dialogText;
         if (text == null || text.isEmpty()) return;
@@ -732,10 +764,8 @@ public class HudView extends View {
             }
 
             if (isSelected && !displayLine.trim().isEmpty()) {
-                int savedColor = mPaint.getColor();
-                mPaint.setColor(Color.YELLOW);
-                canvas.drawText(">", textX - 40, curY, mPaint);
-                mPaint.setColor(savedColor);
+                float textWidth = measureColorText(displayLine, mPaint);
+                drawSelectionCorners(canvas, textX - 10, curY - 45, textWidth + 20, 55);
             }
             
             drawColorText(canvas, displayLine, textX, curY, mPaint, defaultColor);
