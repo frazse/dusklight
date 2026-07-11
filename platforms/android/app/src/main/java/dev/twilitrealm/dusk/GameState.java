@@ -4,7 +4,7 @@ public class GameState {
     public final int health, maxHealth, magic, maxMagic, oil, maxOil, oxygen, maxOxygen;
     public final int rupees, keys, arrows, bombs, transform, roomNo;
     public final int lightDrops, maxLightDrops, horseSpurs, batteryLevel;
-    public final boolean showLightDrops, midnaCalling, isRiding, isSwimming, showOxygen, isDungeon, isFlying, isCharging;
+    public final boolean showLightDrops, midnaCalling, isRiding, isBoarRiding, isSwimming, showOxygen, isDungeon, isFlying, isCharging;
     public final boolean hasMap, hasCompass, hasBossKey;
     public final int ringStatus, ringCurrentSlot, ringItemsTotal;
     public final int[] ringItemIds, ringItemCounts;
@@ -21,7 +21,7 @@ public class GameState {
     public final int idA, idB, idX, idY, idZ, idL, idR, windowStatus, mapStatus, visMask;
     public final String dPadUpText, dPadDownText, dPadLeftText, dPadRightText;
     public final String stageName, itemTitle, itemDesc, dialogText;
-    public final int arrowMax, bombMax0, bombMax1, bombMax2, dialogOnSecondScreen, itemWheelOnSecondScreen, selectPos, selectNum, msgStatus, obtItemId;
+    public final int arrowMax, bombMax0, bombMax1, bombMax2, dialogOnSecondScreen, itemWheelOnSecondScreen, selectPos, selectNum, msgStatus, obtItemId, msgId, fukiKind;
 
     public final int itemXResId, itemYResId, itemXCount, itemYCount, itemBResId;
     public final int itemDDownId, itemDDownCount, itemDLeftId, itemDLeftCount, itemDRightId, itemDRightCount;
@@ -72,6 +72,7 @@ public class GameState {
         boolean targeting = (stateFlags & 1) != 0;
         this.isSwimming = (stateFlags & 2) != 0;
         this.isRiding = (stateFlags & 4) != 0;
+        this.isBoarRiding = (stateFlags & 64) != 0;
         this.isFlying = (stateFlags & 32) != 0;
 
         this.idA = i[28]; this.idB = i[29]; this.idZ = i[30];
@@ -92,6 +93,8 @@ public class GameState {
         this.selectNum = i[106];
         this.msgStatus = i[107];
         this.obtItemId = i[108];
+        this.msgId = i[111];
+        this.fukiKind = i[112];
 
         // Visibility Logic: Ignore visMask (the minimap toggle) to keep HUD elements 
         // always visible on the second screen, except when explicitly hidden by the engine (ID 0).
@@ -177,9 +180,7 @@ public class GameState {
             case 0x07: return "Enter";
             case 0x08: return "Check";
             case 0x09: // Dash/Roll/Hurry
-                if (isSwimming) return "Dash";
-                if (isRiding) return "Hurry";
-                if (wolfForm != 0) return "Dash";
+                if (isSwimming || isRiding || isBoarRiding || wolfForm != 0) return "Dash";
                 return "Roll";
             case 0x0A: return "Crouch";
             case 0x0B: return "Defend";
@@ -225,7 +226,7 @@ public class GameState {
             case 0x33: return "Drop Down";
             case 0x34: return "Grab";
             case 0x35: return "Take";
-            case 0x36: return "Hurry";
+            case 0x36: return "Dash";
             case 0x37: return "Pull Down";
             case 0x38: return "Pet";
             case 0x39: return "Pick Up";
@@ -241,7 +242,7 @@ public class GameState {
             case 0x44: return "Slap";
             case 0x45: return (wolfForm != 0) ? "Sniff" : "";
             case 0x46: return (wolfForm != 0) ? "Bite" : "";
-            case 0x47: return (wolfForm != 0) ? "Dash" : "Roll";
+            case 0x47: return (wolfForm != 0 || isRiding) ? "Dash" : "Roll";
             case 0x48: return "Fasten";
             case 0x49: return "Get Down";
             case 0x4A: return "Hawkeye Off";
@@ -290,7 +291,7 @@ public class GameState {
             case 0x76: return "Rotate";
             case 0x77: return "Helm Splitter";
             case 0x78: return "Move";
-            case 0x79: return (wolfForm != 0) ? "Dash" : "Roll";
+            case 0x79: return (wolfForm != 0 || isRiding) ? "Dash" : "Roll";
             case 0x7A: return "Hold On";
             case 0x7C: return "Help";
             case 0x7D: return "Zoom In";

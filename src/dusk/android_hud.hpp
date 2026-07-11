@@ -8,6 +8,7 @@ void hud_update();
 bool hud_is_second_screen_active();
 
 inline bool dusk_shouldWheelShowOnMainScreen() {
+    if (!hud_is_second_screen_active()) return true;
     return !dusk::getSettings().game.itemWheelOnSecondScreen;
 }
 }  // namespace dusk::android

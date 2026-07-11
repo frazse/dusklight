@@ -173,7 +173,7 @@ public class HudView extends View {
             if (mState.showLightDrops && mState.maxLightDrops > 0) {
                 float width = (mState.maxLightDrops - 1) * 45;
                 drawLightDropZigZag(canvas, 640 - (width / 2), 1055);
-            } else if (mState.isRiding) {
+            } else if (mState.isRiding && !mState.isBoarRiding) {
                 float width = (6 - 1) * 68 + 57;
                 drawHorseSpurs(canvas, 640 - (width / 2), 1060);
             }
@@ -700,7 +700,10 @@ public class HudView extends View {
         float width = 1100;
         float lineHeight = 55;
         float padding = 40;
-        float height = Math.max(200, lines.length * lineHeight + padding * 2);
+        
+        // Use a fixed minimum height for icon-based dialogs to prevent jitter
+        float minHeight = (itemIcon != null) ? 320 : 200;
+        float height = Math.max(minHeight, lines.length * lineHeight + padding * 2);
         
         float x = 640 - width / 2; // Center horizontally
         float y = topY;
@@ -729,8 +732,18 @@ public class HudView extends View {
             mPaint.setAntiAlias(true);
             float iconSize = 140;
             float iconX = x + padding;
-            float iconY = y + padding;
-            RectF dst = new RectF(iconX, iconY, iconX + iconSize, iconY + iconSize);
+            // Center icon vertically in the box
+            float iconY = y + (height - iconSize) / 2;
+            
+            float w = itemIcon.getWidth();
+            float h = itemIcon.getHeight();
+            float scale = iconSize / Math.max(w, h);
+            float drawW = w * scale;
+            float drawH = h * scale;
+            float offX = (iconSize - drawW) / 2;
+            float offY = (iconSize - drawH) / 2;
+            
+            RectF dst = new RectF(iconX + offX, iconY + offY, iconX + offX + drawW, iconY + offY + drawH);
             canvas.drawBitmap(itemIcon, null, dst, mPaint);
             textX += iconSize + 30;
         }
@@ -744,7 +757,9 @@ public class HudView extends View {
         mPaint.setShadowLayer(4, 2, 2, Color.BLACK);
         
         int defaultColor = Color.WHITE;
-        float curY = y + padding + 40;
+        // Center the text block vertically within the height
+        float totalTextHeight = lines.length * lineHeight;
+        float curY = y + (height - totalTextHeight) / 2 + 42;
         
         for (String line : lines) {
             String displayLine = resolvePlaceholders(line);
@@ -1692,7 +1707,8 @@ public class HudView extends View {
         if (DEBUG_IDS) {
             resetPaint(); mPaint.setTextAlign(Paint.Align.RIGHT);
             mPaint.setTextSize(24); mPaint.setColor(Color.YELLOW);
-            canvas.drawText("W:" + mState.windowStatus + " M:" + mState.mapStatus + " V:" + mState.visMask + " MSG:" + mState.msgStatus + " SEL:" + mState.selectPos + "/" + mState.selectNum, x, y - 60, mPaint);
+            // Debug info hidden
+            // canvas.drawText("W:" + mState.windowStatus + " M:" + mState.mapStatus + " V:" + mState.visMask + " MSG:" + mState.msgStatus + " ID:0x" + Integer.toHexString(mState.msgId).toUpperCase() + " OBT:0x" + Integer.toHexString(mState.obtItemId).toUpperCase() + " FUKI:" + mState.fukiKind + " SEL:" + mState.selectPos + "/" + mState.selectNum, x, y - 60, mPaint);
         }
     }
 }

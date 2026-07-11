@@ -381,7 +381,8 @@ void hud_update() {
         u16 status = msgObj->getStatus();
         iData[107] = (int)status;
         if (status != 0 && status != 1) { // Show typing (status varies) and finished (14)
-            u16 msgID = msgObj->getMessageID();
+            u16 msgID = (u16)dMsgObject_getMessageID();
+            iData[111] = (int)msgID;
             jmessage_tReference* pRef = (jmessage_tReference*)msgObj->getSequenceProcessor()->getReference();
             if (pRef) {
                 dialogText = clean_tp_string(pRef->getTextPtr());
@@ -400,7 +401,16 @@ void hud_update() {
 
             // Identify obtained item
             int obtItem = -1;
-            if (msgObj->getFukiKind() == 9 || msgID == 0x2a5) {
+
+            // Check for Hidden Skill (Ougi) messages first
+            if (msgID == 0x17ed || msgID == 0x1823 || msgID == 0x183f || msgID == 0x18b4 ||
+                msgID == 0x185c || msgID == 0x1877 || msgID == 0x1895 || msgID == 0x1878 ||
+                msgID == 0x3efd || msgID == 0x3f33 || msgID == 0x3f6c || msgID == 0x3f87 ||
+                msgID == 0x3fa5 || msgID == 0x3fc4)
+            {
+                obtItem = 0x3001;
+            }
+            else if (msgObj->getFukiKind() == 9 || msgID == 0x2a5) {
                 // Item Get message IDs are typically in the 0x65-0x200 and 0x640+ ranges
                 bool isItemMsg = false;
                 if (msgID >= 0x645 && msgID <= 0x648) { obtItem = (int)msgID - 0x641; isItemMsg = true; }
@@ -419,9 +429,20 @@ void hud_update() {
                     obtItem = -1;
                 }
             }
+
             iData[108] = obtItem;
-            if (obtItem >= 0 && obtItem < 255) {
-                send_item_icon(obtItem, env, activity);
+            if (obtItem >= 0) {
+                if (obtItem < 255) {
+                    // Only send if it's a known valid item ID to prevent renderer crash
+                    if (dItem_data::getArcName((u8)obtItem) != nullptr) {
+                        send_item_icon(obtItem, env, activity);
+                    }
+                } else if (obtItem == 0x3001) {
+                    // Send Ougi scroll icon (index 0x3d)
+                    if (dComIfGp_getItemIconArchive()) {
+                        send_generic_icon(0x3001, dComIfGp_getItemIconArchive(), 0x3d, env, activity);
+                    }
+                }
             }
         }
     }
@@ -692,7 +713,15 @@ void hud_update() {
     for (int k = 50; k <= 56; k++) iData[k] = -1;
     u32 bCount = 0; PADButtonMapping* pbm = PADGetButtonMappings(0, &bCount);
     if (pbm) for (u32 j = 0; j < bCount; j++) {
-        switch (pbm[j].padButton) { case PAD_BUTTON_A: iData[50] = pbm[j].nativeButton; break; case PAD_BUTTON_B: iData[51] = pbm[j].nativeButton; break; case PAD_BUTTON_X: iData[52] = pbm[j].nativeButton; break; case PAD_BUTTON_Y: iData[53] = pbm[j].nativeButton; break; case PAD_TRIGGER_Z: iData[54] = pbm[j].nativeButton; break; }
+        switch (pbm[j].padButton) {
+            case PAD_BUTTON_A: iData[50] = pbm[j].nativeButton; break;
+            case PAD_BUTTON_B: iData[51] = pbm[j].nativeButton; break;
+            case PAD_BUTTON_X: iData[52] = pbm[j].nativeButton; break;
+            case PAD_BUTTON_Y: iData[53] = pbm[j].nativeButton; break;
+            case PAD_TRIGGER_Z: iData[54] = pbm[j].nativeButton; break;
+            case PAD_TRIGGER_L: iData[55] = pbm[j].nativeButton; break;
+            case PAD_TRIGGER_R: iData[56] = pbm[j].nativeButton; break;
+        }
     }
 
     Vec pPos = dMapInfo_n::getMapPlayerPos(); const char* sName = dComIfGp_getStartStageName(); std::string fName = sName ? sName : "Unknown";
