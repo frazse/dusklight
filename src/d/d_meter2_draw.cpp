@@ -17,10 +17,12 @@
 #include "d/d_kantera_icon_meter.h"
 #include "d/d_meter_HIO.h"
 #include "d/d_meter2_info.h"
+#include "dusk/android_hud.hpp"
 #include "d/d_msg_class.h"
 #include "d/d_msg_object.h"
 #include "d/d_pane_class.h"
 #include "dusk/frame_interpolation.h"
+#include "dusk/settings.h"
 #include <cstring>
 
 #if TARGET_PC
@@ -619,7 +621,7 @@ void dMeter2Draw_c::exec(u32 i_status) {
         }
     }
 #else
-    if (i_status & 0x1000000) {
+    if (i_status & (0x1000000 | 0x8)) { // Active or Opening/Closing
         if (mButtonsPosX != g_drawHIO.mRingHUDButtonsPosX ||
             mButtonsPosY != g_drawHIO.mRingHUDButtonsPosY)
         {
@@ -638,7 +640,6 @@ void dMeter2Draw_c::exec(u32 i_status) {
         {
             mButtonsPosX = g_drawHIO.mMainHUDButtonsPosX;
             mButtonsPosY = g_drawHIO.mMainHUDButtonsPosY;
-
             mpButtonParent->paneTrans(g_drawHIO.mMainHUDButtonsPosX, g_drawHIO.mMainHUDButtonsPosY);
         }
 
@@ -653,6 +654,35 @@ void dMeter2Draw_c::exec(u32 i_status) {
 void dMeter2Draw_c::draw() {
     J2DGrafContext* graf_ctx = dComIfGp_getCurrentGrafPort();
     graf_ctx->setup2D();
+
+#if defined(TARGET_ANDROID) || defined(__ANDROID__) || defined(ANDROID)
+    if (dusk::android::hud_is_second_screen_active()) {
+        mpLifeParent->hide();
+        mpRupeeKeyParent->hide();
+        mpKeyParent->hide();
+        mpLightDropParent->hide();
+        mpMagicParent->hide();
+        if (mpItemXY[0]) mpItemXY[0]->hide();
+        if (mpItemXY[1]) mpItemXY[1]->hide();
+
+        bool wheel2nd = dusk::getSettings().game.itemWheelOnSecondScreen;
+        u8 winStatus = dMeter2Info_getWindowStatus();
+        if (winStatus == 1 || winStatus == 2) {
+            if (wheel2nd) mpButtonParent->hide(); else mpButtonParent->show();
+        } else {
+            mpButtonParent->hide();
+        }
+    } else {
+        mpLifeParent->show();
+        mpRupeeKeyParent->show();
+        mpKeyParent->show();
+        mpLightDropParent->show();
+        mpMagicParent->show();
+        if (mpItemXY[0]) mpItemXY[0]->show();
+        if (mpItemXY[1]) mpItemXY[1]->show();
+        mpButtonParent->show();
+    }
+#endif
 
 #if TARGET_PC
     const bool touchControlsEnabled = dusk::getSettings().game.enableTouchControls;

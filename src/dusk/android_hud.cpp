@@ -70,13 +70,14 @@ std::string clean_tp_string(const char* input) {
                 switch (number) {
                     case 0x0A: out += "{{A}}"; break;
                     case 0x0B: out += "{{B}}"; break;
-                    case 0x0C: out += "{{STICK}}"; break;
+                    case 0x0C: out += "{{C}}"; break;
                     case 0x0D: out += "{{L}}"; break;
                     case 0x0E: out += "{{R}}"; break;
                     case 0x0F: out += "{{X}}"; break;
                     case 0x10: out += "{{Y}}"; break;
                     case 0x11: out += "{{Z}}"; break;
                     case 0x13: out += "{{STICK}}"; break;
+                    case 0x17: out += "{{LEFT}}"; break;
                     case 0x1C: out += "{{STICK_UD}}"; break;
                     case 0x24: out += "{{RETICLE}}"; break;
                     case 0x2E: out += "{{XORY}}"; break;
@@ -647,6 +648,7 @@ else if (winStatus == 1 || winStatus == 2) {
     iData[102] = dComIfGs_getBombMax(0x71); // dItemNo_WATER_BOMB_e
     iData[103] = dComIfGs_getBombMax(0x72); // dItemNo_POKE_BOMB_e
     iData[104] = getSettings().game.dialogOnSecondScreen.getValue() ? 1 : 0;
+    iData[109] = getSettings().game.itemWheelOnSecondScreen.getValue() ? 1 : 0;
 
     // Horse & Riding State (Spur Fix)
     iData[42] = dMeter2Info_getHorseLifeCount();

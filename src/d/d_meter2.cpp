@@ -369,11 +369,25 @@ int dMeter2_c::_draw() {
         }
     }
 
+#if defined(TARGET_ANDROID) || defined(__ANDROID__) || defined(ANDROID)
+    const bool secondScreen = dusk::android::hud_is_second_screen_active();
+    const bool inRing = (dMeter2Info_getWindowStatus() == 1 || dMeter2Info_getWindowStatus() == 2);
+    const bool wheelOnSecond = dusk::getSettings().game.itemWheelOnSecondScreen;
+
+    if (!secondScreen || (inRing && !wheelOnSecond)) {
+        if (dMeter2Info_getWindowStatus() == 2) {
+            dComIfGd_set2DOpa(mpMeterDraw);
+        } else {
+            dComIfGd_set2DOpaTop(mpMeterDraw);
+        }
+    }
+#else
     if (dMeter2Info_getWindowStatus() == 2) {
         dComIfGd_set2DOpa(mpMeterDraw);
     } else {
         dComIfGd_set2DOpaTop(mpMeterDraw);
     }
+#endif
 
     if (mpEmpButton != NULL) {
         dComIfGd_set2DOpaTop(mpEmpButton);
