@@ -655,35 +655,6 @@ void dMeter2Draw_c::draw() {
     J2DGrafContext* graf_ctx = dComIfGp_getCurrentGrafPort();
     graf_ctx->setup2D();
 
-#if defined(TARGET_ANDROID) || defined(__ANDROID__) || defined(ANDROID)
-    if (dusk::android::hud_is_second_screen_active()) {
-        mpLifeParent->hide();
-        mpRupeeKeyParent->hide();
-        mpKeyParent->hide();
-        mpLightDropParent->hide();
-        mpMagicParent->hide();
-        if (mpItemXY[0]) mpItemXY[0]->hide();
-        if (mpItemXY[1]) mpItemXY[1]->hide();
-
-        bool wheel2nd = dusk::getSettings().game.itemWheelOnSecondScreen;
-        u8 winStatus = dMeter2Info_getWindowStatus();
-        if (winStatus == 1 || winStatus == 2) {
-            if (wheel2nd) mpButtonParent->hide(); else mpButtonParent->show();
-        } else {
-            mpButtonParent->hide();
-        }
-    } else {
-        mpLifeParent->show();
-        mpRupeeKeyParent->show();
-        mpKeyParent->show();
-        mpLightDropParent->show();
-        mpMagicParent->show();
-        if (mpItemXY[0]) mpItemXY[0]->show();
-        if (mpItemXY[1]) mpItemXY[1]->show();
-        mpButtonParent->show();
-    }
-#endif
-
 #if TARGET_PC
     const bool touchControlsEnabled = dusk::getSettings().game.enableTouchControls;
     if (touchControlsEnabled) {

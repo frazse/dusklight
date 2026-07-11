@@ -265,13 +265,28 @@ int dMeter2_c::_execute() {
         g_drawHIO.mKeyPosX            = 1E5f;
         g_drawHIO.mLanternMeterPosX   = 1E5f;
         g_drawHIO.mOxygenMeterPosX    = 1E5f;
+
         g_drawHIO.mMainHUDButtonsPosX = 1E5f;
-        g_drawHIO.mRingHUDButtonsPosX = 1E5f;
+        if (dusk::getSettings().game.itemWheelOnSecondScreen) {
+            g_drawHIO.mRingHUDButtonsPosX = 1E5f;
+        } else {
+            g_drawHIO.mRingHUDButtonsPosX = -15.0f;
+        }
+
         g_drawHIO.mButtonAPosX        = 1E5f;
         g_drawHIO.mButtonBPosX        = 1E5f;
         g_drawHIO.mButtonXPosX        = 1E5f;
         g_drawHIO.mButtonYPosX        = 1E5f;
         g_drawHIO.mButtonZPosX        = 1E5f;
+
+        g_drawHIO.mButtonXItemPosX    = 1E5f;
+        g_drawHIO.mButtonYItemPosX    = 1E5f;
+        g_drawHIO.mButtonZItemPosX    = 1E5f;
+        g_drawHIO.mButtonXYTextPosX   = 1E5f;
+        g_drawHIO.mButtonATextPosX    = 1E5f;
+        g_drawHIO.mButtonBFontPosX    = 1E5f;
+        g_drawHIO.mButtonZFontPosX    = 1E5f;
+
         g_drawHIO.mMidnaIconPosX      = 1E5f;
         g_drawHIO.mSpurBarPosX        = 1E5f;
         g_drawHIO.mButtonCrossOFFPosX = 1E5f;

@@ -320,6 +320,7 @@ public class GameState {
             case 0x52A: return "Portals Off";
             case 0x522: return "Zoom Out";
             case 0x527: return "Zoom In";
+            case 0x4CD: return "Direct Select";
             case 0x90: return "Separate";
             case 0x91: return "Combine";
 

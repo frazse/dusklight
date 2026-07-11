@@ -221,7 +221,12 @@ std::set<u32> s_loadedIcons;
 int s_frameCounter = 0;
 
 void send_item_icon(u32 itemNo, JNIEnv* env, jobject activity) {
-    if (itemNo == 0xFFFFFFFF || itemNo == 0) return;
+    if (itemNo == 0xFFFFFFFF || itemNo == 0xFF || itemNo == 0) return;
+
+    // Safety check: verify item data pointer exists for this ID to prevent renderer crash
+    const char* arc = dItem_data::getArcName((u8)itemNo);
+    if (!arc || !*arc) return;
+
     if (s_loadedIcons.count(itemNo)) return;
     if (!dComIfGp_getItemIconArchive()) return;
 
@@ -396,21 +401,28 @@ void hud_update() {
             // Identify obtained item
             int obtItem = -1;
             if (msgObj->getFukiKind() == 9 || msgID == 0x2a5) {
-                bool bVar5 = false;
-                if (msgID >= 0x645 && msgID <= 0x648) { obtItem = (int)msgID - 0x641; bVar5 = true; }
-                else if (msgID >= 0x8f5 && msgID <= 0x90c) { obtItem = (int)msgID - 0x835; bVar5 = true; }
-                if (!bVar5) obtItem = (int)msgID - 0x65;
+                // Item Get message IDs are typically in the 0x65-0x200 and 0x640+ ranges
+                bool isItemMsg = false;
+                if (msgID >= 0x645 && msgID <= 0x648) { obtItem = (int)msgID - 0x641; isItemMsg = true; }
+                else if (msgID >= 0x8f5 && msgID <= 0x90c) { obtItem = (int)msgID - 0x835; isItemMsg = true; }
+                else if (msgID >= 0x65 && msgID <= 0x200) { obtItem = (int)msgID - 0x65; isItemMsg = true; }
 
-                if (obtItem == 0x240) obtItem = 0x40;
-                else if (obtItem == 0x191e || obtItem == 0x402e) obtItem = 0x46;
-                else if (obtItem == 0x46a || obtItem == 0x46b || obtItem == 0x46c) obtItem = 0xe0;
-                else if (obtItem == 0x1d35) obtItem = 0x21;
-                else if (obtItem == 0x55b || obtItem == 0x55c) obtItem = 0x23;
-                else if (obtItem == 0x6b9 || obtItem == 0x6eb) obtItem = 0x60;
-                if (obtItem == 0xec) obtItem = 0x33;
+                if (isItemMsg) {
+                    if (obtItem == 0x240) obtItem = 0x40;
+                    else if (obtItem == 0x191e || obtItem == 0x402e) obtItem = 0x46;
+                    else if (obtItem == 0x46a || obtItem == 0x46b || obtItem == 0x46c) obtItem = 0xe0;
+                    else if (obtItem == 0x1d35) obtItem = 0x21;
+                    else if (obtItem == 0x55b || obtItem == 0x55c) obtItem = 0x23;
+                    else if (obtItem == 0x6b9 || obtItem == 0x6eb) obtItem = 0x60;
+                    if (obtItem == 0xec) obtItem = 0x33;
+                } else {
+                    obtItem = -1;
+                }
             }
             iData[108] = obtItem;
-            if (obtItem != -1 && obtItem < 256) send_item_icon(obtItem, env, activity);
+            if (obtItem >= 0 && obtItem < 255) {
+                send_item_icon(obtItem, env, activity);
+            }
         }
     }
 

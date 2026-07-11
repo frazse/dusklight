@@ -459,7 +459,7 @@ public class HudView extends View {
                 }
             } else {
                 String name = (mState.itemTitle != null && !mState.itemTitle.isEmpty()) ? mState.itemTitle : 
-                             ((selectedItemId == 0) ? "(Empty Slot)" : getItemName(selectedItemId));
+                             ((selectedItemId == 0) ? "(Empty Slot)" : "Item 0x" + Integer.toHexString(selectedItemId).toUpperCase());
                 canvas.drawText(name, cx, cy + 25, mPaint);
             }
         }
@@ -487,7 +487,7 @@ public class HudView extends View {
             RectF dst = new RectF(x - drawW / 2, y - drawH / 2, x + drawW / 2, y + drawH / 2);
             canvas.drawBitmap(icon, null, dst, mPaint);
         } else {
-            String name = (itemId == 0) ? "(Empty Slot)" : getItemName(itemId);
+            String name = (itemId == 0) ? "(Empty Slot)" : "Item 0x" + Integer.toHexString(itemId).toUpperCase();
             mPaint.setTextAlign(Paint.Align.CENTER);
             mPaint.setTextSize(isSelected ? 36 : 24); 
             mPaint.setColor(isSelected ? Color.WHITE : Color.rgb(180, 180, 180));
@@ -1577,90 +1577,6 @@ public class HudView extends View {
                 mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.WHITE);
                 canvas.drawText(text, lx, ly, mPaint);
             }
-        }
-    }
-
-    private String getItemName(int id) {
-        switch(id) {
-            // Standard Selectable Items (TP Item IDs)
-            case 0x3E: return "Hawkeye";
-            case 0x3F: case 0x40: return "Gale Boomerang";
-            case 0x41: return "Spinner";
-            case 0x42: return "Ball and Chain";
-            case 0x43: return "Hero's Bow";
-            case 0x44: return "Clawshot";
-            case 0x45: return "Iron Boots";
-            case 0x46: case 0x4C: return "Dominion Rod";
-            case 0x47: return "Double Clawshots";
-            case 0x48: return "Lantern";
-            case 0x49: return "Light Sword";
-            case 0x4A: return "Fishing Rod";
-            case 0x4B: return "Slingshot";
-            
-            case 0x4F: case 0x50: return "Bomb Bag";
-            case 0x59: return "Bow & Arrow Combo";
-
-            // Equipment & Quest
-            case 0x01: case 0x28: return "Ordon Sword";
-            case 0x02: case 0x29: return "Master Sword";
-            case 0x03: case 0x2B: return "Ordon Shield";
-            case 0x04: case 0x2A: return "Wooden Shield";
-            case 0x05: case 0x2C: return "Hylian Shield";
-            case 0x0C: case 0x31: return "Zora Armor";
-            case 0x0D: case 0x32: return "Magic Armor";
-            case 0x14: case 0xA1: return "Shadow Crystal";
-            case 0x17: case 0x83: return "Ancient Sky Book";
-            
-            // Bottle Items
-            case 0x60: return "Empty Bottle";
-            case 0x61: return "Red Potion";
-            case 0x62: return "Green Potion";
-            case 0x63: return "Blue Potion";
-            case 0x64: return "Milk";
-            case 0x65: return "Half Milk";
-            case 0x66: case 0x68: case 0x6E: case 0x6F: return "Lantern Oil";
-            case 0x67: return "Water";
-            case 0x69: return "Red Chu Jelly";
-            case 0x6A: return "Nasty Soup";
-            case 0x6B: return "Hot Spring Water";
-            case 0x6C: return "Fairy";
-            
-            // Ammo & Consumables
-            case 0x70: return "Bomb";
-            case 0x71: return "Water Bomb";
-            case 0x72: return "Bombling";
-            case 0x73: return "Fairy Drop";
-            case 0x74: return "Worm";
-            case 0x76: return "Bee Larva";
-            case 0x77: return "Rare Chu Jelly";
-            case 0x78: return "Red Chu Jelly";
-            case 0x79: return "Blue Chu Jelly";
-            case 0x7A: return "Green Chu Jelly";
-            case 0x7B: case 0x9C: return "Yellow Chu Jelly";
-            case 0x7C: return "Purple Chu Jelly";
-            case 0x7D: return "Good Soup";
-            case 0x7E: return "Simple Soup";
-            case 0x7F: return "Superb Soup";
-            
-            // Quest Items
-            case 0x25: case 0x80: return "Ooccoo";
-            case 0x2D: return "Ooccoo's Note";
-            case 0x81: return "Ooccoo Jr.";
-            case 0x82: return "Gate Pass";
-            case 0x84: return "Horse Call";
-            case 0x86: return "Fishing Hole Card";
-            case 0x87: return "Ilia's Charm";
-            case 0x88: return "Wooden Statue";
-            case 0x89: return "Ilia's Memory";
-            case 0x8A: return "Invoice";
-            case 0x8B: return "Ashei's Sketch";
-            case 0x8C: return "Auru's Memo";
-            case 0x8D: return "Cannon Ball";
-            
-            case 0xBD: return "Mirror of Twilight";
-
-            case 0xFF: return "";
-            default: return "Item 0x" + Integer.toHexString(id).toUpperCase();
         }
     }
 
