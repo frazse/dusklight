@@ -65,9 +65,9 @@ public class HudView extends View {
     public HudView(Context context) {
         super(context);
         try {
-            mRodinTypeface = android.graphics.Typeface.createFromAsset(context.getAssets(), "res/Rodin-Regular.ttf");
+            mRodinTypeface = android.graphics.Typeface.createFromAsset(context.getAssets(), "res/MPLUSRounded1c-Medium.ttf");
         } catch (Exception e) {
-            Log.e(TAG, "Failed to load Rodin font: " + e.getMessage());
+            Log.e(TAG, "Failed to load M PLUS font: " + e.getMessage());
             mRodinTypeface = android.graphics.Typeface.DEFAULT;
         }
     }
@@ -556,7 +556,6 @@ public class HudView extends View {
     }
 
     private void drawColorText(Canvas canvas, String line, float x, float y, Paint paint, int defaultColor) {
-        paint.setColor(defaultColor);
         float curX = x;
         int pos = 0;
 
@@ -768,6 +767,7 @@ public class HudView extends View {
         mPaint.setShadowLayer(4, 2, 2, Color.BLACK);
         
         int defaultColor = Color.WHITE;
+        mPaint.setColor(defaultColor); // Set initial color once for the whole box
         float curY;
         if (itemIcon != null) {
             // Stable vertical centering for Item Reveals
@@ -827,6 +827,7 @@ public class HudView extends View {
             mPaint.setTextSize(48);
             mPaint.setShadowLayer(4, 2, 2, Color.BLACK);
             
+            mPaint.setColor(defaultColor); // Reset color for choices
             float optY = cy + cPadding + 52; // Adjusted baseline for 70px line
             for (String line : choiceLines) {
                 String displayLine = resolvePlaceholders(line);
@@ -847,8 +848,8 @@ public class HudView extends View {
                     float textWidth = measureColorText(displayLine, mPaint);
                     Paint.FontMetrics fm = mPaint.getFontMetrics();
                     float textMid = (fm.ascent + fm.descent) / 2;
-                    float indicatorH = 60; // Tighter indicator
-                    // Centered vertically with a slight -3px tweak to move it UP based on your feedback
+                    float indicatorH = 64; 
+                    // Centered vertically with a -10px tweak to move it UP based on your feedback
                     drawSelectionCorners(canvas, optX - 10, optY + textMid - (indicatorH / 2) - 3, textWidth + 20, indicatorH);
                 }
                 

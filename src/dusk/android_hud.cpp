@@ -386,6 +386,7 @@ void hud_update() {
             iData[111] = (int)msgID;
             jmessage_tReference* pRef = (jmessage_tReference*)msgObj->getSequenceProcessor()->getReference();
             if (pRef) {
+                iData[113] = (int)pRef->getLineMax();
                 dialogText = clean_tp_string(pRef->getTextPtr());
                 iData[105] = pRef->getSelectPos();
                 iData[106] = pRef->getSelectNum();
@@ -707,6 +708,7 @@ void hud_update() {
     auto* player = dComIfGp_getLinkPlayer();
     if (player) {
         if (player->checkHorseRide()) stateFlags |= 4;
+        if (player->checkBoarRide()) stateFlags |= 64;
         if (player->checkPlayerFly()) stateFlags |= 32;
     }
     iData[31] = stateFlags;
