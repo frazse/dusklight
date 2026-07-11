@@ -507,16 +507,30 @@ else if (winStatus == 1 || winStatus == 2) {
                     }
                 }
                 dMenu_ItemExplain_c* explain = ring->getItemExplain();
-                if (explain && explain->getStatus() != 0) {
+                if (explain) {
                     u8 slotIdx = ring->getItem(ring->getCurrentSlot(), 0);
                     u8 currentItemNo = (slotIdx != 0xFF) ? dComIfGs_getItem(slotIdx, false) : 0xFF;
 
-                    uint16_t baseDescID = find_item_long_desc_id(currentItemNo);
-                    if (baseDescID == 0xFFFF) baseDescID = explain->getDescMsgID();
+                    if (currentItemNo != 0xFF) {
+                        uint32_t nameID = currentItemNo + 0x165;
+                        // Handle special cases from openExplainDmap
+                        auto* stage = dComIfGp_getStage();
+                        if (stage && dStage_stagInfo_GetSaveTbl(stage->getStagInfo()) == dStage_SaveTbl_LV5 && currentItemNo == 0x23) {
+                            nameID = 0x5bf;
+                        }
+                        if (currentItemNo == 0x25 && dComIfGs_isDungeonItemWarp(0x16)) {
+                            nameID = 0x251;
+                        }
 
-                    char tBuf[256]; dMeter2Info_getString(explain->getNameMsgID(), tBuf, NULL);
-                    itemTitle = clean_tp_string(tBuf);
-                    itemDesc = get_full_multi_line_desc(baseDescID, currentItemNo);
+                        char tBuf[256]; dMeter2Info_getString(nameID, tBuf, NULL);
+                        itemTitle = clean_tp_string(tBuf);
+
+                        if (explain->getStatus() != 0) {
+                            uint16_t baseDescID = find_item_long_desc_id(currentItemNo);
+                            if (baseDescID == 0xFFFF) baseDescID = explain->getDescMsgID();
+                            itemDesc = get_full_multi_line_desc(baseDescID, currentItemNo);
+                        }
+                    }
                 }
             }
         }
