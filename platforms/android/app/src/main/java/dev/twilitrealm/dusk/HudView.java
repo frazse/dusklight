@@ -55,7 +55,10 @@ public class HudView extends View {
         put("{{DOWN}}", 0x2010);
         put("{{STICK_LEFT}}", 0x2011);
         put("{{STICK_RIGHT}}", 0x2012);
-        put("{{FLIPPED_LEFT}}", 0x200D);
+        put("{{ARROW_UP}}", 0x200D);
+        put("{{ARROW_DOWN}}", 0x200D);
+        put("{{STICK_ALL}}", 0x2000);
+        put("{{RETICLE_SPIN}}", 0x2003);
         put("{{RUPEE}}", 0x1010);
         put("{{NEXT}}", 0x2005);
         put("{{BOMBBAG}}", 0x1022);
@@ -518,6 +521,29 @@ public class HudView extends View {
                             canvas.drawText("STICK", curX, y, paint);
                             curX += paint.measureText("STICK");
                         }
+                    } else if ("{{STICK_ALL}}".equals(tag)) {
+                        // \z{600,13} stick animation pointing all ways (2s cycle)
+                        long time = System.currentTimeMillis();
+                        int phase = (int)((time % 2000) / 250);
+                        int iconId = (phase % 2 == 0) ? 0x2000 : 0x2013;
+                        float rotation = (phase / 2) * 90f;
+
+                        android.graphics.Bitmap bmp = mItemIcons.get(iconId);
+                        if (bmp != null) {
+                            paint.setFilterBitmap(true);
+                            float iconH = paint.getTextSize() * 1.3f;
+                            float iconW = iconH * ((float)bmp.getWidth() / bmp.getHeight());
+                            float iconY = y - (iconH * 0.8f);
+                            android.graphics.RectF dst = new android.graphics.RectF(curX, iconY, curX + iconW, iconY + iconH);
+                            
+                            canvas.save();
+                            canvas.rotate(rotation, curX + iconW / 2f, iconY + iconH / 2f);
+                            canvas.drawBitmap(bmp, null, dst, null);
+                            canvas.restore();
+                            
+                            curX += iconW + 4;
+                            invalidate(); // Keep animating
+                        }
                     } else if ("{{DPAD_JUMP}}".equals(tag)) {
                         // Special animation for \z{603,6}: jumping between font_08.bti and font_08_2.bti
                         long time = System.currentTimeMillis();
@@ -536,7 +562,33 @@ public class HudView extends View {
                             canvas.drawText("+", curX, y, paint);
                             curX += paint.measureText("+");
                         }
-                    } else if ("{{FLIPPED_LEFT}}".equals(tag)) {
+                    } else if ("{{RETICLE_SPIN}}".equals(tag)) {
+                        // \z{600,24} CCW spinning yellow/orange reticle (1s cycle)
+                        android.graphics.Bitmap bmp = mItemIcons.get(0x2003); // font_15.bti
+                        if (bmp != null) {
+                            long time = System.currentTimeMillis();
+                            float rotation = -((time % 1000) / 1000f) * 360f;
+                            
+                            paint.setFilterBitmap(true);
+                            int oldColor = paint.getColor();
+                            paint.setColorFilter(new android.graphics.PorterDuffColorFilter(Color.rgb(255, 180, 0), android.graphics.PorterDuff.Mode.SRC_IN));
+                            
+                            float iconH = paint.getTextSize() * 1.3f;
+                            float iconW = iconH * ((float)bmp.getWidth() / bmp.getHeight());
+                            float iconY = y - (iconH * 0.8f);
+                            android.graphics.RectF dst = new android.graphics.RectF(curX, iconY, curX + iconW, iconY + iconH);
+                            
+                            canvas.save();
+                            canvas.rotate(rotation, curX + iconW / 2f, iconY + iconH / 2f);
+                            canvas.drawBitmap(bmp, null, dst, null);
+                            canvas.restore();
+                            
+                            paint.setColorFilter(null);
+                            paint.setColor(oldColor);
+                            curX += iconW + 4;
+                            invalidate();
+                        }
+                    } else if ("{{ARROW_UP}}".equals(tag)) {
                         android.graphics.Bitmap bmp = mItemIcons.get(0x200D); // font_10.bti
                         if (bmp != null) {
                             paint.setFilterBitmap(true);
@@ -550,6 +602,17 @@ public class HudView extends View {
                             canvas.drawBitmap(bmp, null, dst, null);
                             canvas.restore();
                             
+                            curX += iconW + 4;
+                        }
+                    } else if ("{{ARROW_DOWN}}".equals(tag)) {
+                        android.graphics.Bitmap bmp = mItemIcons.get(0x200D); // font_10.bti
+                        if (bmp != null) {
+                            paint.setFilterBitmap(true);
+                            float iconH = paint.getTextSize() * 1.3f;
+                            float iconW = iconH * ((float)bmp.getWidth() / bmp.getHeight());
+                            float iconY = y - (iconH * 0.8f);
+                            android.graphics.RectF dst = new android.graphics.RectF(curX, iconY, curX + iconW, iconY + iconH);
+                            canvas.drawBitmap(bmp, null, dst, null);
                             curX += iconW + 4;
                         }
                     } else {

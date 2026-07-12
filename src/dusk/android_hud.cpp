@@ -67,7 +67,7 @@ std::string clean_tp_string(const char* input) {
                     case 19: out += "{{STICK}}"; break;
                     case 20: out += "{{Z}}"; break;
                 }
-            } else if (group == 0x00 || group == 0x01) { // GC Buttons or Mixed Tags
+            } else if (group == 0x00 || group == 0x06) { // GC Buttons or Mixed Tags
                 switch (number) {
                     case 0x0A: out += "{{A}}"; break;
                     case 0x0B: out += "{{B}}"; break;
@@ -77,11 +77,11 @@ std::string clean_tp_string(const char* input) {
                     case 0x0F: out += "{{X}}"; break;
                     case 0x10: out += "{{Y}}"; break;
                     case 0x11: out += "{{Z}}"; break;
-                    case 0x13: out += "{{STICK}}"; break;
-                    case 0x16: out += "{{FLIPPED_LEFT}}"; break;
-                    case 0x17: out += "{{LEFT}}"; break;
+                    case 0x13: out += "{{STICK_ALL}}"; break;
+                    case 0x16: out += "{{ARROW_UP}}"; break;
+                    case 0x17: out += "{{ARROW_DOWN}}"; break;
                     case 0x1C: out += "{{STICK_UD}}"; break;
-                    case 0x24: out += "{{RETICLE}}"; break;
+                    case 0x24: out += "{{RETICLE_SPIN}}"; break;
                     case 0x2E: out += "{{XORY}}"; break;
                     case 0x37: {
                         if (size >= 6) {
@@ -94,19 +94,11 @@ std::string clean_tp_string(const char* input) {
                     }
                     case 0x38: out += "{{ARROWCAP}}"; break;
                 }
-            } else if (group == 0x07) {
-                switch (number) {
-                    case 0x3700: out += "{{BOMBCAP0}}"; break;
-                    case 0x3701: out += "{{BOMBCAP1}}"; break;
-                    case 0x3702: out += "{{BOMBCAP2}}"; break;
+                if (group == 0x06) {
+                    if (number == 0x0A) out += "- ";
+                    else if (number == 0x0B) out += "  ";
                 }
-            } else if (group == 0x06) {
-                if (number == 0x0A) out += "- ";
-                else if (number == 0x0B) out += "  ";
-                else if (number == 0x16) out += "{{FLIPPED_LEFT}}";
-                else if (number == 0x17) out += "{{LEFT}}";
-                else if (number == 0x1C) out += "{{STICK_UD}}";
-            } else if (group == 0xFF) {
+            } else if (group == 0x07) {
                 if (size == 5) out += "[[C:" + std::to_string(p[4]) + "]]";
                 else if (size >= 6) out += "[[C:" + std::to_string(p[5]) + "]]";
             }
@@ -681,7 +673,7 @@ void hud_update() {
         send_generic_icon(0x200B, main2D, "font_09.bti", env, activity); // Stick Up
         send_generic_icon(0x200C, main2D, "font_09_02.bti", env, activity); // Stick Down
 
-        send_generic_icon(0x200D, main2D, "font_10.bti", env, activity); // Left
+        send_generic_icon(0x200D, main2D, "font_10.bti", env, activity); // Arrow Base
         send_generic_icon(0x200E, main2D, "font_11.bti", env, activity); // Right
         send_generic_icon(0x200F, main2D, "font_12.bti", env, activity); // Up
         send_generic_icon(0x2010, main2D, "font_13.bti", env, activity); // Down
