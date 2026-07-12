@@ -59,6 +59,7 @@ std::string clean_tp_string(const char* input) {
                 switch (number) {
                     case 1:  out += "{{A}}"; break;
                     case 2:  out += "{{B}}"; break;
+                    case 6:  out += "{{DPAD_JUMP}}"; break;
                     case 13: out += "{{L}}"; break;
                     case 14: out += "{{R}}"; break;
                     case 15: out += "{{X}}"; break;
@@ -66,7 +67,7 @@ std::string clean_tp_string(const char* input) {
                     case 19: out += "{{STICK}}"; break;
                     case 20: out += "{{Z}}"; break;
                 }
-            } else if (group == 0x00) { // GC Buttons
+            } else if (group == 0x00 || group == 0x01) { // GC Buttons or Mixed Tags
                 switch (number) {
                     case 0x0A: out += "{{A}}"; break;
                     case 0x0B: out += "{{B}}"; break;
@@ -77,6 +78,7 @@ std::string clean_tp_string(const char* input) {
                     case 0x10: out += "{{Y}}"; break;
                     case 0x11: out += "{{Z}}"; break;
                     case 0x13: out += "{{STICK}}"; break;
+                    case 0x16: out += "{{FLIPPED_LEFT}}"; break;
                     case 0x17: out += "{{LEFT}}"; break;
                     case 0x1C: out += "{{STICK_UD}}"; break;
                     case 0x24: out += "{{RETICLE}}"; break;
@@ -101,6 +103,9 @@ std::string clean_tp_string(const char* input) {
             } else if (group == 0x06) {
                 if (number == 0x0A) out += "- ";
                 else if (number == 0x0B) out += "  ";
+                else if (number == 0x16) out += "{{FLIPPED_LEFT}}";
+                else if (number == 0x17) out += "{{LEFT}}";
+                else if (number == 0x1C) out += "{{STICK_UD}}";
             } else if (group == 0xFF) {
                 if (size == 5) out += "[[C:" + std::to_string(p[4]) + "]]";
                 else if (size >= 6) out += "[[C:" + std::to_string(p[5]) + "]]";
@@ -157,8 +162,9 @@ std::string clean_tp_string(const char* input) {
 }
 
 struct BMGParts { u8* entries; u16 count; u16 entrySize; const char* pool; };
-BMGParts get_bmg_parts() {
-    u8* msgRes = (u8*)JKRGetTypeResource('ROOT', "zel_00.bmg", dComIfGp_getMsgDtArchive(0));
+BMGParts get_bmg_parts(JKRArchive* arc) {
+    if (!arc) return {nullptr, 0, 0, nullptr};
+    u8* msgRes = (u8*)JKRGetTypeResource('ROOT', "zel_00.bmg", arc);
     if (!msgRes || memcmp(msgRes, "MESGbmg1", 8) != 0) return {nullptr, 0, 0, nullptr};
     u32 nSections = be32(*(u32*)(msgRes + 12));
     u8* section = msgRes + 32;
@@ -174,44 +180,84 @@ BMGParts get_bmg_parts() {
 }
 
 u16 find_item_long_desc_id(u8 itemNo) {
-    BMGParts bmg = get_bmg_parts();
-    if (!bmg.entries) return 0xFFFF;
-    u16 bestID = 0xFFFF;
-    for (u16 i = 0; i < bmg.count; i++) {
-        u8* entry = bmg.entries + (i * bmg.entrySize);
-        if (entry[9] == 0x0B && entry[10] == 0x04 && entry[12] == itemNo) {
-            u16 mid = be16(*(u16*)(entry + 4));
-            // IDs < 0x200 are usually short names. Target GC long-descs (0x200-0x400 range).
-            if (mid >= 0x0200 && mid < 0x0800) {
-                if (bestID == 0xFFFF || mid < bestID) bestID = mid;
+    JKRArchive* archives[] = { dComIfGp_getMsgDtArchive(0), dComIfGp_getMsgCommonArchive() };
+    for (auto* arc : archives) {
+        BMGParts bmg = get_bmg_parts(arc);
+        if (!bmg.entries) continue;
+        for (u16 i = 0; i < bmg.count; i++) {
+            u8* entry = bmg.entries + (i * bmg.entrySize);
+            if (entry[9] == 0x0B && entry[10] == 0x04 && entry[12] == itemNo) {
+                u16 mid = be16(*(u16*)(entry + 4));
+                if (mid >= 0x0200 && mid < 0x0800) return mid;
             }
         }
     }
-    return bestID;
+    return 0xFFFF;
 }
 
 std::string get_full_multi_line_desc(u16 baseMsgID, u8 itemNo) {
-    BMGParts bmg = get_bmg_parts();
-    if (!bmg.entries) return "";
-    std::string combined = "";
-    for (int p = 0; p < 8; p++) {
-        u16 targetID = baseMsgID + p;
-        bool found = false;
-        for (u16 i = 0; i < bmg.count; i++) {
-            u8* entry = bmg.entries + (i * bmg.entrySize);
-            if (be16(*(u16*)(entry + 4)) == targetID) {
-                if (entry[12] == itemNo || (p == 0)) {
-                    u32 off = be32(*(u32*)entry);
-                    std::string cleaned = clean_tp_string(bmg.pool + off);
-                    if (!cleaned.empty()) { if (!combined.empty()) combined += "\n"; combined += cleaned; }
-                    found = true;
+    JKRArchive* archives[] = { dComIfGp_getMsgDtArchive(0), dComIfGp_getMsgCommonArchive() };
+    for (auto* arc : archives) {
+        BMGParts bmg = get_bmg_parts(arc);
+        if (!bmg.entries) continue;
+        std::string combined = "";
+        for (int p = 0; p < 8; p++) {
+            u16 targetID = baseMsgID + p;
+            bool found = false;
+            for (u16 i = 0; i < bmg.count; i++) {
+                u8* entry = bmg.entries + (i * bmg.entrySize);
+                if (be16(*(u16*)(entry + 4)) == targetID) {
+                    if (entry[12] == itemNo || (p == 0)) {
+                        u32 off = be32(*(u32*)entry);
+                        std::string cleaned = clean_tp_string(bmg.pool + off);
+                        if (!cleaned.empty()) { if (!combined.empty()) combined += "\n"; combined += cleaned; }
+                        found = true;
+                    }
+                    break;
                 }
-                break;
+            }
+            if (!found) break;
+        }
+        if (!combined.empty()) return combined;
+    }
+    return "";
+}
+
+int count_lines_for_id(u16 msgID) {
+    for (int i = 0; i < 7; i++) {
+        BMGParts bmg = get_bmg_parts(dComIfGp_getMsgArchive(i));
+        if (!bmg.entries) continue;
+        for (u16 j = 0; j < bmg.count; j++) {
+            u8* entry = bmg.entries + (j * bmg.entrySize);
+            if (be16(*(u16*)(entry + 4)) == msgID) {
+                u32 off = be32(*(u32*)entry);
+                const char* str = bmg.pool + off;
+                int lines = 1;
+                while (*str) {
+                    if (*str == 0x0A || *str == 0x0D || *str == 0x1E) lines++;
+                    str++;
+                }
+                return lines;
             }
         }
-        if (!found) break;
     }
-    return combined;
+    BMGParts bmgCommon = get_bmg_parts(dComIfGp_getMsgCommonArchive());
+    if (bmgCommon.entries) {
+        for (u16 j = 0; j < bmgCommon.count; j++) {
+            u8* entry = bmgCommon.entries + (j * bmgCommon.entrySize);
+            if (be16(*(u16*)(entry + 4)) == msgID) {
+                u32 off = be32(*(u32*)entry);
+                const char* str = bmgCommon.pool + off;
+                int lines = 1;
+                while (*str) {
+                    if (*str == 0x0A || *str == 0x0D || *str == 0x1E) lines++;
+                    str++;
+                }
+                return lines;
+            }
+        }
+    }
+    return 0;
 }
 
 bool clear_pending_exception(JNIEnv* env) { if (env == nullptr || !env->ExceptionCheck()) return false; env->ExceptionClear(); return true; }
@@ -386,7 +432,7 @@ void hud_update() {
             iData[111] = (int)msgID;
             jmessage_tReference* pRef = (jmessage_tReference*)msgObj->getSequenceProcessor()->getReference();
             if (pRef) {
-                iData[113] = (int)pRef->getLineMax();
+                iData[113] = count_lines_for_id(msgID);
                 dialogText = clean_tp_string(pRef->getTextPtr());
                 iData[105] = pRef->getSelectPos();
                 iData[106] = pRef->getSelectNum();
@@ -622,6 +668,7 @@ void hud_update() {
         send_generic_icon(0x2000, main2D, "font_07_01.bti", env, activity); // Stick
         send_generic_icon(0x2001, main2D, "font_09.bti", env, activity, {0,0,0,0}, gcnC); // C-Stick
         send_generic_icon(0x2002, main2D, "font_08.bti", env, activity); // D-Pad
+        send_generic_icon(0x2014, main2D, "font_08_2.bti", env, activity); // D-Pad Jump
         send_generic_icon(0x2003, main2D, "font_15.bti", env, activity); // Reticle
 
         send_generic_icon(0x2004, main2D, "font_00.bti", env, activity, {0,0,0,0}, gcnA); // A
@@ -631,7 +678,7 @@ void hud_update() {
         send_generic_icon(0x2008, main2D, "font_06.bti", env, activity, {0,0,0,0}, gcnZ); // Z
         send_generic_icon(0x2009, main2D, "font_04.bti", env, activity, {0,0,0,0}, gcnGrey); // L
         send_generic_icon(0x200A, main2D, "font_05.bti", env, activity, {0,0,0,0}, gcnGrey); // R
-        send_generic_icon(0x200B, main2D, "font_09_01.bti", env, activity); // Stick Up
+        send_generic_icon(0x200B, main2D, "font_09.bti", env, activity); // Stick Up
         send_generic_icon(0x200C, main2D, "font_09_02.bti", env, activity); // Stick Down
 
         send_generic_icon(0x200D, main2D, "font_10.bti", env, activity); // Left
@@ -641,6 +688,7 @@ void hud_update() {
 
         send_generic_icon(0x2011, main2D, "font_14.bti", env, activity); // Stick Left
         send_generic_icon(0x2012, main2D, "font_15.bti", env, activity); // Stick Right
+        send_generic_icon(0x2013, main2D, "font_07_02.bti", env, activity); // Stick tilted
 
         // Selection Cursor (4 parts corner)
         send_generic_icon(0x3000, main2D, "im_select_cursor_4parts_pikapika_try05_00_40x40_gre.bti", env, activity);
@@ -655,7 +703,7 @@ void hud_update() {
             send_generic_icon(0x4003, mapArc, "tt_map_icon_link_s_ci8_24_00.bti", env, activity);
             send_generic_icon(0x4004, mapArc, "tt_block8x8.bti", env, activity);
             send_generic_icon(0x4005, mapArc, "tt_map_icon_s_size_circle_ci4_yellow_00.bti", env, activity);
-            send_generic_icon(0x4006, mapArc, "tt_map_icon_s_size_circle_ci4_blue_00.bti", env, activity);
+            send_generic_icon(0x4006, mapArc, "tt_map_icon_s_size_circle_ci4_00.bti", env, activity);
             send_generic_icon(0x4007, mapArc, "im_map_icon_enter_ci8_24_02.bti", env, activity);
             send_generic_icon(0x4008, mapArc, "im_map_icon_nijumaru_ci8_24_02.bti", env, activity);
         }

@@ -1,0 +1,37 @@
+// Authoritative Stick Animation Logic for Dialog Tag \z{600,1c} ({{STICK_UD}})
+// This code goes inside the icon handling part of drawColorText in HudView.java
+
+if ("{{STICK_UD}}".equals(tag)) {
+    // 1-second looping animation (4 phases, 250ms each)
+    // Sequence: Neutral -> Tilted CW -> Neutral -> Tilted CCW
+    long time = System.currentTimeMillis();
+    int phase = (int)((time % 1000) / 250);
+
+    // font_07_01.bti is Neutral (0x2000), font_07_02.bti is Tilted (0x2013)
+    int iconId = (phase % 2 == 0) ? 0x2000 : 0x2013;
+    float rotation = 0;
+    if (phase == 1) rotation = 90;
+    else if (phase == 3) rotation = -90;
+
+    android.graphics.Bitmap bmp = mItemIcons.get(iconId);
+    if (bmp != null) {
+        float iconH = paint.getTextSize() * 1.3f;
+        float iconW = iconH * ((float)bmp.getWidth() / bmp.getHeight());
+        float iconY = y - (iconH * 0.8f);
+        android.graphics.RectF dst = new android.graphics.RectF(curX, iconY, curX + iconW, iconY + iconH);
+
+        canvas.save();
+        if (rotation != 0) {
+            canvas.rotate(rotation, curX + iconW / 2f, iconY + iconH / 2f);
+        }
+        paint.setFilterBitmap(true); // Ensure smooth rendering during animation
+        canvas.drawBitmap(bmp, null, dst, null);
+        canvas.restore();
+
+        curX += iconW + 4;
+        invalidate(); // Trigger re-draw for the next frame of animation
+    } else {
+        canvas.drawText("STICK", curX, y, paint);
+        curX += paint.measureText("STICK");
+    }
+}

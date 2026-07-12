@@ -242,7 +242,7 @@ public class GameState {
             case 0x44: return "Slap";
             case 0x45: return (wolfForm != 0) ? "Sniff" : "";
             case 0x46: return (wolfForm != 0) ? "Bite" : "";
-            case 0x47: return (wolfForm != 0 || isRiding) ? "Dash" : "Roll";
+            case 0x47: return (wolfForm != 0 || isRiding || isBoarRiding) ? "Dash" : "Roll";
             case 0x48: return "Fasten";
             case 0x49: return "Get Down";
             case 0x4A: return "Hawkeye Off";
@@ -291,7 +291,7 @@ public class GameState {
             case 0x76: return "Rotate";
             case 0x77: return "Helm Splitter";
             case 0x78: return "Move";
-            case 0x79: return (wolfForm != 0 || isRiding) ? "Dash" : "Roll";
+            case 0x79: return (wolfForm != 0 || isRiding || isBoarRiding) ? "Dash" : "Roll";
             case 0x7A: return "Hold On";
             case 0x7C: return "Help";
             case 0x7D: return "Zoom In";
@@ -325,6 +325,8 @@ public class GameState {
             case 0x4CD: return "Direct Select";
             case 0x90: return "Separate";
             case 0x91: return "Combine";
+            case 0x3F1: return "Dash";
+            case 0x42D: return "Dash";
 
             default: return "ID: 0x" + Integer.toHexString(id).toUpperCase();
         }

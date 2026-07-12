@@ -55,6 +55,7 @@ public class HudView extends View {
         put("{{DOWN}}", 0x2010);
         put("{{STICK_LEFT}}", 0x2011);
         put("{{STICK_RIGHT}}", 0x2012);
+        put("{{FLIPPED_LEFT}}", 0x200D);
         put("{{RUPEE}}", 0x1010);
         put("{{NEXT}}", 0x2005);
         put("{{BOMBBAG}}", 0x1022);
@@ -67,7 +68,7 @@ public class HudView extends View {
         try {
             mRodinTypeface = android.graphics.Typeface.createFromAsset(context.getAssets(), "res/MPLUSRounded1c-Medium.ttf");
         } catch (Exception e) {
-            Log.e(TAG, "Failed to load M PLUS font: " + e.getMessage());
+            Log.e(TAG, "Failed to load authoritative font: " + e.getMessage());
             mRodinTypeface = android.graphics.Typeface.DEFAULT;
         }
     }
@@ -256,135 +257,6 @@ public class HudView extends View {
             mPaint.setColorFilter(new android.graphics.PorterDuffColorFilter(Color.GRAY, android.graphics.PorterDuff.Mode.SRC_IN));
         }
         canvas.drawBitmap(icon, null, dst, mPaint);
-    }
-
-    private void drawZeldaBossKey(Canvas canvas, float cx, float cy, float size, boolean collected) {
-        canvas.save();
-        float scale = size / 48f;
-        canvas.translate(cx, cy);
-        canvas.scale(scale, scale);
-        canvas.translate(-24, -24);
-
-        if (!collected) {
-            resetPaint();
-            mPaint.setColor(Color.argb(60, 100, 100, 100));
-            // Unified silhouette derived from the provided SVG code (Single-Pass drawing)
-            Path p = new Path();
-            p.moveTo(35, 0); 
-            p.cubicTo(35.33f, 0.99f, 35.66f, 1.98f, 36, 3);
-            p.cubicTo(35.67f, 3.66f, 35.34f, 4.32f, 35, 5); 
-            p.cubicTo(36.485f, 5.495f, 36.485f, 5.495f, 38, 6);
-            p.cubicTo(39.192f, 17.032f, 39.192f, 17.032f, 38, 22); 
-            p.cubicTo(35.779f, 24.31f, 33.577f, 25.396f, 30.75f, 26.882f);
-            p.cubicTo(25.761f, 30.723f, 23.973f, 36.653f, 21.593f, 42.332f); 
-            p.cubicTo(20, 46, 20, 46, 18, 48);
-            p.cubicTo(15.722f, 48.046f, 15.722f, 48.046f, 13.062f, 47.75f); 
-            p.cubicTo(12.187f, 47.662f, 11.312f, 47.574f, 10.41f, 47.484f);
-            p.cubicTo(8, 47, 8, 47, 5, 45); 
-            p.cubicTo(4, 43.25f, 4, 43.25f, 4, 41);
-            p.cubicTo(5.22f, 39.581f, 6.447f, 38.166f, 7.718f, 36.792f); 
-            p.cubicTo(10.008f, 33.588f, 10.429f, 29.831f, 11, 26);
-            p.cubicTo(13.333f, 26, 15.666f, 26, 18, 26); 
-            p.cubicTo(17.86f, 25.128f, 17.721f, 24.257f, 17.578f, 23.359f);
-            p.cubicTo(17.057f, 17.636f, 16.811f, 13.035f, 20.496f, 8.398f); 
-            p.cubicTo(21.531f, 7.28f, 22.596f, 6.188f, 23.687f, 5.125f);
-            p.cubicTo(24.216f, 4.607f, 24.746f, 4.09f, 25.291f, 3.557f); 
-            p.cubicTo(28.512f, 0.68f, 30.654f, -0.661f, 35, 0); 
-            p.close();
-            canvas.drawPath(p, mPaint);
-        } else {
-            // Detailed drawing with separate handle and teeth colors
-            Path p1 = new Path();
-            p1.moveTo(35, 0); p1.cubicTo(35.33f, 0.99f, 35.66f, 1.98f, 36, 3);
-            p1.cubicTo(35.67f, 3.66f, 35.34f, 4.32f, 35, 5); p1.cubicTo(36.485f, 5.495f, 36.485f, 5.495f, 38, 6);
-            p1.cubicTo(39.192f, 17.032f, 39.192f, 17.032f, 38, 22); p1.cubicTo(35.779f, 24.31f, 33.577f, 25.396f, 30.75f, 26.882f);
-            p1.cubicTo(25.761f, 30.723f, 23.973f, 36.653f, 21.593f, 42.332f); p1.cubicTo(20, 46, 20, 46, 18, 48);
-            p1.cubicTo(15.722f, 48.046f, 15.722f, 48.046f, 13.062f, 47.75f); p1.cubicTo(12.187f, 47.662f, 11.312f, 47.574f, 10.41f, 47.484f);
-            p1.cubicTo(8, 47, 8, 47, 5, 45); p1.cubicTo(4, 43.25f, 4, 43.25f, 4, 41);
-            p1.cubicTo(5.22f, 39.581f, 6.447f, 38.166f, 7.718f, 36.792f); p1.cubicTo(10.008f, 33.588f, 10.429f, 29.831f, 11, 26);
-            p1.cubicTo(13.333f, 26, 15.666f, 26, 18, 26); p1.cubicTo(17.86f, 25.128f, 17.721f, 24.257f, 17.578f, 23.359f);
-            p1.cubicTo(17.057f, 17.636f, 16.811f, 13.035f, 20.496f, 8.398f); p1.cubicTo(21.531f, 7.28f, 22.596f, 6.188f, 23.687f, 5.125f);
-            p1.cubicTo(24.216f, 4.607f, 24.746f, 4.09f, 25.291f, 3.557f); p1.cubicTo(28.512f, 0.68f, 30.654f, -0.661f, 35, 0); p1.close();
-
-            Path p3 = new Path();
-            p3.moveTo(22, 27); p3.lineTo(24, 27); p3.lineTo(24, 29); p3.lineTo(27, 29);
-            p3.lineTo(22, 48); p3.lineTo(13, 47.6f); p3.lineTo(10.3f, 47.4f); p3.lineTo(6, 45);
-            p3.lineTo(8, 44); p3.lineTo(8, 42); p3.lineTo(10, 42); p3.lineTo(10, 40); p3.lineTo(14, 41);
-            p3.lineTo(14, 40); p3.lineTo(12, 39); p3.lineTo(12, 37); p3.lineTo(16, 36); p3.lineTo(13, 36);
-            p3.lineTo(14, 30); p3.lineTo(19, 32); p3.lineTo(20, 31); p3.lineTo(22, 27); p3.close();
-
-            resetPaint();
-            mPaint.setColor(Color.parseColor("#25150A"));
-            canvas.drawPath(p1, mPaint);
-            mPaint.setColor(Color.parseColor("#605F5E"));
-            canvas.drawPath(p3, mPaint);
-        }
-
-        canvas.restore();
-    }
-
-    private void drawZeldaCompass(Canvas canvas, float cx, float cy, float size, boolean collected) {
-        canvas.save();
-        float scale = size / 48f;
-        canvas.translate(cx, cy);
-        canvas.scale(scale, scale);
-        canvas.translate(-24, -24);
-
-        Path p1 = new Path();
-        p1.moveTo(42, 7); p1.cubicTo(42.8f, 7.68f, 43.6f, 8.36f, 44.43f, 9.06f);
-        p1.cubicTo(47.78f, 13.21f, 47.21f, 18.82f, 47.25f, 23.93f); p1.cubicTo(47.27f, 24.62f, 47.29f, 25.31f, 47.31f, 26.02f);
-        p1.cubicTo(47.35f, 31.84f, 46.05f, 35.75f, 42.13f, 40.04f); p1.cubicTo(41.47f, 40.6f, 40.8f, 41.17f, 40.12f, 41.75f);
-        p1.cubicTo(39.46f, 42.32f, 38.81f, 42.89f, 38.13f, 43.48f); p1.cubicTo(31.67f, 48.07f, 24.63f, 47.67f, 17, 47);
-        p1.cubicTo(11.1f, 45.53f, 7.54f, 42.08f, 4.18f, 37.12f); p1.cubicTo(0.44f, 30.43f, 0.06f, 22.49f, 1, 15);
-        p1.cubicTo(3.13f, 8.52f, 7.76f, 5.27f, 13.59f, 2.12f); p1.cubicTo(23.48f, -2.5f, 34.29f, -0.35f, 42, 7); p1.close();
-
-        if (!collected) {
-            resetPaint();
-            mPaint.setColor(Color.argb(60, 100, 100, 100));
-            canvas.drawPath(p1, mPaint);
-        } else {
-            resetPaint();
-            mPaint.setColor(Color.parseColor("#604F37"));
-            canvas.drawPath(p1, mPaint);
-            Path p2 = new Path();
-            p2.moveTo(34, 1); p2.lineTo(42, 7); p2.lineTo(47.25f, 23.93f); p2.lineTo(42.13f, 40.04f);
-            p2.lineTo(38.13f, 43.48f); p2.lineTo(24, 47.25f); p2.lineTo(12, 47.26f); p2.lineTo(34, 1); p2.close();
-            mPaint.setColor(Color.parseColor("#392518"));
-            canvas.drawPath(p2, mPaint);
-        }
-
-        canvas.restore();
-    }
-
-    private void drawZeldaMap(Canvas canvas, float cx, float cy, float size, boolean collected) {
-        canvas.save();
-        float scale = size / 56f;
-        canvas.translate(cx, cy);
-        canvas.scale(scale, scale);
-        canvas.translate(-28, -23.5f);
-
-        Path p1 = new Path();
-        p1.moveTo(11.43f, 3.25f); p1.cubicTo(12.92f, 3.68f, 14.41f, 4.13f, 15.9f, 4.6f);
-        p1.cubicTo(18.32f, 5.06f, 19.64f, 4.72f, 22, 4.06f); p1.cubicTo(27.48f, 2.85f, 32.84f, 2.77f, 38.43f, 2.75f);
-        p1.lineTo(51, 5); p1.lineTo(50, 20); p1.lineTo(56, 20); p1.lineTo(56, 24); p1.lineTo(48, 29);
-        p1.lineTo(48, 44); p1.lineTo(11.43f, 40.75f); p1.lineTo(0, 38); p1.lineTo(3.3f, 16); p1.lineTo(11.43f, 3.25f); p1.close();
-
-        if (!collected) {
-            resetPaint();
-            mPaint.setColor(Color.argb(60, 100, 100, 100));
-            canvas.drawPath(p1, mPaint);
-        } else {
-            resetPaint();
-            mPaint.setColor(Color.parseColor("#60544A"));
-            canvas.drawPath(p1, mPaint);
-            Path p2 = new Path();
-            p2.moveTo(38, 8); p2.cubicTo(40.96f, 11.12f, 41.38f, 13.31f, 41.31f, 17.56f);
-            p2.lineTo(39, 35); p2.lineTo(21.8f, 37); p2.lineTo(10.8f, 33.7f); p2.lineTo(14, 13); p2.lineTo(38, 8); p2.close();
-            mPaint.setColor(Color.parseColor("#736C56"));
-            canvas.drawPath(p2, mPaint);
-        }
-
-        canvas.restore();
     }
 
     private void drawRingMenu(Canvas canvas, float cx, float cy) {
@@ -614,14 +486,45 @@ public class HudView extends View {
                 if (endIdx != -1) {
                     String tag = line.substring(pos, endIdx + 2);
                     if ("{{STICK_UD}}".equals(tag)) {
-                        // Animate between 0x200B and 0x200C
+                        // Special authoritative animation for \z{600,1c}
+                        // Sequence: neutral (0x2000) -> tilted (0x2013) CW -> neutral -> tilted CCW
                         long time = System.currentTimeMillis();
-                        int iconId = ((time / 500) % 2 == 0) ? 0x200B : 0x200C;
+                        int phase = (int)((time % 1000) / 250);
+                        int iconId = (phase % 2 == 0) ? 0x2000 : 0x2013;
+                        float rotation = 0;
+                        if (phase == 1) rotation = 90;
+                        else if (phase == 3) rotation = -90;
+
                         android.graphics.Bitmap bmp = mItemIcons.get(iconId);
-                        if (bmp == null) bmp = mItemIcons.get(0x200B); // Fallback
-                        if (bmp == null) bmp = mItemIcons.get(0x200C); // Fallback
-                        
                         if (bmp != null) {
+                            paint.setFilterBitmap(true);
+                            float iconH = paint.getTextSize() * 1.3f;
+                            float iconW = iconH * ((float)bmp.getWidth() / bmp.getHeight());
+                            float iconY = y - (iconH * 0.8f);
+                            android.graphics.RectF dst = new android.graphics.RectF(curX, iconY, curX + iconW, iconY + iconH);
+                            
+                            if (rotation != 0) {
+                                canvas.save();
+                                canvas.rotate(rotation, curX + iconW / 2f, iconY + iconH / 2f);
+                                canvas.drawBitmap(bmp, null, dst, null);
+                                canvas.restore();
+                            } else {
+                                canvas.drawBitmap(bmp, null, dst, null);
+                            }
+                            
+                            curX += iconW + 4;
+                            invalidate(); // Keep animating
+                        } else {
+                            canvas.drawText("STICK", curX, y, paint);
+                            curX += paint.measureText("STICK");
+                        }
+                    } else if ("{{DPAD_JUMP}}".equals(tag)) {
+                        // Special animation for \z{603,6}: jumping between font_08.bti and font_08_2.bti
+                        long time = System.currentTimeMillis();
+                        int iconId = ((time / 250) % 2 == 0) ? 0x2002 : 0x2014;
+                        android.graphics.Bitmap bmp = mItemIcons.get(iconId);
+                        if (bmp != null) {
+                            paint.setFilterBitmap(true);
                             float iconH = paint.getTextSize() * 1.3f;
                             float iconW = iconH * ((float)bmp.getWidth() / bmp.getHeight());
                             float iconY = y - (iconH * 0.8f);
@@ -630,14 +533,31 @@ public class HudView extends View {
                             curX += iconW + 4;
                             invalidate(); // Keep animating
                         } else {
-                            canvas.drawText("UD", curX, y, paint);
-                            curX += paint.measureText("UD");
+                            canvas.drawText("+", curX, y, paint);
+                            curX += paint.measureText("+");
+                        }
+                    } else if ("{{FLIPPED_LEFT}}".equals(tag)) {
+                        android.graphics.Bitmap bmp = mItemIcons.get(0x200D); // font_10.bti
+                        if (bmp != null) {
+                            paint.setFilterBitmap(true);
+                            float iconH = paint.getTextSize() * 1.3f;
+                            float iconW = iconH * ((float)bmp.getWidth() / bmp.getHeight());
+                            float iconY = y - (iconH * 0.8f);
+                            android.graphics.RectF dst = new android.graphics.RectF(curX, iconY, curX + iconW, iconY + iconH);
+                            
+                            canvas.save();
+                            canvas.scale(1, -1, curX + iconW / 2f, iconY + iconH / 2f);
+                            canvas.drawBitmap(bmp, null, dst, null);
+                            canvas.restore();
+                            
+                            curX += iconW + 4;
                         }
                     } else {
                         Integer iconId = PLACEHOLDER_TO_ICON.get(tag);
                         if (iconId != null) {
                             android.graphics.Bitmap bmp = mItemIcons.get(iconId);
                             if (bmp != null) {
+                                paint.setFilterBitmap(true);
                                 float iconH = paint.getTextSize() * 1.3f;
                                 float iconW = iconH * ((float)bmp.getWidth() / bmp.getHeight());
                                 float iconY = y - (iconH * 0.8f);
@@ -929,7 +849,7 @@ public class HudView extends View {
                             mPaint.setStyle(Paint.Style.FILL_AND_STROKE); mPaint.setStrokeWidth(0.8f);
                             if (pId == 5) mPaint.setColor(colorWater);
                             else if (pId == 6 || pId == 7) mPaint.setColor(colorHazard);
-                            else if (pId == 2) mPaint.setColor(Color.rgb(255, 128, 0)); // Debug Orange
+                            else if (pId == 2) mPaint.setColor(Color.BLACK); // Empty / Floor Above
                             else if (pId == 0 || pId == 1) mPaint.setColor(colorTerrain);
                             else if (pId == 4) mPaint.setColor(Color.parseColor("#424242")); // Sand
                             else {
@@ -1023,8 +943,6 @@ public class HudView extends View {
             canvas.scale(1, -1); // Flip vertically
             canvas.rotate(180 + interAngle);
             RectF dst = new RectF(-22, -22, 22, 22); // 44px icon
-            resetPaint();
-            mPaint.setFilterBitmap(true); // Smooth sub-pixel centering
             canvas.drawBitmap(linkIcon, null, dst, mPaint);
             canvas.restore();
         } else {
