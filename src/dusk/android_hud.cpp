@@ -778,6 +778,11 @@ void hud_update() {
     }
     fData[3]=miX; fData[4]=miZ; fData[5]=maX; fData[6]=maZ;
     for (int g = 0; g < 17; g++) { for (auto* d = dTres_c::getFirstData(g); d; d = dTres_c::getNextData(d)) { if (should_draw_icon(g, d, stayNo, floor, sName)) { icons.push_back((float)g); icons.push_back(d->mPos.x); icons.push_back(d->mPos.z); icons.push_back((float)d->mRoomNo); } } }
+    struct Door {
+        float x, z, angle;
+        int r0, r1;
+    };
+    std::vector<Door> all_doors;
     auto ad = [&](dStage_KeepDoorInfo* in) {
         if (!in) return;
         for (int i = 0; i < in->mNum; i++) {
@@ -787,14 +792,41 @@ void hud_update() {
             if (dMapInfo_c::calcFloorNo(dr.base.position.y, true, r0) != floor &&
                 dMapInfo_c::calcFloorNo(dr.base.position.y, true, r1) != floor) continue;
             if (is_room_visible(r0, sName, stayNo, iData[48]) || is_room_visible(r1, sName, stayNo, iData[48])) {
-                doors.push_back(dr.base.position.x);
-                doors.push_back(dr.base.position.z);
-                doors.push_back((float)dr.base.angle.y * (180.0f / 32768.0f));
-                doors.push_back(0);
+                all_doors.push_back({dr.base.position.x, dr.base.position.z, (float)dr.base.angle.y * (180.0f / 32768.0f), r0, r1});
             }
         }
     };
-    ad(dStage_GetKeepDoorInfo()); ad(dStage_GetRoomKeepDoorInfo());
+    ad(dStage_GetKeepDoorInfo());
+    ad(dStage_GetRoomKeepDoorInfo());
+
+    // Pair doors connecting the same rooms and average their position
+    std::vector<bool> used(all_doors.size(), false);
+    for (size_t i = 0; i < all_doors.size(); i++) {
+        if (used[i]) continue;
+        Door& d1 = all_doors[i];
+        bool paired = false;
+        for (size_t j = i + 1; j < all_doors.size(); j++) {
+            if (used[j]) continue;
+            Door& d2 = all_doors[j];
+            if (((d1.r0 == d2.r0 && d1.r1 == d2.r1) || (d1.r0 == d2.r1 && d1.r1 == d2.r0)) &&
+                hypotf(d1.x - d2.x, d1.z - d2.z) < 400.0f) {
+                doors.push_back((d1.x + d2.x) / 2.0f);
+                doors.push_back((d1.z + d2.z) / 2.0f);
+                doors.push_back(d1.angle);
+                doors.push_back(0);
+                used[j] = true;
+                paired = true;
+                break;
+            }
+        }
+        if (!paired) {
+            doors.push_back(d1.x);
+            doors.push_back(d1.z);
+            doors.push_back(d1.angle);
+            doors.push_back(0);
+        }
+        used[i] = true;
+    }
 
     jstring jS = env->NewStringUTF(fName.c_str()); jstring jT = env->NewStringUTF(itemTitle.c_str()); jstring jDe = env->NewStringUTF(itemDesc.c_str()); jstring jDT = env->NewStringUTF(dialogText.c_str());
     jintArray jInts = env->NewIntArray(120); env->SetIntArrayRegion(jInts, 0, 120, iData); jfloatArray jF = env->NewFloatArray(14); env->SetFloatArrayRegion(jF, 0, 14, fData);

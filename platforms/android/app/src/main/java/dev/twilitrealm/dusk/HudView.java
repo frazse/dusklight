@@ -1043,11 +1043,9 @@ public class HudView extends View {
     private void drawMapPointer(Canvas canvas, float x, float y, float angle, int color) {
         canvas.save();
         canvas.translate(x, y);
-        canvas.scale(1, -1); // Flip vertically
-        canvas.rotate(180 + angle); 
         mPaint.setStyle(Paint.Style.FILL);
         mPaint.setColor(color);
-        // South-pointing triangle locally (Tip at 0, -22) - matches Link icon orientation
+        // Simple North-pointing triangle (Tip at 0, -22), no rotation or flipping per your request
         mDrawPath.reset();
         mDrawPath.moveTo(0, -22);
         mDrawPath.lineTo(-13, 13);
@@ -1065,11 +1063,11 @@ public class HudView extends View {
             canvas.rotate(180 - angle);
             resetPaint();
             mPaint.setFilterBitmap(true);
-            // Draw a slightly larger, darker outline for the authoritative look
+            // Draw a slightly larger, darker outline for the authoritative look (24x24)
             mPaint.setColor(Color.rgb(16, 16, 16));
-            canvas.drawRect(-8f, -8f, 8f, 8f, mPaint);
-            // Draw the authoritative texture on top
-            RectF dst = new RectF(-6, -6, 6, 6);
+            canvas.drawRect(-12f, -12f, 12f, 12f, mPaint);
+            // Draw the authoritative texture on top (18x18 - 50% bigger than 12x12)
+            RectF dst = new RectF(-9, -9, 9, 9);
             canvas.drawBitmap(doorIcon, null, dst, mPaint);
             canvas.restore();
         } else {
