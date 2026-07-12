@@ -995,13 +995,41 @@ public class HudView extends View {
             }
         }
         
-        // Restart / Entrance Marker (Cyan)
+        // Restart / Entrance Marker (Native Entrance Icon)
         if (mState.showRestart) {
-            drawMapPointer(canvas, cX + (mState.restartX - sCX) * mS, cY + (mState.restartY - sCZ) * mS, mState.restartAngle, Color.CYAN);
+            Bitmap enterIcon = mItemIcons.get(0x4002);
+            float ex = cX + (mState.restartX - sCX) * mS;
+            float ey = cY + (mState.restartY - sCZ) * mS;
+            if (enterIcon != null) {
+                canvas.save();
+                canvas.translate(ex, ey);
+                canvas.scale(1, -1); // Flip vertically
+                canvas.rotate(180 + mState.restartAngle);
+                RectF dst = new RectF(-20, -20, 20, 20);
+                canvas.drawBitmap(enterIcon, null, dst, mPaint);
+                canvas.restore();
+            } else {
+                drawMapPointer(canvas, ex, ey, mState.restartAngle, Color.CYAN);
+            }
         }
 
-        // Player Marker (Yellow)
-        drawMapPointer(canvas, cX + (interX - sCX) * mS, cY + (interY - sCZ) * mS, interAngle, Color.YELLOW);
+        // Player Marker (Native Link Head)
+        Bitmap linkIcon = mItemIcons.get(0x4003);
+        float px = cX + (interX - sCX) * mS;
+        float py = cY + (interY - sCZ) * mS;
+        if (linkIcon != null) {
+            canvas.save();
+            canvas.translate(px, py);
+            canvas.scale(1, -1); // Flip vertically
+            canvas.rotate(180 + interAngle);
+            RectF dst = new RectF(-22, -22, 22, 22); // 44px icon
+            resetPaint();
+            mPaint.setFilterBitmap(true); // Smooth sub-pixel centering
+            canvas.drawBitmap(linkIcon, null, dst, mPaint);
+            canvas.restore();
+        } else {
+            drawMapPointer(canvas, px, py, interAngle, Color.YELLOW);
+        }
         
         canvas.restore();
         resetPaint(); mPaint.setTextAlign(Paint.Align.CENTER); mPaint.setTextSize(32); mPaint.setColor(Color.WHITE);
@@ -1013,23 +1041,68 @@ public class HudView extends View {
     }
 
     private void drawMapPointer(Canvas canvas, float x, float y, float angle, int color) {
-        canvas.save(); canvas.translate(x, y);
-        canvas.rotate(180 - angle); mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(color);
-        mDrawPath.reset(); mDrawPath.moveTo(0, -22); mDrawPath.lineTo(-13, 13); mDrawPath.lineTo(13, 13); mDrawPath.close();
-        canvas.drawPath(mDrawPath, mPaint); canvas.restore();
-    }
-
-    private void drawMapDoor(Canvas canvas, float x, float y, float angle) {
         canvas.save();
         canvas.translate(x, y);
-        canvas.rotate(180 - angle);
-        resetPaint();
-        mPaint.setColor(Color.YELLOW);
-        canvas.drawRect(-8, -2, 8, 2, mPaint);
+        canvas.scale(1, -1); // Flip vertically
+        canvas.rotate(180 + angle); 
+        mPaint.setStyle(Paint.Style.FILL);
+        mPaint.setColor(color);
+        // South-pointing triangle locally (Tip at 0, -22) - matches Link icon orientation
+        mDrawPath.reset();
+        mDrawPath.moveTo(0, -22);
+        mDrawPath.lineTo(-13, 13);
+        mDrawPath.lineTo(13, 13);
+        mDrawPath.close();
+        canvas.drawPath(mDrawPath, mPaint);
         canvas.restore();
     }
 
+    private void drawMapDoor(Canvas canvas, float x, float y, float angle) {
+        Bitmap doorIcon = mItemIcons.get(0x4004);
+        if (doorIcon != null) {
+            canvas.save();
+            canvas.translate(x, y);
+            canvas.rotate(180 - angle);
+            resetPaint();
+            mPaint.setFilterBitmap(true);
+            // Draw a slightly larger, darker outline for the authoritative look
+            mPaint.setColor(Color.rgb(16, 16, 16));
+            canvas.drawRect(-8f, -8f, 8f, 8f, mPaint);
+            // Draw the authoritative texture on top
+            RectF dst = new RectF(-6, -6, 6, 6);
+            canvas.drawBitmap(doorIcon, null, dst, mPaint);
+            canvas.restore();
+        } else {
+            canvas.save();
+            canvas.translate(x, y);
+            canvas.rotate(180 - angle);
+            resetPaint();
+            mPaint.setColor(Color.YELLOW);
+            canvas.drawRect(-8, -2, 8, 2, mPaint);
+            canvas.restore();
+        }
+    }
+
     private void drawMapIcon(Canvas canvas, float x, float y, int type) {
+        Bitmap icon = null;
+        if (type == 3 || type == 7) icon = mItemIcons.get(0x4000); // Boss
+        else if (type == 0 || type == 2 || type == 16) icon = mItemIcons.get(0x4001); // Chest
+        else if (type == 1 || type == 8) icon = mItemIcons.get(0x4007); // Dungeon Entrance
+        else if (type == 5) icon = mItemIcons.get(0x4008); // Destination/Nijumaru
+        else if (type == 6) icon = mItemIcons.get(0x4005); // Golden Wolf (Yellow Circle)
+        else if (type == 11 || type == 12) icon = mItemIcons.get(0x4006); // Objective/Monkey (Blue Circle)
+        
+        // Fallback to original entrance icon if dungeon specific one isn't loaded
+        if ((type == 1 || type == 8) && icon == null) icon = mItemIcons.get(0x4002);
+
+        if (icon != null) {
+            float size = (type == 3 || type == 7) ? 32 : (type == 6 || type == 11 || type == 12) ? 20 : 40;
+            RectF dst = new RectF(x - size/2, y - size/2, x + size/2, y + size/2);
+            resetPaint();
+            canvas.drawBitmap(icon, null, dst, mPaint);
+            return;
+        }
+
         resetPaint();
         if (type == 3 || type == 7) { // Boss / Major Target -> Magenta Circle
             mPaint.setColor(Color.rgb(220, 0, 255));

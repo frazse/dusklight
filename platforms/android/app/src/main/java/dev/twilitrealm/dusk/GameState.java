@@ -171,7 +171,7 @@ public class GameState {
         if (id == 0) return "";
         
         switch (id) {
-            case 0x01: return "Action";
+            case 0x01: return "Let go";
             case 0x02: return "Peek";
             case 0x03: return "Attack";
             case 0x04: return "Put Away";
@@ -270,7 +270,7 @@ public class GameState {
             case 0x61: return "Insert";
             case 0x62: return "Draw";
             case 0x63: return "Strike";
-            case 0x64: return "Action";
+            case 0x64: return "Let go";
             case 0x65: return "Point";
             case 0x66: return "Point";
             case 0x67: return "Flip";
@@ -284,7 +284,7 @@ public class GameState {
             case 0x6F: return "Seize";
             case 0x70: return "Collection";
             case 0x71: return "Area Map";
-            case 0x72: return "Action";
+            case 0x72: return "Let go";
             case 0x73: return "Set Hook";
             case 0x74: return "Tilt";
             case 0x75: return "Thrust";
@@ -306,6 +306,7 @@ public class GameState {
 
             // Menu Message IDs (Authoritative Mirroring)
             case 0x3EE: return "Open";
+            case 0x3E9: return "Let go";
             case 0x436: return "Equip";
             case 0x41E: return "Equip";
             case 0x40C: return "Confirm";

@@ -644,6 +644,21 @@ void hud_update() {
 
         // Selection Cursor (4 parts corner)
         send_generic_icon(0x3000, main2D, "im_select_cursor_4parts_pikapika_try05_00_40x40_gre.bti", env, activity);
+
+        // Map Icons
+        JKRArchive* mapArc = dComIfGp_getDmapResArchive();
+        if (!mapArc) mapArc = dComIfGp_getFmapResArchive();
+        if (mapArc) {
+            send_generic_icon(0x4000, mapArc, "tt_map_icon_boss_s_ci8_16_00.bti", env, activity);
+            send_generic_icon(0x4001, mapArc, "tt_map_icon_box_s_ci8_24_00.bti", env, activity);
+            send_generic_icon(0x4002, mapArc, "tt_map_icon_enter_s_ci8_24_00.bti", env, activity);
+            send_generic_icon(0x4003, mapArc, "tt_map_icon_link_s_ci8_24_00.bti", env, activity);
+            send_generic_icon(0x4004, mapArc, "tt_block8x8.bti", env, activity);
+            send_generic_icon(0x4005, mapArc, "tt_map_icon_s_size_circle_ci4_yellow_00.bti", env, activity);
+            send_generic_icon(0x4006, mapArc, "tt_map_icon_s_size_circle_ci4_blue_00.bti", env, activity);
+            send_generic_icon(0x4007, mapArc, "im_map_icon_enter_ci8_24_02.bti", env, activity);
+            send_generic_icon(0x4008, mapArc, "im_map_icon_nijumaru_ci8_24_02.bti", env, activity);
+        }
     }
 
     // B button item logic
