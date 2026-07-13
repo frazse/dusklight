@@ -57,6 +57,10 @@ public class HudView extends View {
         put("{{STICK_RIGHT}}", 0x2012);
         put("{{ARROW_UP}}", 0x200D);
         put("{{ARROW_DOWN}}", 0x200D);
+        put("{{ARROW_LEFT}}", 0x200D);
+        put("{{ARROW_RIGHT}}", 0x200D);
+        put("{{DPAD_JUMP}}", 0x2002);
+        put("{{DPAD_JUMP_REVERSE}}", 0x2002);
         put("{{STICK_ALL}}", 0x2000);
         put("{{RETICLE_SPIN}}", 0x2003);
         put("{{RUPEE}}", 0x1010);
@@ -562,6 +566,27 @@ public class HudView extends View {
                             canvas.drawText("+", curX, y, paint);
                             curX += paint.measureText("+");
                         }
+                    } else if ("{{DPAD_JUMP_REVERSE}}".equals(tag)) {
+                        // \z{603,c}: font_08.bti -> font_08_2.bti flipped horizontally, 0.5s cycle
+                        long time = System.currentTimeMillis();
+                        int iconId = ((time / 250) % 2 == 0) ? 0x2002 : 0x2014;
+                        android.graphics.Bitmap bmp = mItemIcons.get(iconId);
+                        if (bmp != null) {
+                            paint.setFilterBitmap(true);
+                            float iconH = paint.getTextSize() * 1.3f;
+                            float iconW = iconH * ((float)bmp.getWidth() / bmp.getHeight());
+                            float iconY = y - (iconH * 0.8f);
+                            android.graphics.RectF dst = new android.graphics.RectF(curX, iconY, curX + iconW, iconY + iconH);
+                            canvas.save();
+                            canvas.scale(-1, 1, curX + iconW / 2f, iconY + iconH / 2f);
+                            canvas.drawBitmap(bmp, null, dst, null);
+                            canvas.restore();
+                            curX += iconW + 4;
+                            invalidate(); // Keep animating
+                        } else {
+                            canvas.drawText("+", curX, y, paint);
+                            curX += paint.measureText("+");
+                        }
                     } else if ("{{RETICLE_SPIN}}".equals(tag)) {
                         // \z{600,24} CCW spinning yellow/orange reticle (1s cycle)
                         android.graphics.Bitmap bmp = mItemIcons.get(0x2003); // font_15.bti
@@ -613,6 +638,34 @@ public class HudView extends View {
                             float iconY = y - (iconH * 0.8f);
                             android.graphics.RectF dst = new android.graphics.RectF(curX, iconY, curX + iconW, iconY + iconH);
                             canvas.drawBitmap(bmp, null, dst, null);
+                            curX += iconW + 4;
+                        }
+                    } else if ("{{ARROW_LEFT}}".equals(tag)) {
+                        android.graphics.Bitmap bmp = mItemIcons.get(0x200D); // font_10.bti
+                        if (bmp != null) {
+                            paint.setFilterBitmap(true);
+                            float iconH = paint.getTextSize() * 1.3f;
+                            float iconW = iconH * ((float)bmp.getWidth() / bmp.getHeight());
+                            float iconY = y - (iconH * 0.8f);
+                            android.graphics.RectF dst = new android.graphics.RectF(curX, iconY, curX + iconW, iconY + iconH);
+                            canvas.save();
+                            canvas.rotate(90, curX + iconW / 2f, iconY + iconH / 2f);
+                            canvas.drawBitmap(bmp, null, dst, null);
+                            canvas.restore();
+                            curX += iconW + 4;
+                        }
+                    } else if ("{{ARROW_RIGHT}}".equals(tag)) {
+                        android.graphics.Bitmap bmp = mItemIcons.get(0x200D); // font_10.bti
+                        if (bmp != null) {
+                            paint.setFilterBitmap(true);
+                            float iconH = paint.getTextSize() * 1.3f;
+                            float iconW = iconH * ((float)bmp.getWidth() / bmp.getHeight());
+                            float iconY = y - (iconH * 0.8f);
+                            android.graphics.RectF dst = new android.graphics.RectF(curX, iconY, curX + iconW, iconY + iconH);
+                            canvas.save();
+                            canvas.rotate(-90, curX + iconW / 2f, iconY + iconH / 2f);
+                            canvas.drawBitmap(bmp, null, dst, null);
+                            canvas.restore();
                             curX += iconW + 4;
                         }
                     } else {
@@ -907,6 +960,7 @@ public class HudView extends View {
                     int id0 = (int)mState.mapLines[i+1], id1 = (int)mState.mapLines[i+2];
                     if (id1 > 1000) {
                         int pId = id0 & 0x3F;
+                        boolean visited = (id0 & 0x80) != 0;
                         // Mirror retail palette: pId 5 is water in most dungeons/sewers
                         if (pId != 3) { 
                             mPaint.setStyle(Paint.Style.FILL_AND_STROKE); mPaint.setStrokeWidth(0.8f);
@@ -919,6 +973,11 @@ public class HudView extends View {
                                 // Unique deterministic HSV palette for discovery (0-63)
                                 float hue = (pId * 137.5f) % 360f; // Golden angle for distribution
                                 mPaint.setColor(Color.HSVToColor(new float[]{hue, 0.8f, 0.9f}));
+                            }
+
+                            if (mState.isDungeon && !visited) {
+                                int c = mPaint.getColor();
+                                mPaint.setColor(Color.argb(Color.alpha(c), Color.red(c)/3, Color.green(c)/3, Color.blue(c)/3));
                             }
 
                             for (int j = 0; j < vCount - 2; j++) {
@@ -944,11 +1003,16 @@ public class HudView extends View {
                     int id0 = (int)mState.mapLines[i+1], id1 = (int)mState.mapLines[i+2];
                     if (id1 == 1 || id1 == 2) {
                         int pId = id0 & 0x3F;
+                        boolean visited = (id0 & 0x80) != 0;
                         mPaint.setStyle(Paint.Style.STROKE);
                         mPaint.setStrokeWidth(id1 == 2 ? 4.0f : 2.5f);
                         mPaint.setStrokeJoin(Paint.Join.ROUND); mPaint.setStrokeCap(Paint.Cap.ROUND);
                         
                         mPaint.setColor(colorMint);
+                        if (mState.isDungeon && !visited) {
+                            int c = mPaint.getColor();
+                            mPaint.setColor(Color.argb(Color.alpha(c), Color.red(c)/3, Color.green(c)/3, Color.blue(c)/3));
+                        }
                         
                         mDrawPath.reset();
                         for (int j = 0; j < vCount; j++) {

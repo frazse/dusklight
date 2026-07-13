@@ -60,6 +60,7 @@ std::string clean_tp_string(const char* input) {
                     case 1:  out += "{{A}}"; break;
                     case 2:  out += "{{B}}"; break;
                     case 6:  out += "{{DPAD_JUMP}}"; break;
+                    case 12: out += "{{DPAD_JUMP_REVERSE}}"; break;
                     case 13: out += "{{L}}"; break;
                     case 14: out += "{{R}}"; break;
                     case 15: out += "{{X}}"; break;
@@ -126,15 +127,18 @@ std::string clean_tp_string(const char* input) {
                     case 7: out += "{{Z}}"; break;
                     case 8: out += "{{DPAD}}"; break;
                     case 9: out += "{{STICK}}"; break;
-                    case 10: out += "{{LEFT}}"; break;
-                    case 11: out += "{{RIGHT}}"; break;
-                    case 12: out += "{{UP}}"; break;
-                    case 13: out += "{{DOWN}}"; break;
+                    case 10: out += "{{ARROW_LEFT}}"; break;
+                    case 11: out += "{{ARROW_RIGHT}}"; break;
+                    case 12: out += "{{ARROW_UP}}"; break;
+                    case 13: out += "{{ARROW_DOWN}}"; break;
                     case 14: out += "{{STICK_UP}}"; break;
                     case 15: out += "{{STICK_DOWN}}"; break;
                     case 16: out += "{{STICK_LEFT}}"; break;
                     case 17: out += "{{STICK_RIGHT}}"; break;
                     case 18: out += "{{STICK_UD}}"; break;
+                    case 61:
+                    case 66: out += "{{DPAD_JUMP}}"; break;
+                    case 67: out += "{{DPAD_JUMP_REVERSE}}"; break;
                     case 29: out += "{{NEXT}}"; break;
                     case 30: out += "{{RUPEE}}"; break;
                     case 41: out += "{{BOMBBAG}}"; break;
@@ -145,6 +149,49 @@ std::string clean_tp_string(const char* input) {
             while (*p && *p != ']') p++;
             if (*p == ']') p++;
             continue;
+        }
+
+        // Generic catch for leaked internal tags: I[ID] or C[HEX]
+        if ((*p == 'I' || *p == 'C') && *(p + 1) == '[') {
+            const char* start = (const char*)p + 2;
+            char* end = nullptr;
+            int id = (int)strtol(start, &end, 10);
+            if (end && *end == ']') {
+                if (*p == 'I') {
+                    switch (id) {
+                        case 0: out += "{{A}}"; break;
+                        case 1: out += "{{B}}"; break;
+                        case 2: out += "{{STICK}}"; break;
+                        case 3: out += "{{L}}"; break;
+                        case 4: out += "{{R}}"; break;
+                        case 5: out += "{{X}}"; break;
+                        case 6: out += "{{Y}}"; break;
+                        case 7: out += "{{Z}}"; break;
+                        case 8: out += "{{DPAD}}"; break;
+                        case 9: out += "{{STICK}}"; break;
+                        case 10: out += "{{ARROW_LEFT}}"; break;
+                        case 11: out += "{{ARROW_RIGHT}}"; break;
+                        case 12: out += "{{ARROW_UP}}"; break;
+                        case 13: out += "{{ARROW_DOWN}}"; break;
+                        case 14: out += "{{STICK_UP}}"; break;
+                        case 15: out += "{{STICK_DOWN}}"; break;
+                        case 16: out += "{{STICK_LEFT}}"; break;
+                        case 17: out += "{{STICK_RIGHT}}"; break;
+                        case 18: out += "{{STICK_UD}}"; break;
+                        case 61:
+                        case 66: out += "{{DPAD_JUMP}}"; break;
+                        case 67: out += "{{DPAD_JUMP_REVERSE}}"; break;
+                        case 29: out += "{{NEXT}}"; break;
+                        case 30: out += "{{RUPEE}}"; break;
+                        case 41: out += "{{BOMBBAG}}"; break;
+                    }
+                } else if (*p == 'C' && (end - start) == 8) { // Color
+                    char hex[9]; memcpy(hex, start, 8); hex[8] = 0;
+                    out += "[[C:#" + std::string(hex) + "]]";
+                }
+                p = (const unsigned char*)end + 1;
+                continue;
+            }
         }
 
         if (*p == 0x0A || *p == 0x0D || *p == 0x1E) { out += '\n'; p++; continue; }
@@ -799,6 +846,7 @@ void hud_update() {
     std::vector<float> lines, icons, doors; float miX=1e10f, miZ=1e10f, maX=-1e10f, maZ=-1e10f;
     if (dMpath_c::mLayerList) for (int r = 0; r < 64; r++) {
         if (!is_room_visible(r, sName, stayNo, iData[48])) continue;
+        float visitedBit = dComIfGs_isVisitedRoom(r) ? 0x80 : 0;
         for (int l = 0; l < 2; l++) {
             auto* rm = dMpath_c::getRoomPointer(l, r); if (!rm || !rm->mpFloatData) continue;
             for (int f = 0; f < rm->mFloorNum; f++) {
@@ -811,7 +859,7 @@ void hud_update() {
                             float px = rm->mpFloatData[grp.mpLine[ln].mpData[i]*2], pz = rm->mpFloatData[grp.mpLine[ln].mpData[i]*2+1];
                             lines.push_back(px); lines.push_back(pz); miX=std::min(miX,px); maX=std::max(maX,px); miZ=std::min(miZ,pz); maZ=std::max(maZ,pz);
                         }
-                        lines.push_back(std::numeric_limits<float>::quiet_NaN()); lines.push_back((float)grp.mpLine[ln].field_0x0); lines.push_back((float)grp.mpLine[ln].field_0x1); lines.push_back(0);
+                        lines.push_back(std::numeric_limits<float>::quiet_NaN()); lines.push_back((float)(grp.mpLine[ln].field_0x0 | (u8)visitedBit)); lines.push_back((float)grp.mpLine[ln].field_0x1); lines.push_back(0);
                     }
                     for (int pn = 0; pn < grp.mPolyNum; pn++) {
                         if (grp.mpPoly[pn].field_0x0 & 0x40) continue;
@@ -819,7 +867,7 @@ void hud_update() {
                             float px = rm->mpFloatData[grp.mpPoly[pn].mpData[i]*2], pz = rm->mpFloatData[grp.mpPoly[pn].mpData[i]*2+1];
                             lines.push_back(px); lines.push_back(pz); miX=std::min(miX,px); maX=std::max(maX,px); miZ=std::min(miZ,pz); maZ=std::max(maZ,pz);
                         }
-                        lines.push_back(std::numeric_limits<float>::quiet_NaN()); lines.push_back((float)grp.mpPoly[pn].field_0x0); lines.push_back(1001.0f); lines.push_back(0);
+                        lines.push_back(std::numeric_limits<float>::quiet_NaN()); lines.push_back((float)(grp.mpPoly[pn].field_0x0 | (u8)visitedBit)); lines.push_back(1001.0f); lines.push_back(0);
                     }
                 }
             }
