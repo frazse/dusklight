@@ -417,9 +417,18 @@ bool should_draw_icon(int typeGroupNo, const dTres_c::data_s* data, int stayNo, 
     }
     if (is_d) {
         if (!dComIfGs_isDungeonItemCompass()) return false;
-        if (typeGroupNo == 11 || typeGroupNo == 12 || typeGroupNo == 16) return true; // NPCs/Objectives
-        if (data->mNo != 0xFF && dComIfGs_isTbox(data->mNo)) return false;
-        return switch_reveals(data->mSwBit, data->mRoomNo);
+        if (typeGroupNo == 0 || typeGroupNo == 2 || typeGroupNo == 3 || typeGroupNo == 4 || typeGroupNo == 11 || typeGroupNo == 12 || typeGroupNo == 15 || typeGroupNo == 16) {
+             // Strict floor check for all dungeon icons (matching retail behavior)
+             s8 iconFloor = dMapInfo_c::calcFloorNo(data->mPos.y, true, data->mRoomNo);
+             if (iconFloor != sFloor) return false;
+
+             // NPCs and Objectives should always show once revealed by compass
+             if (typeGroupNo == 11 || typeGroupNo == 12 || typeGroupNo == 16) return true;
+
+             if (data->mNo != 0xFF && dComIfGs_isTbox(data->mNo)) return false;
+             return switch_reveals(data->mSwBit, data->mRoomNo);
+        }
+        return false;
     }
     switch (typeGroupNo) {
         case 1: case 8: if (!is_room_visible(data->mRoomNo, sName, stayNo, dComIfGs_isDungeonItemMap())) return false; return switch_reveals(data->mSwBit, data->mRoomNo);
@@ -758,6 +767,7 @@ void hud_update() {
             send_generic_icon(0x4006, mapArc, "tt_map_icon_s_size_circle_ci4_00.bti", env, activity);
             send_generic_icon(0x4007, mapArc, "im_map_icon_enter_ci8_24_02.bti", env, activity);
             send_generic_icon(0x4008, mapArc, "im_map_icon_nijumaru_ci8_24_02.bti", env, activity);
+            send_generic_icon(0x4009, mapArc, "tt_map_icon_s_size_circle_ci4_blue_00.bti", env, activity);
         }
     }
 

@@ -488,6 +488,7 @@ public class HudView extends View {
                         }
                     } catch (Exception e) {}
                     pos = endIdx + 2;
+                    continue;
                 } else pos += 4;
             } else if (pos == iconIdx) {
                 int endIdx = line.indexOf("}}", pos);
@@ -1176,7 +1177,7 @@ public class HudView extends View {
             mPaint.setStyle(Paint.Style.STROKE);
             mPaint.setStrokeWidth(2.5f);
             canvas.drawPath(mDrawPath, mPaint);
-        } else if (type == 0 || type == 2 || type == 16) { // Treasure Chest / Keys -> Yellow
+        } else if (type == 0 || type == 2) { // Treasure Chest / Keys -> Yellow
             mPaint.setColor(Color.YELLOW);
             canvas.drawRect(x-9, y-9, x+9, y+9, mPaint);
             mPaint.setStyle(Paint.Style.STROKE);
