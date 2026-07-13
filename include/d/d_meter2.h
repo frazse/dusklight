@@ -105,6 +105,7 @@ public:
     u8 getRStatus() { return mRStatus; }
     u8 getZStatus() { return mZStatus; }
     u8 getItemStatus(int i_no) { return mItemStatus[i_no]; }
+    u32 getStatus() { return mStatus; }
 
 private:
     /* 0x0FC */ int field_0xfc;

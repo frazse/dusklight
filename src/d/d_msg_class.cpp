@@ -2709,6 +2709,7 @@ jmessage_tRenderingProcessor::jmessage_tRenderingProcessor(jmessage_tReference c
     field_0x13c = 0;
     field_0x13e = 0;
     field_0x184[0] = field_0x184[1] = field_0x184[2] = 0;
+    mAndroidSkip = 0;
     field_0x14d = 0;
     field_0x14e = 0;
 
@@ -2723,6 +2724,7 @@ jmessage_tRenderingProcessor::jmessage_tRenderingProcessor(jmessage_tReference c
     for (int i = 0; i < ARRAY_SIZE(field_0x7c); i++) {
         field_0x7c[i] = 0.0f;
     }
+    mAndroidSkip = 0;
 }
 
 void jmessage_tRenderingProcessor::do_reset() {}
@@ -2748,6 +2750,7 @@ void jmessage_tRenderingProcessor::do_begin(void const* pEntry, char const* pszT
     field_0x13e = 0;
     field_0x138 = 0.0f;
     field_0x184[0] = field_0x184[1] = field_0x184[2] = 0;
+    mAndroidSkip = 0;
 
     if (mCharInfoPtr != NULL) {
         mpCharInfoCnt = (s16*)((u8*)mCharInfoPtr + 0x1068);
@@ -2824,6 +2827,18 @@ void jmessage_tRenderingProcessor::do_end() {
 }
 
 void jmessage_tRenderingProcessor::do_character(int i_character) {
+    if (i_character == 0x1B) {
+        mAndroidSkip = 1;
+        return;
+    }
+
+    if (mAndroidSkip) {
+        if (i_character == ']') {
+            mAndroidSkip = 0;
+        }
+        return;
+    }
+
     jmessage_tReference* pReference = (jmessage_tReference*)getReference();
     JUTFont* pFont = pReference->getFont();
 
@@ -3522,7 +3537,7 @@ void jmessage_tRenderingProcessor::do_color(u8 i_colorNo) {
             "\x1B"
             "GC[%08x]",
             mCCColor, mGCColor);
-    do_strcat(buffer, false, false, false);
+    do_strcat(buffer, false, true, false);
 }
 
 void jmessage_tRenderingProcessor::do_scale(f32 param_1) {
@@ -3607,11 +3622,11 @@ void jmessage_tRenderingProcessor::do_outfont(u8 i_iconNo, u32 i_color) {
     mpOutFont->drawFont(NULL, i_iconNo, posX - field_0x7c[field_0x142], posY, sizeX, sizeY, color, 0xFF);
     pReference->addDrawLightCount();
 
-    char buffer[16];
 #if defined(TARGET_ANDROID) || defined(__ANDROID__) || defined(ANDROID)
-    // Custom tag for Android HUD: \x1B I[iconID]
-    snprintf(buffer, sizeof(buffer) - 1, "\x1B" "I[%d]", (int)i_iconNo);
-    do_strcat(buffer, false, true, false);
+    // Custom tag for Android HUD injected ONLY into shadow buffer mTextS
+    char hudTag[32];
+    snprintf(hudTag, sizeof(hudTag) - 1, "[[HUD:%d]]", (int)i_iconNo);
+    SAFE_STRCAT(pReference->getTextSPtr(), hudTag);
 #endif
 
     if (mCharInfoPtr != NULL) {

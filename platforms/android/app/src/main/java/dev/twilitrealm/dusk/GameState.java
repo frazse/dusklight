@@ -271,8 +271,8 @@ public class GameState {
             case 0x62: return "Draw";
             case 0x63: return "Strike";
             case 0x64: return "Let go";
-            case 0x65: return "Point";
-            case 0x66: return "Point";
+            case 0x65: return "Jump";
+            case 0x66: return "Jump";
             case 0x67: return "Flip";
             case 0x68: return "Change View";
             case 0x69: return "Change View";

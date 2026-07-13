@@ -112,11 +112,23 @@ std::string clean_tp_string(const char* input) {
             if (*p == 'C' && *(p+1) == 'C' && *(p+2) == '[') { // Color
                 char hex[9]; memcpy(hex, p + 3, 8); hex[8] = 0;
                 out += "[[C:#" + std::string(hex) + "]]";
-            } else if (*p == 'I' && *(p+1) == '[') { // Custom Icon tag
-                const char* start = (const char*)p + 2;
-                char* end = nullptr;
-                int iconID = (int)strtol(start, &end, 10);
-                switch (iconID) {
+            } else if (*p == 'G' && *(p+1) == 'C' && *(p+2) == '[') { // Gradient
+                char hex[9]; memcpy(hex, p + 3, 8); hex[8] = 0;
+                out += "[[G:#" + std::string(hex) + "]]";
+            }
+            // Skip the entire control block until the closing ']'
+            while (*p && *p != ']') p++;
+            if (*p == ']') p++;
+            continue;
+        }
+
+        // Catch custom HUD tags [[HUD:ID]]
+        if (*p == '[' && *(p+1) == '[') {
+             if (strncmp((const char*)p, "[[HUD:", 6) == 0) {
+                 const char* start = (const char*)p + 6;
+                 char* end = nullptr;
+                 int iconID = (int)strtol(start, &end, 10);
+                 switch (iconID) {
                     case 0: out += "{{A}}"; break;
                     case 1: out += "{{B}}"; break;
                     case 2: out += "{{STICK}}"; break;
@@ -126,29 +138,21 @@ std::string clean_tp_string(const char* input) {
                     case 6: out += "{{Y}}"; break;
                     case 7: out += "{{Z}}"; break;
                     case 8: out += "{{DPAD}}"; break;
-                    case 9: out += "{{STICK}}"; break;
                     case 10: out += "{{ARROW_LEFT}}"; break;
                     case 11: out += "{{ARROW_RIGHT}}"; break;
                     case 12: out += "{{ARROW_UP}}"; break;
                     case 13: out += "{{ARROW_DOWN}}"; break;
-                    case 14: out += "{{STICK_UP}}"; break;
-                    case 15: out += "{{STICK_DOWN}}"; break;
-                    case 16: out += "{{STICK_LEFT}}"; break;
-                    case 17: out += "{{STICK_RIGHT}}"; break;
-                    case 18: out += "{{STICK_UD}}"; break;
                     case 61:
                     case 66: out += "{{DPAD_JUMP}}"; break;
                     case 67: out += "{{DPAD_JUMP_REVERSE}}"; break;
                     case 29: out += "{{NEXT}}"; break;
                     case 30: out += "{{RUPEE}}"; break;
                     case 41: out += "{{BOMBBAG}}"; break;
-                    default: break;
-                }
-            }
-            // Skip the entire control block until the closing ']'
-            while (*p && *p != ']') p++;
-            if (*p == ']') p++;
-            continue;
+                 }
+                 while (*p && (*p != ']' || *(p+1) != ']')) p++;
+                 if (*p == ']') p += 2;
+                 continue;
+             }
         }
 
         // Generic catch for leaked internal tags: I[ID] or C[HEX]
@@ -406,13 +410,14 @@ bool should_draw_icon(int typeGroupNo, const dTres_c::data_s* data, int stayNo, 
     if (data == nullptr) return false;
     auto* stage = dComIfGp_getStage(); if (!stage) return false;
     StageType stype = (StageType)dStage_stagInfo_GetSTType(stage->getStagInfo());
-    bool is_d = (stype == ST_DUNGEON);
+    bool is_d = (stype == ST_DUNGEON || stype == ST_BOSS_ROOM);
     if (!group_is_floor_independent(typeGroupNo)) {
         s8 iconFloor = dMapInfo_c::calcFloorNo(data->mPos.y, true, data->mRoomNo);
         if (iconFloor != sFloor) return false;
     }
     if (is_d) {
         if (!dComIfGs_isDungeonItemCompass()) return false;
+        if (typeGroupNo == 11 || typeGroupNo == 12 || typeGroupNo == 16) return true; // NPCs/Objectives
         if (data->mNo != 0xFF && dComIfGs_isTbox(data->mNo)) return false;
         return switch_reveals(data->mSwBit, data->mRoomNo);
     }
@@ -472,7 +477,7 @@ void hud_update() {
             jmessage_tReference* pRef = (jmessage_tReference*)msgObj->getSequenceProcessor()->getReference();
             if (pRef) {
                 iData[113] = count_lines_for_id(msgID);
-                dialogText = clean_tp_string(pRef->getTextPtr());
+                dialogText = clean_tp_string(pRef->getTextSPtr());
                 iData[105] = pRef->getSelectPos();
                 iData[106] = pRef->getSelectNum();
 
@@ -540,7 +545,8 @@ void hud_update() {
     bool isDungeon = false;
     auto* stage = dComIfGp_getStage();
     if (stage) {
-        isDungeon = dStage_stagInfo_GetSTType(stage->getStagInfo()) == ST_DUNGEON;
+        StageType stype = (StageType)dStage_stagInfo_GetSTType(stage->getStagInfo());
+        isDungeon = (stype == ST_DUNGEON || stype == ST_BOSS_ROOM);
     }
     iData[47] = isDungeon ? 1 : 0;
 

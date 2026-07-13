@@ -177,7 +177,7 @@ public class HudView extends View {
         drawItems(canvas, 1280, 20);
 
         if (mState.isDungeon) {
-            drawDungeonIcons(canvas, 1280 - 60, 150);
+            drawDungeonIcons(canvas, 1241.1f, 150);
         }
 
         drawRupeeCounter(canvas, 20, 1060);
@@ -196,7 +196,7 @@ public class HudView extends View {
             drawMiniMap(canvas, MAP_X, MAP_Y, interMapX, interMapY, interMapAngle);
         }
         
-        drawContextButtons(canvas, 940, 280);
+        drawContextButtons(canvas, 835, 280);
         drawStatusInfo(canvas, 1260, 1060);
 
         if (mState.dialogOnSecondScreen != 0 && mState.dialogText != null && !mState.dialogText.isEmpty()) {
@@ -440,12 +440,13 @@ public class HudView extends View {
 
         while (pos < line.length()) {
             int tagIdx = line.indexOf("[[C:", pos);
+            int gradIdx = line.indexOf("[[G:", pos);
             int iconIdx = line.indexOf("{{", pos);
 
             int nextIdx = -1;
-            if (tagIdx != -1 && iconIdx != -1) nextIdx = Math.min(tagIdx, iconIdx);
-            else if (tagIdx != -1) nextIdx = tagIdx;
-            else if (iconIdx != -1) nextIdx = iconIdx;
+            if (tagIdx != -1) nextIdx = (nextIdx == -1) ? tagIdx : Math.min(nextIdx, tagIdx);
+            if (gradIdx != -1) nextIdx = (nextIdx == -1) ? gradIdx : Math.min(nextIdx, gradIdx);
+            if (iconIdx != -1) nextIdx = (nextIdx == -1) ? iconIdx : Math.min(nextIdx, iconIdx);
 
             if (nextIdx == -1) {
                 String segment = line.substring(pos);
@@ -459,7 +460,7 @@ public class HudView extends View {
                 pos = nextIdx;
             }
 
-            if (pos == tagIdx) {
+            if (pos == tagIdx || pos == gradIdx) {
                 int endIdx = line.indexOf("]]", pos);
                 if (endIdx != -1) {
                     String tag = line.substring(pos + 4, endIdx);
@@ -1128,18 +1129,19 @@ public class HudView extends View {
 
     private void drawMapIcon(Canvas canvas, float x, float y, int type) {
         Bitmap icon = null;
-        if (type == 3 || type == 7) icon = mItemIcons.get(0x4000); // Boss
-        else if (type == 0 || type == 2 || type == 16) icon = mItemIcons.get(0x4001); // Chest
+        if (type == 3 || type == 4 || type == 7) icon = mItemIcons.get(0x4000); // Boss/Big Key
+        else if (type == 0 || type == 2) icon = mItemIcons.get(0x4001); // Chest/Small Key
         else if (type == 1 || type == 8) icon = mItemIcons.get(0x4007); // Dungeon Entrance
         else if (type == 5) icon = mItemIcons.get(0x4008); // Destination/Nijumaru
         else if (type == 6) icon = mItemIcons.get(0x4005); // Golden Wolf (Yellow Circle)
-        else if (type == 11 || type == 12) icon = mItemIcons.get(0x4006); // Objective/Monkey (Blue Circle)
+        else if (type == 11 || type == 12 || type == 16) icon = mItemIcons.get(0x4009); // Ooccoo/Story/NPCs (Blue Circle)
         
-        // Fallback to original entrance icon if dungeon specific one isn't loaded
+        // Fallback to story icon if blue circle isn't loaded
+        if ((type == 11 || type == 12 || type == 16) && icon == null) icon = mItemIcons.get(0x4006);
         if ((type == 1 || type == 8) && icon == null) icon = mItemIcons.get(0x4002);
 
         if (icon != null) {
-            float size = (type == 3 || type == 7) ? 32 : (type == 6 || type == 11 || type == 12) ? 20 : 40;
+            float size = (type == 3 || type == 7) ? 32 : (type == 6 || type == 11 || type == 12 || type == 16) ? 20 : 40;
             RectF dst = new RectF(x - size/2, y - size/2, x + size/2, y + size/2);
             resetPaint();
             canvas.drawBitmap(icon, null, dst, mPaint);
@@ -1210,7 +1212,7 @@ public class HudView extends View {
             mPaint.setColor(Color.parseColor("#EFDB39"));
             canvas.drawRoundRect(innerRect, 7.0f, 7.0f, mPaint);
 
-        } else if (type == 11) { // Story Objective -> Original Cyan style
+        } else if (type == 11 || type == 12 || type == 16) { // Ooccoo / Story / NPCs -> Original Cyan style
             mPaint.setColor(Color.CYAN);
             canvas.drawCircle(x, y, 8, mPaint);
             mPaint.setStyle(Paint.Style.STROKE);
@@ -1218,7 +1220,7 @@ public class HudView extends View {
             mPaint.setStrokeWidth(2);
             canvas.drawCircle(x, y, 8, mPaint);
         } else {
-            mPaint.setColor(Color.RED);
+            mPaint.setColor(Color.CYAN);
             canvas.drawCircle(x, y, 8, mPaint);
         }
     }
@@ -1661,7 +1663,7 @@ public class HudView extends View {
         drawActionButton(canvas, x, startY + spacing * 2, mState.labelZ, Color.parseColor("#5A429B"), mState.buttonZText, mState.buttonZText != null && !mState.buttonZText.isEmpty(), null, 38, 52, null);
         
         // 2. Diamond Layout (A=South, B=West, Y=North, X=East) - Reverted to previous layout
-        float cx = x + 40; // Shift diamond slightly right
+        float cx = x + 145; // Shift diamond back to original preferred position
         float cy = startY + spacing * 5.0f;
         float ds = 145; // Diamond spacing
         int br = 52; // Button radius

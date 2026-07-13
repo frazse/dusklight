@@ -534,6 +534,7 @@ struct jmessage_tRenderingProcessor : public JMessage::TRenderingProcessor {
     /* 0x152 */ char field_0x152[0x184 - 0x152];
     /* 0x184 */ char field_0x184[3];
     /* 0x187 */ u8 field_0x187;
+    u8 mAndroidSkip;
 };
 
 struct jmessage_string_tControl : public JMessage::TControl {

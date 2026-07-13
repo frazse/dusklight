@@ -6,6 +6,7 @@
 #include "d/d_msg_object.h"
 #include "d/d_msg_out_font.h"
 #include "d/d_pane_class.h"
+#include "d/d_msg_class.h"
 #include <cstring>
 
 #if TARGET_PC
@@ -104,13 +105,34 @@ void dMsgScrnBase_c::drawOutFont(f32 param_0, f32 param_1, f32 param_2) {
 }
 
 void dMsgScrnBase_c::setString(char DUSK_CONST* mpText, char DUSK_CONST* i_stringB) {
+    char cleanText[D_MSG_CLASS_CHAR_CNT_MAX];
+    char cleanShadow[D_MSG_CLASS_CHAR_CNT_MAX];
+
+    auto filter = [](const char* src, char* dst) {
+        if (!src) { *dst = 0; return; }
+        while (*src) {
+            if (*src == '[' && *(src+1) == '[') {
+                src += 2;
+                while (*src && (*src != ']' || *(src+1) != ']')) src++;
+                if (*src == ']') src += 2;
+                continue;
+            }
+            *dst++ = *src++;
+        }
+        *dst = 0;
+    };
+
+    filter(mpText, cleanText);
+    filter(i_stringB, cleanShadow);
+
     for (int i = 0; i < 7; i++) {
         if (mpTm_c[i] != NULL) {
-            JUT_ASSERT(262, ((J2DTextBox*)(mpTm_c[i]->getPanePtr()))->getStringAllocByte() > strlen(mpText));
             if (i == 0) {
-                SAFE_STRCPY(((J2DTextBox*)mpTm_c[i]->getPanePtr())->getStringPtr(), mpText);
+                JUT_ASSERT(262, ((J2DTextBox*)(mpTm_c[i]->getPanePtr()))->getStringAllocByte() > strlen(cleanText));
+                SAFE_STRCPY(((J2DTextBox*)mpTm_c[i]->getPanePtr())->getStringPtr(), cleanText);
             } else {
-                SAFE_STRCPY(((J2DTextBox*)mpTm_c[i]->getPanePtr())->getStringPtr(), i_stringB);
+                JUT_ASSERT(262, ((J2DTextBox*)(mpTm_c[i]->getPanePtr()))->getStringAllocByte() > strlen(cleanShadow));
+                SAFE_STRCPY(((J2DTextBox*)mpTm_c[i]->getPanePtr())->getStringPtr(), cleanShadow);
             }
         }
     }
