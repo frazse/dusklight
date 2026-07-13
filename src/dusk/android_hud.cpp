@@ -69,8 +69,8 @@ std::string clean_tp_string(const char* input) {
                 }
             } else if (group == 0x00 || group == 0x06) { // GC Buttons or Mixed Tags
                 switch (number) {
-                    case 0x0A: out += "{{A}}"; break;
-                    case 0x0B: out += "{{B}}"; break;
+                    case 0x0A: if (group == 0x00) out += "{{A}}"; break;
+                    case 0x0B: if (group == 0x00) out += "{{B}}"; break;
                     case 0x0C: out += "{{C}}"; break;
                     case 0x0D: out += "{{L}}"; break;
                     case 0x0E: out += "{{R}}"; break;
@@ -98,7 +98,7 @@ std::string clean_tp_string(const char* input) {
                     if (number == 0x0A) out += "- ";
                     else if (number == 0x0B) out += "  ";
                 }
-            } else if (group == 0x07) {
+            } else if (group == 0x07 || group == 0xFF) {
                 if (size == 5) out += "[[C:" + std::to_string(p[4]) + "]]";
                 else if (size >= 6) out += "[[C:" + std::to_string(p[5]) + "]]";
             }
@@ -610,7 +610,14 @@ void hud_update() {
     }
 
     iData[0] = dComIfGs_getLife(); iData[1] = dComIfGs_getMaxLife(); iData[8] = dComIfGs_getRupee(); iData[9] = dComIfGs_getKeyNum() + dComIfGp_getItemKeyNumCount();
+    iData[2] = dComIfGs_getMagic(); iData[3] = dComIfGs_getMaxMagic();
     iData[10] = dComIfGs_getArrowNum(); iData[11] = dComIfGs_getBombNum(0); iData[12] = (int)daPy_py_c::checkNowWolf(); iData[13] = stayNo;
+    iData[14] = dComIfGs_getLightDropNum(dComIfGp_getStartStageDarkArea());
+    iData[15] = dComIfGp_getNeedLightDropNum();
+    iData[16] = dComIfGp_isLightDropMapVisible() ? 1 : 0;
+    iData[27] = meter->getMeterDrawPtr()->isEmphasisZ() ? 1 : 0;
+    iData[43] = dComIfGp_getOxygenShowFlag() ? 1 : 0;
+
     u8 slotX = dComIfGs_getSelectItemIndex(0);
     iData[17] = (slotX != 0xFF) ? dComIfGs_getItem(slotX, true) : 0xFF;
     u8 slotY = dComIfGs_getSelectItemIndex(1);
@@ -762,6 +769,8 @@ void hud_update() {
     int stateFlags = 0;
     auto* player = dComIfGp_getLinkPlayer();
     if (player) {
+        if (player->checkAttentionLock()) stateFlags |= 1;
+        if (player->checkSwimUp()) stateFlags |= 2;
         if (player->checkHorseRide()) stateFlags |= 4;
         if (player->checkBoarRide()) stateFlags |= 64;
         if (player->checkPlayerFly()) stateFlags |= 32;
