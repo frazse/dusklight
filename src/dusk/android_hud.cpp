@@ -470,7 +470,7 @@ void hud_update() {
         if (s_onGameStateUpdate == nullptr || s_onItemIconLoaded == nullptr || clear_pending_exception(env)) return;
     }
     s_secondScreenActive.store(true, std::memory_order_relaxed);
-    int iData[120] = {0};
+    int iData[130] = {0};
     int winStatus = dMeter2Info_getWindowStatus();
     int mapStatus = dMeter2Info_getMapStatus();
     iData[57] = winStatus; iData[58] = mapStatus;
@@ -617,30 +617,7 @@ void hud_update() {
                 iData[29] = 0x3F9; // Back
                 iData[59] = 0x4CD; // Direct Select
                 iData[60] = (int)ring->getStatus() + 1; iData[61] = (int)ring->getCurrentSlot(); iData[62] = (int)ring->getItemsTotal();
-                for (int s = 0; s < 24; s++) {
-                    u8 slotIdx = ring->getItem(s, 0);
-                    if (slotIdx != 0xFF && slotIdx < 24) {
-                        u8 comboItem = dComIfGs_getItem(slotIdx, true);
-                        u8 baseItem = dComIfGs_getItem(slotIdx, false);
 
-                        if (comboItem == 0x59 && baseItem != 0x43) {
-                            iData[63 + s] = 0x59; // Combined Bomb slot -> show "Bow & Arrow Combo"
-                        } else {
-                            iData[63 + s] = baseItem; // Use base item (Bow) to keep wheel entry consistent
-                        }
-
-                        int count = ring->getMenuRingItemNum(slotIdx);
-                        if (comboItem == 0x59) { // But calculate ammo for the combo
-                            int arrows = (int)dComIfGs_getArrowNum();
-                            count = std::min(arrows, count);
-                        }
-                        iData[87 + s] = count;
-                        send_item_icon(baseItem, env, activity);
-                    } else {
-                        iData[63 + s] = 0xFF;
-                        iData[87 + s] = 0;
-                    }
-                }
                 dMenu_ItemExplain_c* explain = ring->getItemExplain();
                 if (explain) {
                     u8 slotIdx = ring->getItem(ring->getCurrentSlot(), 0);
@@ -672,6 +649,27 @@ void hud_update() {
     }
 
     iData[0] = dComIfGs_getLife(); iData[1] = dComIfGs_getMaxLife(); iData[8] = dComIfGs_getRupee(); iData[9] = dComIfGs_getKeyNum() + dComIfGp_getItemKeyNumCount();
+
+    // Persistent inventory sync for Quick-Select Grid
+    for (int s = 0; s < 24; s++) {
+        u8 item = dComIfGs_getItem(s, true);
+        if (item != 0xFF) {
+            iData[63 + s] = item;
+
+            // Calculate ammo
+            int count = 1;
+            if (item == 0x43 || item == 0x59) count = (int)dComIfGs_getArrowNum(); // Bow or Bomb Arrow
+            else if (item == 0x4B) count = (int)dComIfGs_getPachinkoNum(); // Slingshot
+            else if (s >= 15 && s <= 17) count = (int)dComIfGs_getBombNum(s - 15); // Bomb Bags
+            else if (s >= 11 && s <= 14) count = (int)dComIfGs_getBottleNum(s - 11); // Bottles
+
+            iData[87 + s] = count;
+            send_item_icon(item, env, activity);
+        } else {
+            iData[63 + s] = 0xFF;
+            iData[87 + s] = 0;
+        }
+    }
     iData[2] = dComIfGs_getMagic(); iData[3] = dComIfGs_getMaxMagic();
     iData[10] = dComIfGs_getArrowNum(); iData[11] = dComIfGs_getBombNum(0); iData[12] = (int)daPy_py_c::checkNowWolf(); iData[13] = stayNo;
     iData[14] = dComIfGs_getLightDropNum(dComIfGp_getStartStageDarkArea());
@@ -942,13 +940,21 @@ void hud_update() {
     }
 
     jstring jS = env->NewStringUTF(fName.c_str()); jstring jT = env->NewStringUTF(itemTitle.c_str()); jstring jDe = env->NewStringUTF(itemDesc.c_str()); jstring jDT = env->NewStringUTF(dialogText.c_str());
-    jintArray jInts = env->NewIntArray(120); env->SetIntArrayRegion(jInts, 0, 120, iData); jfloatArray jF = env->NewFloatArray(14); env->SetFloatArrayRegion(jF, 0, 14, fData);
+    jintArray jInts = env->NewIntArray(130); env->SetIntArrayRegion(jInts, 0, 130, iData); jfloatArray jF = env->NewFloatArray(14); env->SetFloatArrayRegion(jF, 0, 14, fData);
     jfloatArray jL = env->NewFloatArray(lines.size()); env->SetFloatArrayRegion(jL, 0, lines.size(), lines.data());
     jfloatArray jI = env->NewFloatArray(icons.size()); env->SetFloatArrayRegion(jI, 0, icons.size(), icons.data());
     jfloatArray jD = env->NewFloatArray(doors.size()); env->SetFloatArrayRegion(jD, 0, doors.size(), doors.data());
     env->CallVoidMethod(activity, s_onGameStateUpdate, jInts, jF, jS, jT, jDe, jDT, jL, jI, jD);
     env->DeleteLocalRef(jInts); env->DeleteLocalRef(jF); env->DeleteLocalRef(jS); env->DeleteLocalRef(jT); env->DeleteLocalRef(jDe); env->DeleteLocalRef(jDT); env->DeleteLocalRef(jL); env->DeleteLocalRef(jI); env->DeleteLocalRef(jD); env->DeleteLocalRef(activity);
 }
+
+extern "C" JNIEXPORT void JNICALL
+Java_dev_twilitrealm_dusk_DuskActivity_nativeEquipItem(JNIEnv* env, jclass cls, jint buttonIdx, jint slotNo) {
+    // buttonIdx: 0=X, 1=Y
+    // slotNo: 0-23
+    dComIfGs_setSelectItemIndex(buttonIdx, (u8)slotNo);
+}
+
 } // namespace dusk::android
 #else
 namespace dusk::android { void hud_update() {} bool hud_is_second_screen_active() { return false; } }

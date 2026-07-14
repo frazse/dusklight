@@ -125,6 +125,7 @@ public class DuskActivity extends SDLActivity {
     private boolean awaitingManageStoragePermission = false;
 
     private static native void nativeFolderDialogResult(long userdata, String path, String error);
+    public static native void nativeEquipItem(int buttonIdx, int slotNo);
 
     private static String[] splitArgs(String raw) {
         List<String> out = new ArrayList<>();

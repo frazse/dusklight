@@ -29,6 +29,9 @@ public class HudView extends View {
     private final float MAP_X = 20;
     private final float MAP_Y = 210;
     private final float MAP_SIZE = 720;
+    
+    private boolean mShowItemSelectionGrid = false;
+    private int mPendingEquipButtonIdx = 0; // 0=X, 1=Y
 
     private int mDisplayRupees = -1;
     private int mRupeeTimer = 0;
@@ -115,9 +118,51 @@ public class HudView extends View {
             float logicalX = (tx - (getWidth() - 1280 * scale) / 2) / scale;
             float logicalY = (ty - (getHeight() - 1080 * scale) / 2) / scale;
 
+            if (mShowItemSelectionGrid) {
+                // Check Close Button
+                float distClose = (float)Math.hypot(logicalX - (MAP_X + 40), logicalY - (MAP_Y + 40));
+                if (distClose < 40) { mShowItemSelectionGrid = false; invalidate(); return true; }
+                
+                // Check Grid Items
+                if (logicalX >= MAP_X && logicalX <= MAP_X + MAP_SIZE &&
+                    logicalY >= MAP_Y + 80 && logicalY <= MAP_Y + MAP_SIZE) {
+                    float cellW = MAP_SIZE / 6;
+                    float cellH = (MAP_SIZE - 80) / 4;
+                    int col = (int)((logicalX - MAP_X) / cellW);
+                    int row = (int)((logicalY - (MAP_Y + 80)) / cellH);
+                    int slot = row * 6 + col;
+                    if (slot >= 0 && slot < 24 && mState.ringItemIds[slot] != 0xFF) {
+                        DuskActivity.nativeEquipItem(mPendingEquipButtonIdx, slot);
+                        mShowItemSelectionGrid = false;
+                        invalidate();
+                        return true;
+                    }
+                }
+                return true; // Consume all touches when grid is open
+            }
+
+            // Map Zoom
             if (logicalX >= MAP_X && logicalX <= MAP_X + MAP_SIZE &&
                 logicalY >= MAP_Y && logicalY <= MAP_Y + MAP_SIZE) {
                 mMapZoomLevel = (mMapZoomLevel + 1) % ZOOM_FACTORS.length;
+                invalidate();
+                return true;
+            }
+            
+            // X and Y button taps to open grid
+            float cx = 835 + 145, cy = 280 + 95 * 5, ds = 145;
+            float distY = (float)Math.hypot(logicalX - cx, logicalY - (cy - ds));
+            float distX = (float)Math.hypot(logicalX - (cx + ds), logicalY - cy);
+            
+            if (distY < 60) { // Y Button
+                mPendingEquipButtonIdx = 1;
+                mShowItemSelectionGrid = true;
+                invalidate();
+                return true;
+            }
+            if (distX < 60) { // X Button
+                mPendingEquipButtonIdx = 0;
+                mShowItemSelectionGrid = true;
                 invalidate();
                 return true;
             }
@@ -193,7 +238,11 @@ public class HudView extends View {
                 drawHorseSpurs(canvas, 640 - (width / 2), 1060);
             }
             
-            drawMiniMap(canvas, MAP_X, MAP_Y, interMapX, interMapY, interMapAngle);
+            if (mShowItemSelectionGrid) {
+                drawItemSelectionGrid(canvas, MAP_X, MAP_Y);
+            } else {
+                drawMiniMap(canvas, MAP_X, MAP_Y, interMapX, interMapY, interMapAngle);
+            }
         }
         
         drawContextButtons(canvas, 835, 280);
@@ -904,6 +953,54 @@ public class HudView extends View {
             .replace("{{BOMBCAP1}}", mState.bombMax1 + " bombs")
             .replace("{{BOMBCAP2}}", mState.bombMax2 + " bombs")
             .replace("{{ARROWCAP}}", mState.arrowMax + " arrows");
+    }
+
+    private void drawItemSelectionGrid(Canvas canvas, float x, float y) {
+        resetPaint();
+        mPaint.setColor(Color.argb(220, 15, 15, 30));
+        canvas.drawRect(x, y, x + MAP_SIZE, y + MAP_SIZE, mPaint);
+        mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(3); mPaint.setColor(Color.WHITE);
+        canvas.drawRect(x, y, x + MAP_SIZE, y + MAP_SIZE, mPaint);
+        
+        // Close button (X) in top left
+        mPaint.setStyle(Paint.Style.FILL); mPaint.setColor(Color.RED);
+        canvas.drawCircle(x + 40, y + 40, 30, mPaint);
+        mPaint.setColor(Color.WHITE); mPaint.setTextSize(40); mPaint.setTextAlign(Paint.Align.CENTER);
+        canvas.drawText("X", x + 40, y + 54, mPaint);
+        
+        // Title
+        mPaint.setTextSize(32); mPaint.setTextAlign(Paint.Align.CENTER);
+        canvas.drawText("Select Item for " + (mPendingEquipButtonIdx == 0 ? mState.labelX : mState.labelY), x + MAP_SIZE/2, y + 50, mPaint);
+
+        float cellW = MAP_SIZE / 6;
+        float cellH = (MAP_SIZE - 80) / 4;
+        
+        for (int s = 0; s < 24; s++) {
+            int row = s / 6;
+            int col = s % 6;
+            float cx = x + col * cellW + cellW/2;
+            float cy = y + 80 + row * cellH + cellH/2;
+            
+            int itemId = mState.ringItemIds[s];
+            if (itemId != 0xFF && itemId != 0) {
+                android.graphics.Bitmap icon = mItemIcons.get(itemId);
+                if (icon != null) {
+                    float size = Math.min(cellW, cellH) * 0.8f;
+                    RectF dst = new RectF(cx - size/2, cy - size/2, cx + size/2, cy + size/2);
+                    canvas.drawBitmap(icon, null, dst, mPaint);
+                    
+                    // Ammo
+                    int count = mState.ringItemCounts[s];
+                    if (count > 1 || (count == 0 && isAmmoItem(itemId))) {
+                        mPaint.setTextAlign(Paint.Align.CENTER); mPaint.setTextSize(24);
+                        mPaint.setColor(Color.BLACK); mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(4);
+                        canvas.drawText(String.valueOf(count), cx, cy + size/2, mPaint);
+                        mPaint.setColor(Color.WHITE); mPaint.setStyle(Paint.Style.FILL);
+                        canvas.drawText(String.valueOf(count), cx, cy + size/2, mPaint);
+                    }
+                }
+            }
+        }
     }
 
     private void drawMiniMap(Canvas canvas, float x, float y, float interX, float interY, float interAngle) {
