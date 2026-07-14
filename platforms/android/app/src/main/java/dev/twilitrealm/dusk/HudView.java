@@ -118,8 +118,24 @@ public class HudView extends View {
             float logicalX = (tx - (getWidth() - 1280 * scale) / 2) / scale;
             float logicalY = (ty - (getHeight() - 1080 * scale) / 2) / scale;
 
+            // X and Y button taps to open/toggle grid
+            float bx = 835 + 145, by = 280 + 95 * 5, ds = 145; // Corrected by to 280
+            float distY = (float)Math.hypot(logicalX - bx, logicalY - (by - ds));
+            float distX = (float)Math.hypot(logicalX - (bx + ds), logicalY - by);
+            
+            if (distY < 60) { // Y Button
+                if (mShowItemSelectionGrid && mPendingEquipButtonIdx == 1) mShowItemSelectionGrid = false;
+                else { mPendingEquipButtonIdx = 1; mShowItemSelectionGrid = true; }
+                invalidate(); return true;
+            }
+            if (distX < 60) { // X Button
+                if (mShowItemSelectionGrid && mPendingEquipButtonIdx == 0) mShowItemSelectionGrid = false;
+                else { mPendingEquipButtonIdx = 0; mShowItemSelectionGrid = true; }
+                invalidate(); return true;
+            }
+
             if (mShowItemSelectionGrid) {
-                // Check Close Button
+                // Check Close Button (Red circle top-left)
                 float distClose = (float)Math.hypot(logicalX - (MAP_X + 40), logicalY - (MAP_Y + 40));
                 if (distClose < 40) { mShowItemSelectionGrid = false; invalidate(); return true; }
                 
@@ -138,31 +154,13 @@ public class HudView extends View {
                         return true;
                     }
                 }
-                return true; // Consume all touches when grid is open
+                return true; // Consume all touches inside or outside grid if grid is open
             }
 
             // Map Zoom
             if (logicalX >= MAP_X && logicalX <= MAP_X + MAP_SIZE &&
                 logicalY >= MAP_Y && logicalY <= MAP_Y + MAP_SIZE) {
                 mMapZoomLevel = (mMapZoomLevel + 1) % ZOOM_FACTORS.length;
-                invalidate();
-                return true;
-            }
-            
-            // X and Y button taps to open grid
-            float cx = 835 + 145, cy = 280 + 95 * 5, ds = 145;
-            float distY = (float)Math.hypot(logicalX - cx, logicalY - (cy - ds));
-            float distX = (float)Math.hypot(logicalX - (cx + ds), logicalY - cy);
-            
-            if (distY < 60) { // Y Button
-                mPendingEquipButtonIdx = 1;
-                mShowItemSelectionGrid = true;
-                invalidate();
-                return true;
-            }
-            if (distX < 60) { // X Button
-                mPendingEquipButtonIdx = 0;
-                mShowItemSelectionGrid = true;
                 invalidate();
                 return true;
             }
@@ -986,7 +984,10 @@ public class HudView extends View {
                 android.graphics.Bitmap icon = mItemIcons.get(itemId);
                 if (icon != null) {
                     float size = Math.min(cellW, cellH) * 0.8f;
-                    RectF dst = new RectF(cx - size/2, cy - size/2, cx + size/2, cy + size/2);
+                    float w = icon.getWidth(), h = icon.getHeight();
+                    float iconScale = size / Math.max(w, h);
+                    float dw = w * iconScale, dh = h * iconScale;
+                    RectF dst = new RectF(cx - dw/2, cy - dh/2, cx + dw/2, cy + dh/2);
                     canvas.drawBitmap(icon, null, dst, mPaint);
                     
                     // Ammo
