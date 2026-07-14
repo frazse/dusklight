@@ -952,6 +952,17 @@ extern "C" JNIEXPORT void JNICALL
 Java_dev_twilitrealm_dusk_DuskActivity_nativeEquipItem(JNIEnv* env, jclass cls, jint buttonIdx, jint slotNo) {
     // buttonIdx: 0=X, 1=Y
     // slotNo: 0-23
+
+    int otherIdx = (buttonIdx == 0) ? 1 : 0;
+    u8 currentOtherSlot = dComIfGs_getSelectItemIndex(otherIdx);
+
+    if (currentOtherSlot == (u8)slotNo) {
+        // Swap: if we are equipping an item that is already on the other button,
+        // move the current button's item to that other button.
+        u8 currentThisSlot = dComIfGs_getSelectItemIndex(buttonIdx);
+        dComIfGs_setSelectItemIndex(otherIdx, currentThisSlot);
+    }
+
     dComIfGs_setSelectItemIndex(buttonIdx, (u8)slotNo);
 }
 
