@@ -8,6 +8,7 @@ public class GameState {
     public final boolean hasMap, hasCompass, hasBossKey;
     public final int ringStatus, ringCurrentSlot, ringItemsTotal;
     public final int[] ringItemIds, ringItemCounts;
+    public final int[] inventoryItemIds, inventoryItemCounts;
     
     public final float mapX, mapY, mapAngle;
     public final float mapMinX, mapMinZ, mapMaxX, mapMaxZ;
@@ -66,6 +67,13 @@ public class GameState {
         for (int s = 0; s < 24; s++) {
             this.ringItemIds[s] = i[63 + s];
             this.ringItemCounts[s] = i[87 + s];
+        }
+
+        this.inventoryItemIds = new int[24];
+        this.inventoryItemCounts = new int[24];
+        for (int s = 0; s < 24; s++) {
+            this.inventoryItemIds[s] = i[114 + s];
+            this.inventoryItemCounts[s] = i[138 + s];
         }
 
         int stateFlags = i[31];

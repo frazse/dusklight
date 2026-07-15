@@ -147,7 +147,7 @@ public class HudView extends View {
                     int col = (int)((logicalX - MAP_X) / cellW);
                     int row = (int)((logicalY - (MAP_Y + 80)) / cellH);
                     int slot = row * 6 + col;
-                    if (slot >= 0 && slot < 24 && mState.ringItemIds[slot] != 0xFF) {
+                    if (slot >= 0 && slot < 24 && mState.inventoryItemIds[slot] != 0xFF) {
                         DuskActivity.nativeEquipItem(mPendingEquipButtonIdx, slot);
                         mShowItemSelectionGrid = false;
                         invalidate();
@@ -979,7 +979,7 @@ public class HudView extends View {
             float cx = x + col * cellW + cellW/2;
             float cy = y + 80 + row * cellH + cellH/2;
             
-            int itemId = mState.ringItemIds[s];
+            int itemId = mState.inventoryItemIds[s];
             if (itemId != 0xFF && itemId != 0) {
                 android.graphics.Bitmap icon = mItemIcons.get(itemId);
                 if (icon != null) {
@@ -991,7 +991,7 @@ public class HudView extends View {
                     canvas.drawBitmap(icon, null, dst, mPaint);
                     
                     // Ammo
-                    int count = mState.ringItemCounts[s];
+                    int count = mState.inventoryItemCounts[s];
                     if (count > 1 || (count == 0 && isAmmoItem(itemId))) {
                         mPaint.setTextAlign(Paint.Align.CENTER); mPaint.setTextSize(24);
                         mPaint.setColor(Color.BLACK); mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(4);
