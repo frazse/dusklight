@@ -2572,9 +2572,17 @@ u8 dComIfG_getNowCalcRegion() {
 }
 
 bool dComIfGp_isLightDropMapVisible() {
+    u8 darkArea = dComIfGp_getStartStageDarkArea();
     for (int i = 0; i < 3; i++) {
-        if (dComIfGs_isLightDropGetFlag(i) != FALSE && dComIfGs_getLightDropNum(i) < 16) {
-            return true;
+        if (dComIfGs_isLightDropGetFlag(i) != FALSE) {
+            u8 need = (i == darkArea) ? dComIfGp_getNeedLightDropNum() : 16;
+            // Area 2 (Lanayru) can be complete at 12 tears even if 'need' is 16
+            if (i == 2 && need == 16 && dComIfGs_getLightDropNum(i) == 12) {
+                continue;
+            }
+            if (dComIfGs_getLightDropNum(i) < need) {
+                return true;
+            }
         }
     }
     return false;

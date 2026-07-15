@@ -228,7 +228,7 @@ public class HudView extends View {
         if (mState.ringStatus > 0 && mState.itemWheelOnSecondScreen != 0) {
             drawRingMenu(canvas, MAP_X + MAP_SIZE/2f, MAP_Y + MAP_SIZE/2f);
         } else {
-            if (mState.showLightDrops && mState.maxLightDrops > 0) {
+            if (mState.showLightDrops && mState.maxLightDrops > 0 && mState.lightDrops < mState.maxLightDrops) {
                 float width = (mState.maxLightDrops - 1) * 45;
                 drawLightDropZigZag(canvas, 640 - (width / 2), 1055);
             } else if (mState.isRiding && !mState.isBoarRiding) {

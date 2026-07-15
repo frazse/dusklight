@@ -695,9 +695,22 @@ void hud_update() {
 
     iData[2] = dComIfGs_getMagic(); iData[3] = dComIfGs_getMaxMagic();
     iData[10] = dComIfGs_getArrowNum(); iData[11] = dComIfGs_getBombNum(0); iData[12] = (int)daPy_py_c::checkNowWolf(); iData[13] = stayNo;
-    iData[14] = dComIfGs_getLightDropNum(dComIfGp_getStartStageDarkArea());
-    iData[15] = dComIfGp_getNeedLightDropNum();
-    iData[16] = dComIfGp_isLightDropMapVisible() ? 1 : 0;
+    int darkArea = dComIfGp_getStartStageDarkArea();
+    if (darkArea >= 0 && darkArea < 3) {
+        iData[14] = dComIfGs_getLightDropNum(darkArea);
+        iData[15] = dComIfGp_getNeedLightDropNum();
+
+        // Area 2 (Lanayru/Lake Hylia) is often 12 tears instead of 16.
+        // If the engine reports 16 but the user is done at 12, respect that.
+        if (darkArea == 2 && iData[15] == 16 && iData[14] == 12) {
+            iData[16] = 0;
+        } else {
+            // Authoritative visibility: show only if vessel is held and not yet full
+            iData[16] = (dComIfGs_isLightDropGetFlag(darkArea) != FALSE && iData[14] < iData[15]) ? 1 : 0;
+        }
+    } else {
+        iData[14] = 0; iData[15] = 0; iData[16] = 0;
+    }
     iData[27] = meter->getMeterDrawPtr()->isEmphasisZ() ? 1 : 0;
     iData[43] = dComIfGp_getOxygenShowFlag() ? 1 : 0;
 
