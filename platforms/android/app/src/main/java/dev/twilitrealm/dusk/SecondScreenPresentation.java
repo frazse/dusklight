@@ -19,6 +19,13 @@ public class SecondScreenPresentation extends Presentation {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        // Prevent physical controller 'B' button from dismissing the second screen
+        setCancelable(false);
+        
+        // Allow touches while preventing focus stealing from the main game screen
+        getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE);
+
         mHudView = new HudView(getContext());
         setContentView(mHudView);
     }
