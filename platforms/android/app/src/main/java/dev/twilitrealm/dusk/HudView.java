@@ -1240,10 +1240,18 @@ public class HudView extends View {
         if ((type == 1 || type == 8) && icon == null) icon = mItemIcons.get(0x4002);
 
         if (icon != null) {
-            float size = (type == 3 || type == 7) ? 32 : (type == 6 || type == 11 || type == 12 || type == 16) ? 20 : 40;
+            float size = (type == 3 || type == 7) ? 32 : (type == 5 ? 48 : (type == 6 || type == 11 || type == 12 || type == 16) ? 20 : 40);
             RectF dst = new RectF(x - size/2, y - size/2, x + size/2, y + size/2);
             resetPaint();
             canvas.drawBitmap(icon, null, dst, mPaint);
+            return;
+        }
+
+        resetPaint();
+        if (type == 5) {
+            mPaint.setColor(Color.RED); mPaint.setStyle(Paint.Style.STROKE); mPaint.setStrokeWidth(5.0f);
+            canvas.drawCircle(x, y, 16, mPaint);
+            canvas.drawCircle(x, y, 8, mPaint);
             return;
         }
 

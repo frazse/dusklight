@@ -408,32 +408,36 @@ bool should_draw_geometry_group(const dDrawPath_c::group_class& grp, int roomNo)
 
 bool should_draw_icon(int typeGroupNo, const dTres_c::data_s* data, int stayNo, s8 sFloor, const char* sName) {
     if (data == nullptr) return false;
+
+    // Quest / Destination markers (Group 5) should always show if active, regardless of Compass
+    if (typeGroupNo == 5) {
+        if (data->mNo != 0xFF && dComIfGs_isTbox(data->mNo)) return false;
+        return switch_reveals(data->mSwBit, data->mRoomNo);
+    }
+
     auto* stage = dComIfGp_getStage(); if (!stage) return false;
     StageType stype = (StageType)dStage_stagInfo_GetSTType(stage->getStagInfo());
     bool is_d = (stype == ST_DUNGEON || stype == ST_BOSS_ROOM);
+
     if (!group_is_floor_independent(typeGroupNo)) {
         s8 iconFloor = dMapInfo_c::calcFloorNo(data->mPos.y, true, data->mRoomNo);
         if (iconFloor != sFloor) return false;
     }
+
     if (is_d) {
         if (!dComIfGs_isDungeonItemCompass()) return false;
+
+        // Items revealed by Compass
         if (typeGroupNo == 0 || typeGroupNo == 2 || typeGroupNo == 3 || typeGroupNo == 4 || typeGroupNo == 11 || typeGroupNo == 12 || typeGroupNo == 15 || typeGroupNo == 16) {
-             // Strict floor check for all dungeon icons (matching retail behavior)
-             s8 iconFloor = dMapInfo_c::calcFloorNo(data->mPos.y, true, data->mRoomNo);
-             if (iconFloor != sFloor) return false;
-
-             // NPCs and Objectives should always show once revealed by compass
-             if (typeGroupNo == 11 || typeGroupNo == 12 || typeGroupNo == 16) return true;
-
              if (data->mNo != 0xFF && dComIfGs_isTbox(data->mNo)) return false;
              return switch_reveals(data->mSwBit, data->mRoomNo);
         }
         return false;
     }
+
     switch (typeGroupNo) {
         case 1: case 8: if (!is_room_visible(data->mRoomNo, sName, stayNo, dComIfGs_isDungeonItemMap())) return false; return switch_reveals(data->mSwBit, data->mRoomNo);
         case 13: case 14: return switch_reveals(data->mSwBit, data->mRoomNo);
-        case 5: if (data->mNo != 0xFF && dComIfGs_isTbox(data->mNo)) return false; return switch_reveals(data->mSwBit, data->mRoomNo);
         case 6: return data->mSwBit != 0xFF && dComIfGs_isSwitch(data->mSwBit, data->mRoomNo);
         case 4: {
             if (!dComIfGp_isLightDropMapVisible()) return false;
